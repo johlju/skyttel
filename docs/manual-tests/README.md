@@ -389,7 +389,8 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   faktiska skärmläsning, beröring och förstoring samt MEDGIVANDE-21:s
   enda hörda fjärråterkallandebesked.
 - [Samtalsnotiser](conversation-notices.md): bruten kontakt, otillgängligt
-  samtal och uppdragsfel; en gemensam ordning, bara ett besked, stängning och
+  samtal och uppdragsfel; en gemensam ordning, bara ett besked, uttryckliga
+  nästa steg för oavslutat modellarbete, stängning av andra händelser och
   automatisk återkomst, textåtkomst utan tillgängligt samtal, bevarad text
   med stoppad sändning och mikrofon,
   hjälpmedel utan dubbel uppläsning, fokus och placering vid röstrutan
@@ -550,6 +551,8 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   beställd förklaring. Hela förklaringen behålls vid lyckat sparande med
   röst. Ett fel efter sparandet behåller sparkvittot och felbeskedet i
   text och röst.
+  TEXT-18 prövar uttryckligt återförsök med aktuellt modellval och avstående
+  efter fel i text och röst, med bevarade genomförda förslag och pausad kö.
   Ett fel efter osparad ändring behåller ändringens detaljer, den
   separata väntande frågan och felbeskedet utan att påstå sparande.
   På smal skärm provas även tangentbordsåtkomst till kartans sammanhang

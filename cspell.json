@@ -4,6 +4,8 @@
   "language": "sv,en",
   "import": ["@cspell/dict-sv/cspell-ext.json"],
   "words": [
+    "kösvaret",
+    "köfrågan",
     "tokenåtgång",
     "backendleverans",
     "tokenuppgifter",
@@ -30,6 +32,7 @@
     "backendarbete",
     "modellista",
     "modellåterförsök",
+    "modellfelsnotisen",
     "kontexttoken",
     "utmatningstoken",
     "noexec",

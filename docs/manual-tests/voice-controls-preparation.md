@@ -533,7 +533,10 @@ förberedelse. Läs det verkliga held-anropets värden varje gång. Alla uppgift
    ska inte skapa ett nytt nödvändigt svarskrav.
 5. Öppna textvyn, skicka **Berätta mer.**, stäng panelerna med kryssen och kör
    `fail REQUEST`. Kräv samtalsnotisen
-   **Skyttel kunde inte slutföra uppdraget. Försök igen.**
+   **Modellen är tillfälligt otillgänglig. Valet är kvar.** Läs att oavslutat
+   arbete och senare kö väntar och att genomförda ändringar finns kvar.
+   Notisen erbjuder **Försök igen**, **Oavslutad begäran**,
+   **Avstå från det oavslutade arbetet** och **Stoppa allt**.
 6. Öppna textvyn och välj **Nytt samtal**. Beskrivningen
    **Förslag väntar på svar** ska fortfarande finnas i utkastet.
 
@@ -840,15 +843,15 @@ samtal → Godkänn och starta** före uppdraget. Lo Exempel, Person och
   Vid steg 3 sätt **Network → Offline**, läs kontaktfelet, återställ
   **No throttling**, läs åter otillgängligheten och skriv sedan `available on`.
 - NOT-05: efter uppdraget i UI-steg 1, läs `held` och skriv `fail REQUEST`
-  med aktuellt ID. Gör samma sak för det nya anropet efter UI-steg 3.
-  I UI-steg 4 behåll det nya anropet hållet tills den borttagna notisen lästs;
-  släpp sedan med `reply REQUEST Ett nytt svar.`.
+  med aktuellt ID. Gör samma sak efter det uttryckliga återförsöket i
+  UI-steg 2. I UI-steg 3 behåll det nya anropet hållet tills den borttagna
+  notisen lästs; släpp sedan med `reply REQUEST Ett nytt svar.`.
 - NOT-06: sätt **Network → Offline** före UI-steg 1. Efter att testaren
   fokuserat stängknappen vid steg 2 återställ **No throttling**. Bryt före
   steg 3 igen; efter uttrycklig stängning återställ nätverket vid steg 4.
 - NOT-08 och dess placeringsvarianter NOT-21/22: efter **Ge ett förslag.**
   i UI-steg 1 läs `held` och skriv `fail REQUEST` med aktuellt ID. Behåll
-  det valda visningsmåttet och mikrofon på genom stängningen.
+  det valda visningsmåttet och mikrofon på genom avståendet.
 - NOT-09/23: före UI-steg 1 skriv `available off`; vid UI-steg 2 skriv
   `available on`. Före mikrofontrycket i UI-steg 3 kör följande i Console:
 
@@ -994,7 +997,8 @@ efter fallet och avsluta med `quit`.
 3. Fokusera **Prata med Skyttel**. Tabba genom samtalskontrollerna och läs dem
    i dokumentordning med hjälpmedlet.
 4. Stäng textvyn, upprepa ordningen, öppna textvyn och upprepa igen.
-5. Fokusera **Stäng notisen** och tryck Retur.
+5. Fokusera **Avstå från det oavslutade arbetet** och tryck Retur. Läs att
+   notisen försvinner och att meddelandefältet får fokus utan ett nytt `held`.
 
 ### Tidslinje HJALP-03
 

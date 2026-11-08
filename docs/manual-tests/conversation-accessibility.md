@@ -157,21 +157,23 @@ separat. Utför arbetsflödet en gång.
 2. Låt förberedelsen ge inkommande aktivitet. Läs **Skyttel talar** och
    **Avbryt**.
 3. Fokusera **Prata med Skyttel**. Gå med Tab genom **Skriv till Skyttel**,
-   röstrutans **Modell och resonemang**, **Avbryt**, **Stäng notisen** och
-   återstående synliga verktyg.
+   röstrutans **Modell och resonemang**, **Avbryt**, **Försök igen**,
+   **Oavslutad begäran**, **Avstå från det oavslutade arbetet**,
+   **Stoppa allt** och återstående synliga verktyg.
 4. Stäng textvyn, prova samma ordning, öppna textvyn och prova igen. Läs
    dokumentordningen separat enligt förberedelsen.
-5. Fokusera **Stäng notisen** och tryck Enter. Fokus återgår till
-   mikrofonknappen.
+5. Fokusera **Avstå från det oavslutade arbetet** och tryck Enter. Notisen
+   försvinner och fokus återgår till meddelandefältet. Inget nytt modellarbete
+   startar.
 
 **Förväntat resultat:**
 
 - **Navigera** ligger bland kartverktygen efter **Karta**, före
   samtalskontrollerna. Samtalets ordning är **Prata med Skyttel**,
   **Skriv till Skyttel**, röstrutans **Modell och resonemang**, **Avbryt**,
-  **Stäng notisen**, sedan de
-  återstående synliga verktygen. En notisknapp, när en sådan finns, föregår
-  stängknappen.
+  **Försök igen**, **Oavslutad begäran**,
+  **Avstå från det oavslutade arbetet**, **Stoppa allt**, sedan de
+  återstående synliga verktygen.
 - Läsordningen är densamma som tabbordningen. På smal skärm går fokus från
   verktygsraden till nederkanten och tillbaka. Dolda extraverktyg får inget
   tabbstopp; vid visade namn ligger de efter notisen. Efter notisen följer
@@ -180,7 +182,8 @@ separat. Utför arbetsflödet en gång.
 - Öppen textvy visar notisen ovanför meddelandefältet. Stängd textvy visar den
   vid röstrutans plats. Bara en notis finns och flytten skapar ingen ny
   uppläsning.
-- Stängning tar bort notisen och återför fokus till **Prata med Skyttel**.
+- Uttryckligt avstående tar bort notisen och återför fokus till
+  meddelandefältet utan att starta nytt modellarbete.
 
 ## Uppläsning och återkomst
 

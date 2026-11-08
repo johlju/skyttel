@@ -154,6 +154,7 @@ export function TextView({
   const blocked =
     conversation.inputBlocked ||
     session?.paused ||
+    session?.workFailure?.code === 'assistant_draft_changed' ||
     pending ||
     unknown ||
     session?.phase === 'recovery' ||

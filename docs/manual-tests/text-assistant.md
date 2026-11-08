@@ -49,6 +49,165 @@ formuläret; befintliga förslag i utkastet påverkas inte.
 
 ## Samtal och samlat sparande
 
+### TEXT-18: återförsök och avstående fortsätter bara återstående arbete
+
+**Syfte:** Behålla genomförda förslag vid modellfel och själv välja hur
+oavslutat arbete och kö ska fortsätta i text och röst.
+
+**Användare:** Alex i den kontrollerade installationen.
+
+**Förutsättningar:** Lo Exempel av typen Person med beskrivningen
+Påhittad uppgift ligger osparad i utkastet. Mikrofonen är av.
+
+**Separat förberedelse:** Följ
+[återförsök efter modellfel](text-conversation-preparation.md#återförsök-efter-modellfel).
+Operatören håller nästa svar efter en genomförd ändring och släpper sedan
+ett tillfälligt fel. Kontrollerade rösthändelser används; fysisk mikrofon,
+hörbart tal och verklig modellförståelse bedöms separat.
+
+**Automatiskt motsvarande test:**
+[conversation-work-retry.spec.ts](../../tests/integration/conversation-work-retry.spec.ts),
+TEXT-18.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/conversation-work-retry.spec.ts",
+    "caseId": "TEXT-18"
+  },
+  "reference": "Dator med tangentbord; riktig server och databas, kontrollerade modell- och rösthändelser. Skrivet delvis slutfört uppdrag med återförsök, därefter talat delvis slutfört uppdrag med uttryckligt avstående. Verklig språkförståelse och fysisk uppläsning ingår inte.",
+  "outcomes": [
+    "Ett modellfel behåller genomförda förslag och pausar senare kö utan automatiskt modellarbete.",
+    "Modellbyte startar inget; uttryckligt återförsök fortsätter återstående arbete med det aktuella valet utan dubbla förslag eller återupplivat sparande.",
+    "Uttryckligt avstående efter ett talat uppdrag behåller genomförda förslag och låter senare kö fortsätta.",
+    "Tangentbord når nästa steg och fokus finns kvar på en synlig kontroll när felkontrollerna försvinner."
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "playwright",
+      "suite": "technical-browser",
+      "spec": "tests/technical-browser/conversation-work-clarification.spec.ts",
+      "title": "a concurrent draft discard asks a visible question and requires explicit abandonment before a fresh instruction and save",
+      "purpose": "Ändrat underlag ger en synlig fråga, bevarar oskickad instruktion och kräver avstående före ny instruktion och nytt sparande utan att återskapa kastade förslag."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-work-retry-http.test.ts",
+      "title": "a spoken clarification retries only unfinished work after its own verified question and draft transitions: provider failure",
+      "purpose": "Ett uttryckligt återförsök efter ett talat förtydligande behåller samma begäran och genomförda förslag utan att upprepa dem."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-work-retry-http.test.ts",
+      "title": "a spoken clarification retries only unfinished work after its own verified question and draft transitions: lost batch status",
+      "purpose": "Statuskontroll av en genomförd ändring efter ett talat förtydligande bevarar frågans verifierade utveckling och kräver uttryckligt återförsök för återstående arbete."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-work-retry-http.test.ts",
+      "title": "a spoken clarification retries only unfinished work after its own verified question and draft transitions: manually discarded question",
+      "purpose": "Ett tidigare talat förtydligande kan inte fortsätta en väntande del som därefter avslutas genom manuellt kastande av utkastet."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-work-retry-http.test.ts",
+      "title": "a definitive absent batch status offers explicit retry without starting model work automatically",
+      "purpose": "En statuskontroll som bekräftar att ändringarna inte genomförs visar rätt nästa steg och startar nytt modellarbete först vid uttryckligt återförsök."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-work-retry-http.test.ts",
+      "title": "a definitive absent batch status offers explicit abandon without starting model work automatically",
+      "purpose": "Ett bekräftat uteblivet resultat tillåter uttryckligt avstående utan nytt modellarbete; ett okänt utfall behåller spärren."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-work-retry-http.test.ts",
+      "title": "an incomplete interpretation reply pauses the original request and queue until explicit retry",
+      "purpose": "Ett ofullständigt tolkningssvar pausar kön utan ändringar; uttryckligt återförsök behåller begäran och aktuellt modellval utan återupplivat sparande."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-work-retry-http.test.ts",
+      "title": "an invalid interpretation reply pauses the original request and queue until explicit abandon",
+      "purpose": "Ett ogiltigt tolkningssvar ändrar inget och kräver uttryckligt avstående innan senare kö fortsätter i ordning."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-work-retry-http.test.ts",
+      "title": "an incomplete checking reply pauses the original request and queue until explicit abandon",
+      "purpose": "Ett ofullständigt kontrollsvar efter en genomförd batch lämnar nästa batch orörd och behåller den tidigare tills användaren uttryckligen avstår."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-work-retry-http.test.ts",
+      "title": "an invalid checking reply pauses the original request and queue until explicit retry",
+      "purpose": "Ett ogiltigt kontrollsvar pausar kön efter en genomförd batch; uttryckligt återförsök fortsätter bara återstående ändringar utan dubbla batcher eller gammalt sparande."
+    }
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Välj **Skriv till Skyttel → Nytt samtal** och godkänn medgivandet om
+   det behövs. Skicka **Ändra Lo Exempel till Lo Lind och lägg till Mira.
+   Spara hela utkastet.** Operatören ändrar Lo först och håller nästa svar.
+2. Skicka **Beskriv vad ett utkast är.** medan arbetet pågår. Operatören
+   släpper nu felet. Läs att modellen är tillfälligt otillgänglig, att
+   återstående arbete och kö väntar och att utkastet finns kvar. Öppna
+   utkastet och läs Lo Lind med oförändrad beskrivning.
+3. Öppna **Modell och resonemang**, välj **GPT-6.1 Sol** och **Medium**,
+   och stäng dialogerna. Läs det nya valet. Inget arbete startar av valet.
+4. Nå **Försök igen** med tangentbord och aktivera knappen. Operatören
+   lämnar först samma Lo-förslag tillsammans med Mira och släpper sedan
+   kösvaret. Läs Lo Lind och Mira i utkastet samt beskedet att en ny
+   sparbegäran behövs. Ingen ändring finns i den gemensamma kartan.
+5. Slå på mikrofonen. Operatören ger det kontrollerade talade uppdraget
+   **Ändra Mira till Mira Lind. Beskriv sedan hushållets typer.** och
+   genomför namnändringen före nästa hållna svar.
+6. Skicka **Beskriv kartan.** som text medan arbetet pågår. Operatören
+   släpper felet. Läs det kvarvarande Mira Lind-förslaget och felbeskedet.
+7. Nå **Avstå från det oavslutade arbetet** med tangentbord. Aktivera
+   knappen och låt operatören släppa kösvaret. Läs svaret och kontrollera
+   att Lo Lind och Mira Lind fortfarande är osparade förslag.
+
+**Förväntat resultat:**
+
+- Samma samtal och utkast används för text och röst. Senare kö väntar vid
+  modellfel tills Alex uttryckligen försöker igen eller avstår.
+- Återförsök använder aktuellt modellval och fortsätter bara återstående
+  arbete. Genomförda ändringar upprepas inte och gammal sparbegäran ger
+  inget nytt sparande.
+- Avstående tar bort den oavslutade delen, bevarar genomförda förslag och
+  släpper fram kön. Kontrollerna går att nå med tangentbord och fokus
+  återgår till samtalets synliga kontroll efter handlingen.
+
 ### TEXT-SCOPE-01: stoppad åtgärd visar felreferens och behåller utkastet
 
 **Syfte:** Läsa en stoppnotis utan att förlora befintliga förslag.
@@ -126,8 +285,9 @@ utkast, sparade uppgifter och historik samt loggens begränsade innehåll.
    åter släppa ett felaktigt kastande enligt förberedelsen. En ny stoppnotis
    ska visas med en annan felreferens. Stäng notisen.
 7. Skicka **Prova ett vanligt fel.** Låt operatören neka svaret.
-   Läs uppdragsfelets notis och stäng den. Upprepa en gång; båda felen
-   ska visas trots det tidigare mikrofonhindret.
+   Läs modellfelets notis och välj **Avstå från det oavslutade arbetet**.
+   Upprepa en gång; båda felen ska visas trots det tidigare mikrofonhindret.
+   Avståendet startar inget nytt modellarbete.
 8. Skriv och skicka **Mitt nästa uppdrag**. Låt operatören släppa svaret.
    Läs **Ett nytt svar.** och kontrollera att ingen gammal notis visas.
 
@@ -350,7 +510,7 @@ som stöd, skilt från hela det ordinarie fallet.
       "suite": "server",
       "spec": "tests/unit/server/voice-typed-delivery.test.ts",
       "title": "a failed typed completion delivers its own question before a later task question",
-      "purpose": "En senare begärans fråga får inte ersätta en tidigare slutförd begärans väntande fråga i röstleveransen."
+      "purpose": "En misslyckad begärans resultat, fel och fråga levereras en gång före nästa köade begärans fråga efter uttryckligt avstående."
     },
     {
       "kind": "technical",
@@ -698,9 +858,9 @@ tillgängligt”.
 
 - Ingen av de nekade, hypotetiska, uppskjutna eller citerade begärandena
   sparar kartan, även när ersättaren försöker anropa sparverktyget.
-- Felnotisen visar att uppdraget inte slutförs. Samtalstexten förklarar att
-  modellen är tillfälligt otillgänglig, att valet är kvar och att återförsök
-  kräver en egen handling när felet är löst.
+- Vid leverantörsfelet visar både felnotisen och samtalstexten att modellen
+  är tillfälligt otillgänglig, att valet är kvar och att återförsök kräver en
+  egen handling när felet är löst. Oavslutat arbete och senare kö väntar.
 - Utkastet och vanligt formulärarbete finns kvar. Provet är ett kontrollerat
   verktygsprov, inte bevis på språkförståelse.
 

@@ -38,6 +38,21 @@ felkategori, tidpunkt och diagnostisk referens utan samtalsinnehåll eller
 inloggningsuppgifter. Skilj tillfälligt fel från saknad kontoåtkomst och
 modell/nivå som inte stöds. Återställd åtkomst startar inget modellarbete.
 
+Vid felsökning, använd referensen tillsammans med modell, nivå, tidpunkt
+och felkategori. Kontrollera installationens aktivering och projektets
+faktiska åtkomst utan att samla in samtalstext, utkastvärden, API-nycklar
+eller leverantörens råa felkropp. Ett avstängt val ligger kvar tills
+användaren gör ett nytt val; aktivering och kontoåtkomst är separata.
+
+Oavslutat modellarbete blockerar senare kö även efter omstart och på en
+annan enhet. Användaren väljer själv återförsök eller avstående i
+samtalsnotisen. Återförsöket binds till aktuellt modellval och läser
+aktuella genomföranden. Det återställer ingen upphävd sparbegäran.
+Manuellt ändrade eller kastade förslag kräver förtydligande före vidare
+ändringar. Kontroll av en redan registrerad sparoperation är en separat
+återställningsåtgärd; okänt utfall ska behålla hindret och får inte lösas
+med ett nytt modell- eller sparförsök.
+
 Text och röst använder samma val för uppdragstolkning, arbete, oberoende
 ändringskontroll och sammanfattning. GPT-Live 1 fortsätter att lyssna och
 tala. Valet binds vid varje begärans start, också när begäran väntar i kö.

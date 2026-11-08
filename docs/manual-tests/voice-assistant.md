@@ -560,7 +560,8 @@ till TAL-17/23/24.
 2. Öppna textvyn, läs Vem använder tjänsten?, skicka Lo använder tjänsten. och
    håll svaret. Läs arbetsraden sist; inget rent textarbete visar röstrutan.
 3. Låt Vill du läsa vidare? tillkomma enligt tidslinjen. Skicka Berätta mer.,
-   stäng textvyn och läs uppdragsnotisen efter det förberedda felet.
+   stäng textvyn och läs modellfelsnotisen efter det förberedda felet. Valet
+   finns kvar och oavslutat arbete väntar på en uttrycklig handling.
 4. Öppna textvyn och välj Nytt samtal. Läs hela Lo Exempel-förslaget, Person och
    Förslag väntar på svar. Inget förslag försvinner vid samtalsbyte.
 

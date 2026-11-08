@@ -73,7 +73,7 @@ for (const width of [1280, 390])
     page,
   }) => {
     await page.setViewportSize({ width, height: 900 });
-    const { app } = await setup(
+    const { app, model } = await setup(
       page,
       textModel(() => Promise.reject(new Error('Synthetic provider failure'))),
     );
@@ -81,10 +81,18 @@ for (const width of [1280, 390])
       await openConversationText(page);
       await page.getByLabel('Meddelande till Skyttel').fill('Ge ett förslag.');
       await page.getByRole('button', { name: 'Skicka', exact: true }).click();
-      await expect(notice(page)).toContainText('Skyttel kunde inte slutföra uppdraget.');
+      await expect(notice(page)).toContainText(
+        'Modellen är tillfälligt otillgänglig. Valet är kvar.',
+      );
       await page.evaluate(() => window.skyttelVoiceFixture.setSound('remote', true, 0.2));
       await expect(voiceBox(page)).toHaveText('Skyttel talar');
-      const close = notice(page).getByRole('button', { name: 'Stäng notisen', exact: true });
+      const retry = notice(page).getByRole('button', { name: 'Försök igen', exact: true });
+      const unfinished = notice(page).getByText('Oavslutad begäran', { exact: true });
+      const abandon = notice(page).getByRole('button', {
+        name: 'Avstå från det oavslutade arbetet',
+        exact: true,
+      });
+      const stopAll = notice(page).getByRole('button', { name: 'Stoppa allt', exact: true });
       await page.locator('.notice-announcement[aria-live="polite"] span').evaluate((span) => {
         span.dataset.occurrence = 'first';
       });
@@ -96,7 +104,10 @@ for (const width of [1280, 390])
             '.workspace-text',
             '.voice-box .conversation-model-button',
             '.voice-stop',
-            '.conversation-notice-close',
+            '.conversation-notice-content > button:nth-of-type(1)',
+            '.conversation-notice summary',
+            '.conversation-notice-content > button:nth-of-type(2)',
+            '.conversation-notice-content > button:nth-of-type(3)',
             '.workspace-tools-footer button',
           ].map((selector) => document.querySelector(selector));
           return controls.every(
@@ -120,7 +131,13 @@ for (const width of [1280, 390])
         await page.keyboard.press('Tab');
         await expect(voiceBox(page).getByRole('button', { name: 'Avbryt' })).toBeFocused();
         await page.keyboard.press('Tab');
-        await expect(close).toBeFocused();
+        await expect(retry).toBeFocused();
+        await page.keyboard.press('Tab');
+        await expect(unfinished).toBeFocused();
+        await page.keyboard.press('Tab');
+        await expect(abandon).toBeFocused();
+        await page.keyboard.press('Tab');
+        await expect(stopAll).toBeFocused();
         await page.keyboard.press('Tab');
         await expect(
           page.getByRole('button', {
@@ -144,10 +161,12 @@ for (const width of [1280, 390])
         'data-occurrence',
         'first',
       );
-      await close.focus();
+      expect(model.requests).toHaveLength(1);
+      await abandon.focus();
       await page.keyboard.press('Enter');
       await expect(notice(page)).toHaveCount(0);
-      await expect(microphoneButton(page)).toBeFocused();
+      await expect(page.getByLabel('Meddelande till Skyttel')).toBeFocused();
+      expect(model.requests).toHaveLength(1);
     } finally {
       await app.close();
     }

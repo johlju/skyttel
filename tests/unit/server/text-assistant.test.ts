@@ -8,6 +8,7 @@ import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation, robin } from '../../support/installation.js';
 import {
   lastToolResult,
+  type ModelRequest,
   modelMessage,
   modelTool,
   readOnlyScope,
@@ -3124,20 +3125,34 @@ test('HTTP authorization and exact turn retries prevent duplicate provider work 
   }
 });
 
+function completeSaveAuthorization(request: ModelRequest) {
+  return [
+    modelMessage(
+      JSON.stringify(
+        request.instructions.startsWith('SKYTTEL_TURN_SCOPE')
+          ? { mode: 'work', request: 'Spara hela utkastet.', responseRequired: false }
+          : { decision: 'allow', complete: true, fulfillsRequest: true },
+      ),
+    ),
+  ];
+}
+
 test.each(['retry', 'completed elsewhere'] as const)(
   'an automatically completed prepared save returns one durable receipt via %s',
   async (mode) => {
     let step = 0;
-    const model = textModel(() =>
-      step++ === 0
-        ? [
-            modelTool('prepare_save', {
-              version: 1,
-              contentVersion: 1,
-              operationId: 'provider-chosen',
-            }),
-          ]
-        : [modelMessage('Sparförsöket är förberett.')],
+    const model = textModel(
+      () =>
+        step++ === 0
+          ? [
+              modelTool('prepare_save', {
+                version: 1,
+                contentVersion: 1,
+                operationId: 'provider-chosen',
+              }),
+            ]
+          : [modelMessage('Sparförsöket är förberett.')],
+      completeSaveAuthorization,
     );
     await setup(model.provider);
     await webProposal();
@@ -3222,7 +3237,8 @@ test('an unresolved identity rejects the whole save and recovery requires a fres
     data: {},
   });
   expect(await recovery.json()).toMatchObject({
-    phase: 'ready',
+    phase: 'error',
+    error: 'assistant_request_unfinished',
     saveCheck: {
       reply: 'Kontrollen visar att utkastet inte sparades. Dina osparade ändringar ligger kvar.',
     },
@@ -3371,10 +3387,12 @@ test('an idle assistant shows current web proposals before the next instruction'
 
 test('recovery checks its exact save receipt even after it leaves the recent operations list', async () => {
   let step = 0;
-  const model = textModel(() =>
-    step++ === 0
-      ? [modelTool('prepare_save', { version: 1, contentVersion: 1, operationId: 'held-save' })]
-      : [modelMessage('Försöket är förberett.')],
+  const model = textModel(
+    () =>
+      step++ === 0
+        ? [modelTool('prepare_save', { version: 1, contentVersion: 1, operationId: 'held-save' })]
+        : [modelMessage('Försöket är förberett.')],
+    completeSaveAuthorization,
   );
   await setup(model.provider);
   await webProposal();

@@ -556,17 +556,19 @@ test('a failed typed completion delivers its own question before a later task qu
           }),
         ],
   );
-  const { live, householdPath, send, poll } = await arrange(
-    failExplanation(
-      model,
-      () =>
-        Response.json({ error: { message: 'Controlled explanation outage.' } }, { status: 503 }),
-      (body) =>
-        model.requests.length === 1 &&
-        JSON.parse(String(body.input.findLast((item) => item.role === 'user')?.content)).message ===
-          firstRequest,
-    ),
+  const provider = failExplanation(
+    model,
+    () => Response.json({ error: { message: 'Controlled explanation outage.' } }, { status: 503 }),
+    (body) =>
+      model.requests.length === 1 &&
+      JSON.parse(String(body.input.findLast((item) => item.role === 'user')?.content)).message ===
+        firstRequest,
   );
+  let providerCalls = 0;
+  const { live, path, householdPath, post, send, poll } = await arrange(async (input, init) => {
+    providerCalls++;
+    return provider(input, init);
+  });
   const failed = await send(firstRequest, 'failed-partial');
   expect(failed).toMatchObject({
     phase: 'error',
@@ -576,17 +578,56 @@ test('a failed typed completion delivers its own question before a later task qu
     result: { kind: 'draft', changes: [{ subject: 'Sambandstypen Delar', action: 'lades till' }] },
   });
   expect(failed.modelReply).toBeUndefined();
-  const later = await send('Lägg till hjälmen utan att spara.', 'later-question');
-  expect(later.newQuestions).toEqual([laterQuestion]);
-  expect(later.completedReplies).toContainEqual(
+  expect(failed.receipt).toBeUndefined();
+  const failedCalls = providerCalls;
+  const queued = await send('Lägg till hjälmen utan att spara.', 'later-question');
+  expect(queued).toMatchObject({
+    phase: 'error',
+    workFailure: { requestId: 'failed-partial', code: 'assistant_model_temporary' },
+    queuedMessages: 1,
+    queuedRequests: [{ id: 'later-question', text: 'Lägg till hjälmen utan att spara.' }],
+    newQuestions: [question],
+  });
+  expect(queued.completedReplies).toContainEqual(
     expect.objectContaining({ id: 'failed-partial', failed: true, newQuestions: [question] }),
   );
+  const delivered = await poll(true);
+  expect(delivered.voice.replyDelivery).toContainEqual({ id: 'failed-partial', voiced: true });
+  const firstSpoken = voiceAnswerParts(live.sent).join('');
+  expect(firstSpoken).toContain('Sambandstypen Delar lades till.');
+  expect(firstSpoken).toContain(`Obligatoriskt besked från Skyttel: ${failed.reply}`);
+  expect(firstSpoken).toContain(`Nödvändig fråga (samtalsdata): ${JSON.stringify(question)}`);
+  expect(firstSpoken).not.toContain(laterQuestion);
   await poll(true);
+  expect(voiceAnswerParts(live.sent).join('')).toBe(firstSpoken);
+  expect(providerCalls).toBe(failedCalls);
+
+  const current: TextAssistantView = await (await browser.get(path)).json();
+  const abandoned = await post(`${path}/abandon-work`, {
+    revision: current.revision,
+    requestId: 'failed-partial',
+  });
+  expect(abandoned.status(), await abandoned.text()).toBe(202);
+  await expect
+    .poll(async () => {
+      const view: TextAssistantView = await (await browser.get(path)).json();
+      return [view.phase, view.queuedMessages];
+    })
+    .toEqual(['ready', 0]);
+  const later: TextAssistantView = await (await browser.get(path)).json();
+  expect(later.workFailure).toBeUndefined();
+  expect(later.questions).toEqual([laterQuestion]);
+  expect(later.newQuestions).toEqual([laterQuestion]);
+  expect(later.review).toEqual(failed.review);
+  expect(later.receipt).toBeUndefined();
+  expect(model.requests).toHaveLength(2);
+  const next = await poll(true);
+  expect(next.voice.replyDelivery).toContainEqual({ id: 'later-question', voiced: true });
   const spoken = voiceAnswerParts(live.sent).join('');
-  expect(spoken).toContain('Sambandstypen Delar lades till.');
-  expect(spoken).toContain(`Obligatoriskt besked från Skyttel: ${failed.reply}`);
-  expect(spoken).toContain(`Nödvändig fråga (samtalsdata): ${JSON.stringify(question)}`);
+  expect(spoken.startsWith(firstSpoken)).toBe(true);
   expect(spoken).toContain(`Nödvändig fråga (samtalsdata): ${JSON.stringify(laterQuestion)}`);
+  expect(spoken.split('Sambandstypen Delar lades till.')).toHaveLength(2);
+  expect(spoken.split(`Obligatoriskt besked från Skyttel: ${failed.reply}`)).toHaveLength(2);
   expect(spoken.split(JSON.stringify(question))).toHaveLength(2);
   expect(spoken.split(JSON.stringify(laterQuestion))).toHaveLength(2);
   await poll(true);

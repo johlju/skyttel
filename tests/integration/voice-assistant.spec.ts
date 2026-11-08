@@ -291,7 +291,7 @@ test('TAL-08: nödvändiga frågor finns i samtalet och fel visas i en samtalsno
     await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
     await closeConversationText(page);
     await expect(page.getByRole('region', { name: 'Samtalsnotis' })).toContainText(
-      'Skyttel kunde inte slutföra uppdraget',
+      'Modellen är tillfälligt otillgänglig. Valet är kvar.',
     );
     await openConversationText(page);
     await panel.getByRole('button', { name: 'Nytt samtal' }).click();

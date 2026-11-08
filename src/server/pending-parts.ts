@@ -302,6 +302,16 @@ export function pendingParts(state: PendingPartsState = pendingPartsState()) {
         part.revision++;
       }
     },
+    withdrawMessage(messageId: string) {
+      for (const part of state.parts)
+        if (
+          active(part) &&
+          (part.messageId === messageId || part.evidence?.messageId === messageId)
+        ) {
+          part.status = 'withdrawn';
+          part.revision++;
+        }
+    },
     discard() {
       for (const part of state.parts)
         if (active(part) && (part.kind === 'change' || part.dependsOnDraft)) {

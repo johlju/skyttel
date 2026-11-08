@@ -626,12 +626,23 @@ test.each([
         })
       ).status(),
     ).toBe(202);
+    const waiting: TextAssistantView = await (await browser.get(endpoint)).json();
+    expect(waiting.queuedMessages).toBe(1);
+    expect(model.requests).toHaveLength(1);
+    expect(
+      (
+        await post(`${endpoint}/abandon-work`, {
+          revision: waiting.revision,
+          requestId: 'unfinished-explanation',
+        })
+      ).status(),
+    ).toBe(202);
     await expect
       .poll(async () => {
         const later: TextAssistantView = await (await browser.get(endpoint)).json();
         return later.phase === 'ready' && later.questions;
       })
-      .toEqual([...(question ? [question] : []), 'Vilken sak vill du läsa om?']);
+      .toEqual(['Vilken sak vill du läsa om?']);
     const original: TextAssistantView = await (
       await browser.get(`${endpoint}/messages/unfinished-explanation`)
     ).json();
@@ -654,10 +665,7 @@ test.each([
     const later: TextAssistantView = await (
       await browser.get(`${endpoint}/messages/later-question`)
     ).json();
-    expect(later.questions).toEqual([
-      ...(question ? [question] : []),
-      'Vilken sak vill du läsa om?',
-    ]);
+    expect(later.questions).toEqual(['Vilken sak vill du läsa om?']);
     expect(later.newQuestions).toEqual(['Vilken sak vill du läsa om?']);
     expect(later.error).toBeUndefined();
     expect(later.requiredNotice).toBeUndefined();

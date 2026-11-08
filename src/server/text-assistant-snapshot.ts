@@ -2,7 +2,7 @@ import type { TextAssistantView } from '../shared/text-assistant.js';
 
 type RecoveryView = Pick<
   TextAssistantView,
-  'paused' | 'expiresAt' | 'conversation' | 'queuedRequests' | 'unfinishedRequests'
+  'paused' | 'expiresAt' | 'conversation' | 'queuedRequests' | 'unfinishedRequests' | 'workFailure'
 >;
 
 /** Task status is always current; completed turns retain only a reply-prefix index. */
@@ -23,6 +23,7 @@ export function captureAssistantResult(
     conversation: _conversation,
     queuedRequests: _queuedRequests,
     unfinishedRequests: _unfinishedRequests,
+    workFailure: _workFailure,
     ...view
   } = current;
   return {
@@ -43,6 +44,7 @@ export function restoreAssistantResult(
     conversation: current.conversation,
     queuedRequests: current.queuedRequests,
     unfinishedRequests: current.unfinishedRequests,
+    workFailure: current.workFailure,
     phase: current.paused ? current.phase : snapshot.view.phase,
     tasks: current.tasks,
     completedReplies:

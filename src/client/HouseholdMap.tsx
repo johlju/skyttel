@@ -1159,7 +1159,9 @@ export function HouseholdMap({
   const securityReference =
     conversation.session?.securityReference ??
     conversation.session?.completedReplies?.at(-1)?.securityReference;
+  const workFailure = !conversation.session?.paused ? conversation.session?.workFailure : undefined;
   const noticeState = useConversationNotice({
+    workFailure,
     batchPending: conversation.session?.batchPending,
     contextSummaryFailure: conversation.session?.contextSummaryFailure,
     conditions: {
@@ -1170,7 +1172,7 @@ export function HouseholdMap({
       ),
       disconnectedIdle: Boolean(!conversation.revokedHere && conversation.disconnected && !ongoing),
       unavailable: !conversation.revokedHere && conversation.available === false,
-      taskFailed: Boolean(conversation.taskFailed && !securityReference),
+      taskFailed: Boolean((conversation.taskFailed || workFailure) && !securityReference),
       actionBlocked: Boolean(securityReference),
       consentRevoked: Boolean(conversation.consentRevoked),
       contextFull: conversation.session?.contextSummaryState === 'failed',
@@ -1202,15 +1204,44 @@ export function HouseholdMap({
             ? () => void conversation.recover()
             : noticeState.notice.id === 'contextFull'
               ? () => void conversation.newConversation()
-              : undefined
+              : noticeState.notice.id === 'taskFailed' && workFailure?.retry
+                ? () => void conversation.retryWork?.()
+                : undefined
       }
+      actionPending={conversation.pending}
+      restoreActionFocus={noticeState.notice.id === 'taskFailed' && Boolean(workFailure)}
       focusAfterRemoval={() =>
         active
-          ? (workspace.current?.querySelector<HTMLElement>('.workspace-talk') ?? null)
+          ? ((textViewVisible && workFailure
+              ? workspace.current?.querySelector<HTMLElement>('.text-view-message textarea')
+              : workspace.current?.querySelector<HTMLElement>('.workspace-talk')) ?? null)
           : document.querySelector<HTMLElement>('.settings-return')
       }
       inline={textViewVisible && active}
-    />
+    >
+      {noticeState.notice.id === 'taskFailed' && workFailure && (
+        <>
+          <details>
+            <summary>Oavslutad begäran</summary>
+            <p>{workFailure.request}</p>
+          </details>
+          <button
+            type="button"
+            disabled={conversation.pending}
+            onClick={() => void conversation.abandonWork?.()}
+          >
+            Avstå från det oavslutade arbetet
+          </button>
+          <button
+            type="button"
+            disabled={conversation.pending}
+            onClick={() => void conversation.cancel()}
+          >
+            Stoppa allt
+          </button>
+        </>
+      )}
+    </ConversationNoticeCard>
   );
   const voiceBox = (
     <VoiceBox

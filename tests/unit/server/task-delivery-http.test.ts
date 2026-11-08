@@ -6,7 +6,7 @@ import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
 import { liveProvider, voiceAnswerParts } from '../../support/live-provider.js';
 import { advanceActiveLogin } from '../../support/session-time.js';
-import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
+import { modelMessage, modelTool, readOnlyScope, textModel } from '../../support/text-model.js';
 
 type Socket = {
   on(event: 'message' | 'open' | 'error' | 'close', callback: (data: unknown) => void): void;
@@ -122,6 +122,62 @@ async function arrange(
     },
   };
 }
+
+test.each([
+  { source: 'text', deliveryAudio: true },
+  { source: 'voice', deliveryAudio: false },
+] as const)(
+  'explicit retry of $source input uses current deliveryAudio=$deliveryAudio without repeating model work',
+  async ({ source, deliveryAudio }) => {
+    const model = textModel(() => {
+      if (model.requests.length === 1) throw new Error('Controlled initial failure');
+      return [modelMessage('Det fullständiga återförsökssvaret.')];
+    }, readOnlyScope);
+    const fixture = await arrange(model);
+    const requestId = 'retry-current-delivery';
+    expect(
+      (
+        await fixture.post(
+          requestId,
+          source === 'voice' ? { voiceContext: 'Beskriv hela svaret.' } : {},
+        )
+      ).status(),
+    ).toBe(202);
+    await expect
+      .poll(async () => (await (await browser.get(fixture.endpoint)).json()).workFailure?.requestId)
+      .toBe(requestId);
+    const before = fixture.channel.messages.length;
+    const view = await (await browser.get(fixture.endpoint)).json();
+    expect(model.requests).toHaveLength(1);
+    const retried = await browser.post(`${fixture.endpoint}/retry-work`, {
+      headers: { origin: app.origin },
+      data: {
+        ...approvedForVisit,
+        revision: view.revision,
+        requestId,
+        deliveryConnectionId: fixture.channel.id,
+        deliveryAudio,
+      },
+    });
+    expect(retried.status(), await retried.text()).toBe(202);
+    await expect
+      .poll(() =>
+        fixture.channel.messages
+          .slice(before)
+          .find((item) => item.taskId === requestId && item.state === 'awaiting-receipt'),
+      )
+      .toBeTruthy();
+    const delivered = fixture.channel.messages
+      .slice(before)
+      .find((item) => item.taskId === requestId && item.state === 'awaiting-receipt');
+    expect(delivered?.audio).toBe(deliveryAudio);
+    expect(delivered?.text).toContain('Det fullständiga återförsökssvaret.');
+    expect(model.requests).toHaveLength(2);
+    fixture.channel.socket.send(
+      JSON.stringify({ type: 'received', taskId: requestId, text: delivered?.text }),
+    );
+  },
+);
 
 test.each(['text', 'voice'] as const)(
   'a completed %s result and its frozen delivery survive the next FIFO task before polling',
@@ -274,6 +330,49 @@ test('an incomplete provider answer fails delivery and never presents its prefix
       (item) => item.state === 'awaiting-receipt' || item.state === 'received',
     ),
   ).toBe(false);
+});
+
+test('an incomplete model result pauses the later queue until explicit recovery instead of reporting draft drift', async () => {
+  let release = () => {};
+  let entered = () => {};
+  const started = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const model = textModel(async () => {
+    if (model.requests.length === 1) {
+      entered();
+      await held;
+    }
+    return [modelMessage('Ett ännu inte fullständigt svar.')];
+  }, readOnlyScope);
+  const fixture = await arrange({
+    ...model,
+    provider: async (input, init) => {
+      const body = JSON.parse(String(init?.body));
+      const response = await model.provider(input, init);
+      if (!body.instructions.startsWith('SKYTTEL_TURN_') && model.requests.length === 1)
+        return Response.json({ ...(await response.json()), status: 'incomplete' });
+      return response;
+    },
+  });
+  try {
+    expect((await fixture.post('incomplete-first')).status()).toBe(202);
+    await started;
+    expect((await fixture.post('later-queued')).status()).toBe(202);
+    release();
+    await expect
+      .poll(async () => {
+        const view = await (await browser.get(fixture.endpoint)).json();
+        return [view.phase, view.queuedMessages, view.workFailure?.code];
+      })
+      .toEqual(['error', 1, 'assistant_provider_failed']);
+    expect(model.requests).toHaveLength(1);
+  } finally {
+    release();
+  }
 });
 
 test('the complete frozen fallback contains every follow-up, conversation part and verified draft/save status', async () => {

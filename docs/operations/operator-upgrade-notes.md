@@ -28,6 +28,21 @@ end and expiry remove its text and unfinished work. Draft proposals and
 registered save attempts remain separate. Verify an unknown save outcome
 before further changes; conversation deletion does not clear its barrier.
 
+### Keep failed conversation work paused
+
+After rollout, use synthetic data to verify that a model failure keeps
+later requests queued, including after a restart and on another device.
+Changing the selected model or restoring provider access must not start
+work. The user must choose retry or abandon for the unfinished request.
+A retry uses current facts and the selected model. It must preserve
+completed changes and must not renew an earlier revoked save request.
+
+Keep unknown operation outcomes blocked until status recovery confirms
+the original operation. A known result can leave an explanation or other
+work unfinished; status recovery must not start that work. Use diagnostic
+references, model, effort, category and time for support. Do not collect
+conversation content or credentials in these diagnostics.
+
 ### Preserve operation recovery state
 
 Preserve the installation database during rollout. After rollout, use

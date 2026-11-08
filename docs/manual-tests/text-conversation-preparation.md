@@ -28,6 +28,98 @@ Behåll låset under den interaktiva körningen. Fysiska telefoner använder
 i stället för denna installation på loopback. Inga verkliga leverantörsanrop
 utförs av den kontrollerade installationen.
 
+## Återförsök efter modellfel
+
+TEXT-18 använder en ny kontrollerad **röstinstallation**, även för de
+skrivna stegen. Logga in som Alex och skapa Textprov. Lägg Lo Exempel,
+Person, med beskrivningen Påhittad uppgift i utkastet genom formuläret.
+Starta text genom det vanliga medgivandet och ställ terminalen så här:
+
+```text
+scope-work
+response-required off
+hold-check on
+```
+
+Låt användaren skicka det första uppdraget. Vid dess `held`:
+
+```text
+tool REQUEST read_my_draft {}
+```
+
+Kopiera Lo-förslagets `id`, `baseRevision` och hela `after` från nästa
+`lastToolResult`, inklusive typ och beskrivning. Kalla dessa `LO`, `BASE`
+och `VALUE`. Ändra bara namnet i `VALUE` till Lo Lind. `TYPE` är samma
+typ-ID som i värdet. Använd de aktuella versionerna i varje begäran:
+
+<!-- markdownlint-disable MD013 -->
+```text
+tool REQUEST submit_changes {"version":VERSION,"contentVersion":CONTENT,"completion":"draft","continueResponse":true,"operations":[{"name":"propose_object","arguments":{"id":"LO","baseRevision":BASE,"value":VALUE}}]}
+```
+<!-- markdownlint-enable MD013 -->
+
+Nästa hållna begäran är kontrollen av den föreslagna ändringen. Läs dess
+aktuella uppdrag och operation, och släpp den så här:
+
+```text
+reply REQUEST {"decision":"allow","complete":true,"fulfillsRequest":false}
+```
+
+Kräv att nästa vanliga `held` visar genomförd Lo Lind i verktygsresultatet.
+Låt användaren lägga sin senare fråga i kön innan `fail REQUEST` släpper
+detta modellfel. Behåll det ursprungliga uppdraget och vänta på användarens
+uttryckliga återförsök; modellvalet i sig ska inte ge något nytt `held`.
+
+Vid återförsök lämnas både samma Lo-operation och Mira. Den genomförda
+Lo-operationen ska inte köras en gång till. Kopiera åter Lo-värdet exakt:
+
+<!-- markdownlint-disable MD013 -->
+```text
+tool REQUEST submit_changes {"version":VERSION,"contentVersion":CONTENT,"completion":"draft","operations":[{"name":"propose_object","arguments":{"id":"LO","baseRevision":BASE,"value":VALUE}},{"name":"propose_object","arguments":{"id":"retry-mira","baseRevision":null,"value":{"typeId":"TYPE","name":"Mira"}}}]}
+```
+<!-- markdownlint-enable MD013 -->
+
+Vid den hållna ändringskontrollen byter operatören scope för den **senare
+köfrågan**, sedan släpps kontrollen för det redan avgränsade återförsöket:
+
+```text
+scope-read
+reply REQUEST {"decision":"allow","complete":true,"fulfillsRequest":true}
+```
+
+Släpp nästa vanliga `held` med `reply REQUEST Ett utkast innehåller dina
+osparade ändringar.` Användaren läser Lo Lind, Mira och att en ny
+sparbegäran behövs. Kartan ska fortfarande sakna sparade objekt.
+
+För det talade steget, slå på mikrofonen i gränssnittet och kör:
+
+```text
+scope-work
+response-required on
+user Ändra Mira till Mira Lind. Beskriv sedan hushållets typer.
+delegate
+```
+
+Hämta `read_my_draft` igen och kopiera hela aktuella Mira-värdet. Byt
+endast namnet till Mira Lind. Använd samma `submit_changes`-form med en
+Mira-operation, `completion:"draft"` och `continueResponse:true`. Släpp
+dess kontroll med `fulfillsRequest:false` som tidigare. Kräv ett verkligt
+Mira Lind-förslag i nästa resultat. Låt användaren lägga den senare
+textfrågan i kön innan detta nästa modellsteg släpps med `fail REQUEST`.
+
+Efter felet och före användarens uttryckliga avstående:
+
+```text
+scope-read
+response-required off
+```
+
+Avstående ska nu släppa bara den senare textfrågan. Släpp dess vanliga
+`held` med `reply REQUEST Kartan har ännu inga sparade objekt.` Läs båda
+bevarade förslagen i gränssnittet. Slå av mikrofonen, avsluta installationen
+med `quit`, kräv `closed` och stäng provfönstret. Ingen fysisk röst eller
+verklig leverantör har använts.
+
 ## Tappat ändringsbesked
 
 TEXT-16 använder en ny kontrollerad textinstallation. Logga in som Alex,
@@ -648,6 +740,9 @@ TEXTMOBIL-03: före användarens stopp aktiverar operatören
 `window.skyttelVoiceFixture.setSound('remote', true)`; därefter körs
 `fail REQUEST` vid textfelet. Återställ ljudsignalen till `false` efter
 stoppkontrollen. TEXTMOBIL-04 får `fail REQUEST` vid första meddelandet.
+I båda fallen inväntar operatören användarens uttryckliga avstående; det
+startar inget nytt modellarbete. TEXTMOBIL-04 får ett nytt `fail REQUEST`
+för **Fortsätt med text.** efter avståendet, med fältets fokus kvar.
 TEXTMOBIL-05: kör `user Beskriv utkastet.` och `delegate`, håll svaret för
 arbetsstatusen, släpp `reply REQUEST Lo-förslaget ligger kvar i utkastet.`.
 Håll nästa skrivna uppdrag genom alla tre storleksbyten; släpp det efteråt.

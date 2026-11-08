@@ -73,7 +73,8 @@ test('consecutive captures exclude pending prior audio and retain the new render
             const handler = this.onmessage;
             deliver = (event) => handler?.call(this, event);
             this.onmessage = (event) => {
-              if (event.data.snapshot) holding = true;
+              // Only the prior capture supplies the queued PCM for this transition.
+              if (captures === 1 && event.data.snapshot) holding = true;
               if (holding && event.data.pcm) {
                 pending.push(event);
                 evidence.held++;

@@ -1948,15 +1948,20 @@ test.each(['latest_save', 'save'])(
 );
 
 test.each([
-  { label: 'missing content', result: { isError: false } },
-  { label: 'non-text content', result: { content: [{ type: 'image', data: 'private-result' }] } },
+  { label: 'missing content', retained: true, result: { isError: false } },
+  {
+    label: 'non-text content',
+    retained: true,
+    result: { content: [{ type: 'image', data: 'private-result' }] },
+  },
   {
     label: 'unclassified error',
+    retained: false,
     result: { isError: true, content: [{ type: 'text', text: '{}' }] },
   },
 ])(
   'a malformed checked-tool response with $label fails privately and preserves work',
-  async ({ result }) => {
+  async ({ result, retained }) => {
     const model = textModel(
       () =>
         model.requests.length === 1
@@ -1994,10 +1999,36 @@ test.each([
     expect(failed.phase).toBe('error');
     expect(failed.receipt).toBeUndefined();
     expect(failed.operations).toEqual([]);
-    const report = await settled(await send(failed, 'Vad var felet?'));
+    expect(await readMap()).toEqual(before);
+    if (retained)
+      expect(failed.workFailure).toMatchObject({
+        request: 'Läs vilka typer som finns.',
+        code: 'assistant_provider_failed',
+      });
+    else expect(failed.workFailure).toBeUndefined();
+    const queued = await send(failed, 'Vad var felet?');
+    if (retained) {
+      // A later question waits behind failed work until the user explicitly
+      // abandons it; malformed tool data must not cause an automatic retry.
+      expect(queued.taskStatus).toBe('queued');
+      expect(queued.queuedMessages).toBe(1);
+      expect(model.requests).toHaveLength(1);
+      expect(await readMap()).toEqual(before);
+      const abandoned = await post(`${base}/text-assistant/${session.id}/abandon-work`, {
+        revision: queued.revision,
+        requestId: failed.workFailure?.requestId,
+      });
+      expect(abandoned.status(), await abandoned.text()).toBe(202);
+    }
+    const report = await settled(queued);
     expect(report).toMatchObject({ phase: 'ready', result: { kind: 'failure' } });
     expect(report.reply).toContain('Det senaste registrerade felbeskedet var:');
-    expect(JSON.stringify([report, model.requests])).not.toContain('private-result');
+    expect(JSON.stringify([failed, queued, report, model.requests])).not.toContain(
+      'private-result',
+    );
+    expect(model.requests).toHaveLength(2);
+    expect(report.receipt).toBeUndefined();
+    expect(report.operations).toEqual([]);
     expect(await readMap()).toEqual(before);
   },
 );

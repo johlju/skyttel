@@ -1,4 +1,4 @@
-import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type ReactNode, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { TextAssistantView } from '../shared/text-assistant.js';
 import {
   type ConversationNotice,
@@ -32,6 +32,7 @@ export function useConversationNotice({
   securityReference,
   contextSummaryFailure,
   batchPending,
+  workFailure,
 }: {
   conditions: ConversationNoticeConditions;
   ongoing: boolean;
@@ -41,6 +42,7 @@ export function useConversationNotice({
   securityReference?: string;
   contextSummaryFailure?: TextAssistantView['contextSummaryFailure'];
   batchPending?: boolean;
+  workFailure?: TextAssistantView['workFailure'];
 }) {
   const voiceSession = useContext(VoiceSessionContext);
   const [dismissed, setDismissed] = useState<Partial<Record<ConversationNotice['id'], string>>>({});
@@ -59,7 +61,10 @@ export function useConversationNotice({
   // retains at most one identity per known notice kind, rather than a history.
   const visibleConditions = { ...conditions };
   for (const definition of conversationNoticeDefinitions)
-    if (dismissed[definition.id] === identityFor(definition))
+    if (
+      !(definition.id === 'taskFailed' && workFailure) &&
+      dismissed[definition.id] === identityFor(definition)
+    )
       visibleConditions[definition.id] = false;
   const selected = firstConversationNotice(visibleConditions);
   const definition =
@@ -79,7 +84,13 @@ export function useConversationNotice({
                   ? contextSummaryFailure.message
                   : `Skyttel kunde inte sammanfatta samtalet. ${contextSummaryFailure.message} Samtalstexten och utkastet ligger kvar. Ett nytt samtal tömmer samtalstexten och kontexten och använder ditt senaste personliga modellval. Det löser inte modellfelet och ändrar inte kontots åtkomst.`,
             }
-          : selected;
+          : selected?.id === 'taskFailed' && workFailure
+            ? {
+                ...selected,
+                text: `${workFailure.message} Det oavslutade arbetet och senare kö väntar. Genomförda ändringar finns kvar.`,
+                action: workFailure.retry,
+              }
+            : selected;
   const reference =
     definition?.id === 'actionBlocked'
       ? securityReference
@@ -98,7 +109,9 @@ export function useConversationNotice({
   useEffect(() => {
     if (!candidate) setUsedRequest(requested);
   }, [candidate, requested]);
-  const closable = Boolean(notice && (notice.kind === 'event' || !ongoing));
+  const closable = Boolean(
+    notice && !(notice.id === 'taskFailed' && workFailure) && (notice.kind === 'event' || !ongoing),
+  );
   const before = useRef<{ notice: ConversationNotice | null; identity: string }>({
     notice: null,
     identity: '',
@@ -167,6 +180,9 @@ export function ConversationNoticeCard({
   onAction,
   focusAfterRemoval,
   inline = false,
+  actionPending = false,
+  restoreActionFocus = false,
+  children,
 }: {
   notice: ConversationNotice;
   closable: boolean;
@@ -175,16 +191,25 @@ export function ConversationNoticeCard({
   focusAfterRemoval: () => HTMLElement | null;
   /** Visual placement changes; the reading order and card identity stay put. */
   inline?: boolean;
+  actionPending?: boolean;
+  /** Recovery actions can disable their focused button before removing the card. */
+  restoreActionFocus?: boolean;
+  children?: ReactNode;
 }) {
   const element = useRef<HTMLElement>(null);
   const restore = useRef(focusAfterRemoval);
+  const actionRestore = useRef<(() => HTMLElement | null) | undefined>(undefined);
   restore.current = focusAfterRemoval;
-  useLayoutEffect(
-    () => () => {
-      if (element.current?.contains(document.activeElement)) restore.current()?.focus();
-    },
-    [],
-  );
+  useLayoutEffect(() => {
+    const card = element.current;
+    return () => {
+      if (
+        card?.contains(document.activeElement) ||
+        (actionRestore.current && document.activeElement === document.body)
+      )
+        (actionRestore.current ?? restore.current)()?.focus();
+    };
+  }, []);
   return (
     <section
       ref={element}
@@ -192,6 +217,10 @@ export function ConversationNoticeCard({
       aria-label="Samtalsnotis"
       data-kind={notice.kind}
       data-inline={inline || undefined}
+      onClickCapture={() => {
+        if (restoreActionFocus && element.current?.contains(document.activeElement))
+          actionRestore.current = focusAfterRemoval;
+      }}
     >
       <span className="conversation-notice-symbol" aria-hidden="true">
         <svg
@@ -209,10 +238,11 @@ export function ConversationNoticeCard({
       <div className="conversation-notice-content">
         <p>{notice.text}</p>
         {notice.action && (
-          <button type="button" onClick={onAction}>
+          <button type="button" onClick={onAction} disabled={actionPending}>
             {notice.action}
           </button>
         )}
+        {children}
       </div>
       {closable && (
         <button

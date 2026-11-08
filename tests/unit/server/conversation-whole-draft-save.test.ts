@@ -124,6 +124,22 @@ test('an old whole-draft approval cannot save newer proposals and a rejected att
   const recovered = await post(`text-assistant/${session.id}/recover`, {});
   expect(recovered.status(), await recovered.text()).toBe(200);
   session = await recovered.json();
+  expect(session.workFailure?.request).toBe('Spara hela utkastet.');
+  const retainedDraft = (await map()).draft;
+  const abandoned = await post(`text-assistant/${session.id}/abandon-work`, {
+    revision: session.revision,
+    requestId: session.workFailure?.requestId,
+  });
+  expect(abandoned.status(), await abandoned.text()).toBe(202);
+  session = await abandoned.json();
+  expect(session.workFailure).toBeUndefined();
+  expect(session.receipt).toBeUndefined();
+  expect((await map()).draft).toEqual(retainedDraft);
+  expect((await map()).objects).toEqual([]);
+  expect((await (await client.get(`${base}/map/operations`)).json()).operations).toEqual(
+    rejected.operations,
+  );
+  expect((await (await client.get(`${base}/map/history`)).json()).history).toEqual([]);
   expect((await send('Vad finns i utkastet?')).receipt).toBeUndefined();
   expect((await map()).objects).toEqual([]);
   const saved = await send('Spara hela utkastet.');
@@ -166,20 +182,23 @@ async function setup(
   session = await (await post('text-assistant', approvedForVisit)).json();
 }
 async function send(text: string) {
+  const requestId = crypto.randomUUID();
   const response = await post(`text-assistant/${session.id}/messages`, {
     revision: session.revision,
     draftVersion: session.review.version,
     contentVersion: session.review.contentVersion,
-    requestId: crypto.randomUUID(),
+    requestId,
     text,
   });
   expect(response.status(), await response.text()).toBe(202);
   await expect
     .poll(async () => {
-      session = await read();
-      return session.phase;
+      session = await (
+        await client.get(`${base}/text-assistant/${session.id}/messages/${requestId}`)
+      ).json();
+      return session.taskStatus;
     })
-    .not.toBe('working');
+    .toBe('completed');
   return session;
 }
 async function stage(route: string, data: object) {

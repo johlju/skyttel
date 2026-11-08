@@ -82,8 +82,13 @@ test('TEXT-SCOPE-01: stoppad åtgärd visar felreferens och behåller utkastet',
         .getByLabel('Meddelande till Skyttel', { exact: true })
         .fill('Prova ett vanligt fel.');
       await page.getByRole('button', { name: 'Skicka', exact: true }).click();
-      await expect(notice).toContainText('Skyttel kunde inte slutföra uppdraget. Försök igen.');
-      await notice.getByRole('button', { name: 'Stäng notisen', exact: true }).click();
+      await expect(notice).toContainText('Modellen är tillfälligt otillgänglig. Valet är kvar.');
+      const calls = model.requests.length;
+      await notice
+        .getByRole('button', { name: 'Avstå från det oavslutade arbetet', exact: true })
+        .click();
+      await expect(notice).toHaveCount(0);
+      expect(model.requests).toHaveLength(calls);
     }
     await page.getByLabel('Meddelande till Skyttel', { exact: true }).fill('Mitt nästa uppdrag');
     await expect(page.getByRole('button', { name: 'Skicka', exact: true })).toBeEnabled();

@@ -422,7 +422,7 @@ testfallet “TEXTMOBIL-03: röstrutan och notisen lämnar kartans nederkant fri
     "spec": "tests/integration/mobile-conversation.spec.ts",
     "caseId": "TEXTMOBIL-03"
   },
-  "reference": "390 × 844 emulerad pekare; hörntryck, stopp och notisstängning utan överlapp.",
+  "reference": "390 × 844 emulerad pekare; hörntryck, stopp och uttryckligt avstående utan överlapp.",
   "outcomes": [
     "Nå kartans kontroller och samtalets kontroller utan överlapp."
   ]
@@ -438,21 +438,23 @@ testfallet “TEXTMOBIL-03: röstrutan och notisen lämnar kartans nederkant fri
 2. Låt operatören förbereda syntetisk fjärrljudaktivitet. Aktivera Avbryt
    nära stoppikonens övre kant. Stoppkontrollen försvinner.
 3. Öppna textvyn, skicka **Ett kontrollerat fel.** och låt operatören ge
-   leverantörsfel. Läs felnotisen. Aktivera Stäng notisen nära dess övre kant.
-   Notisen stängs och fältet finns kvar.
+   leverantörsfel. Läs felnotisen. Aktivera
+   **Avstå från det oavslutade arbetet** nära knappens övre kant. Notisen
+   försvinner och meddelandefältet får fokus.
 
 **Förväntat resultat:**
 
 - Röstrutan står ovanför kartans nedersta synliga kontroller och
   återkoppling när textvyn är stängd. Med textvyn öppen står röstrutan
-  ovanför fältet, utan att täcka notisens stängknapp.
-- Stoppikonens tryckyta och notisens stängknapp är 44×44 px på mobil
-  enhet. Stoppikonens synliga cirkel behåller sitt utseende.
-  Automation mäter tryckytorna och trycker utanför cirkelns synliga kant.
+  ovanför fältet, utan att täcka notisens återhämtningsknappar.
+- Stoppikonens tryckyta är 44×44 px på mobil enhet. Avståendets tryckyta är
+  minst 44 px i båda riktningarna. Stoppikonens synliga cirkel behåller sitt
+  utseende. Automation mäter tryckytorna och trycker utanför kontrollernas
+  synliga övre kant.
 
-### TEXTMOBIL-04: en lång notis rullar och kan stängas i kort fönster
+### TEXTMOBIL-04: en lång notis rullar och tillåter avstående i kort fönster
 
-**Syfte:** Nå notisens innehåll och stängknapp utan att tappa fältet.
+**Syfte:** Nå notisens innehåll och avstående utan att tappa fältet.
 
 **Användare:** Alex.
 
@@ -461,7 +463,7 @@ Lo-förslag. Använd fallets exakta emulerade konfiguration.
 
 **Integrationstest:**
 [mobile-conversation.spec.ts](../../tests/integration/mobile-conversation.spec.ts),
-testfallet “TEXTMOBIL-04: en lång notis rullar och kan stängas i kort fönster”.
+testfallet “TEXTMOBIL-04: en lång notis rullar och tillåter avstående i kort fönster”.
 
 **Separat förberedelse:**
 [Hållna svar, syntetiska medier och tekniska jämförelser](text-conversation-preparation.md).
@@ -474,9 +476,9 @@ testfallet “TEXTMOBIL-04: en lång notis rullar och kan stängas i kort fönst
     "spec": "tests/integration/mobile-conversation.spec.ts",
     "caseId": "TEXTMOBIL-04"
   },
-  "reference": "844 × 190 emulerad pekare; intern notisrullning, tangentbordsstängning och fortsatt text.",
+  "reference": "844 × 190 emulerad pekare; intern notisrullning, uttryckligt avstående med tangentbord och fortsatt text.",
   "outcomes": [
-    "Nå notisens innehåll och stängknapp utan att tappa fältet."
+    "Nå notisens innehåll och avstående utan att tappa fältet."
   ]
 }
 ```
@@ -487,14 +489,15 @@ testfallet “TEXTMOBIL-04: en lång notis rullar och kan stängas i kort fönst
 
 1. Vid 844 × 190 med emulerad pekare: starta med text, skicka
    **Ett kontrollerat fel.** och låt operatören ge leverantörsfel.
-2. Läs notisen och rulla inuti den till slutet. Nå **Stäng notisen**
-   med Tab och välj Enter. Notisen stängs trots rullningen.
+2. Läs notisen och rulla inuti den till slutet. Nå
+   **Avstå från det oavslutade arbetet** med Tab och välj Enter. Notisen
+   försvinner och fältet får fokus trots rullningen.
 3. Skriv **Fortsätt med text.** och välj Skicka. Fältet behåller fokus.
 
 **Förväntat resultat:**
 
 - Notisen rullar inom sin begränsade yta och flyttar inte bort fältet.
-  Stängknappen går att nå och har kvar sin tryckyta på 44×44 px.
+  Avståendet går att nå och har en tryckyta på minst 44 px i båda riktningarna.
 - Automation provar detta vid 844×190 px. Faktisk förstoring, fokus
   och VoiceOver med verkligt tangentbord provas separat.
 

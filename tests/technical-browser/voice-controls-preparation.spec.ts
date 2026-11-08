@@ -636,7 +636,12 @@ for (const { seeded, viewport } of references)
         'before deliberately failing the literal notice request',
       ).toBe('');
       child.stdin.write(`${failed.replace('REQUEST', rejected)}\n`);
-      await expect(notice).toContainText('Skyttel kunde inte slutföra uppdraget.');
+      await expect(notice).toContainText(
+        'Modellen är tillfälligt otillgänglig. Valet är kvar. Försök igen genom en egen handling när felet är löst.',
+      );
+      await expect(notice).toContainText(
+        'Det oavslutade arbetet och senare kö väntar. Genomförda ändringar finns kvar.',
+      );
       // This deliberate model failure emits one content-free operator diagnostic.
       // Exact fields reject transcripts, provider details and credentials; keep
       // the captured output unchanged through recovery and launcher shutdown.
@@ -655,13 +660,13 @@ for (const { seeded, viewport } of references)
       });
       expect(new Date(failureDiagnostic.at).toISOString()).toBe(failureDiagnostic.at);
       await expect(field).toBeFocused();
-      await notice.getByRole('button', { name: 'Stäng notisen', exact: true }).focus();
+      await notice.getByText('Oavslutad begäran', { exact: true }).click();
+      await expect(notice).toContainText('Ge ett förslag.');
+      await notice.getByRole('button', { name: 'Försök igen', exact: true }).focus();
       await page.keyboard.press('Enter');
-      await expect(microphoneButton(page)).toBeFocused();
-      await field.fill('Ett nytt försök.');
-      await send.click();
       await expect.poll(() => events.filter(({ event }) => event === 'held').length).toBe(2);
       await expect(notice).toHaveCount(0);
+      await expect(field).toBeFocused();
       const recovered = events.filter(({ event }) => event === 'held').at(-1)?.id;
       if (!recovered) throw new Error('Missing literal recovery request');
       child.stdin.write(`${answered.replace('REQUEST', recovered)}\n`);

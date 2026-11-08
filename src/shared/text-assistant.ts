@@ -67,6 +67,14 @@ export type RetainedConversation = {
   modelChoice: ConversationModelChoice;
 };
 export interface TextAssistantView {
+  /** Deliberate next steps for retained failed work, separate from unknown outcomes. */
+  workFailure?: {
+    requestId: string;
+    request: string;
+    code: string;
+    message: string;
+    retry?: string;
+  };
   /** Restored work never starts automatically. */
   paused?: boolean;
   expiresAt?: number;

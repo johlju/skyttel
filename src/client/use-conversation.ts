@@ -122,6 +122,8 @@ export type Conversation = {
   endConversation: () => Promise<void>;
   recover: () => Promise<void>;
   retry: (operationId: string) => Promise<void>;
+  retryWork?: () => Promise<void>;
+  abandonWork?: () => Promise<void>;
 };
 
 /**
@@ -1100,6 +1102,7 @@ export function useConversation({
     if (
       !current ||
       current.paused ||
+      current.workFailure?.code === 'assistant_draft_changed' ||
       revoking.current ||
       !text.trim() ||
       inputBlocked ||
@@ -1175,6 +1178,39 @@ export function useConversation({
           setTranscript((rows) => rows.filter((row) => row.id !== messageId));
         } else fail(failure);
       }
+    } finally {
+      if (mounted.current && epoch === requestEpoch.current) setPending(false);
+    }
+  }
+  async function resolveWork(action: 'retry' | 'abandon') {
+    const current = active.current;
+    if (!current?.workFailure || current.paused || pending || revoking.current) return;
+    const requestId = current.workFailure.requestId;
+    const epoch = ++requestEpoch.current;
+    setPending(true);
+    setError('');
+    try {
+      const connection =
+        action === 'retry' ? await delivery?.connect(`${path}/${current.id}`) : undefined;
+      if (epoch !== requestEpoch.current) return;
+      if (action === 'retry' && delivery && !connection) {
+        setError(deliveryUnavailableMessage);
+        return;
+      }
+      const result = await request<TextAssistantView>(`${path}/${current.id}/${action}-work`, {
+        revision: current.revision,
+        requestId,
+        ...(visitConsent ? { consent: { textVersion: conversationConsentTextVersion } } : {}),
+        deliveryConnectionId: connection?.id,
+        deliveryAudio: voiceConnected.current,
+      });
+      if (epoch !== requestEpoch.current) return;
+      const accepted = result.tasks?.find((task) => task.id === requestId)?.delivery;
+      if (accepted) connection?.observeAccepted(accepted);
+      setUnknown(false);
+      update(result);
+    } catch (failure) {
+      if (epoch === requestEpoch.current) fail(failure);
     } finally {
       if (mounted.current && epoch === requestEpoch.current) setPending(false);
     }
@@ -1415,6 +1451,8 @@ export function useConversation({
     },
     recover,
     retry: (operationId) => command('retry', { operationId }),
+    retryWork: () => resolveWork('retry'),
+    abandonWork: () => resolveWork('abandon'),
   };
 }
 

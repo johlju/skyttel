@@ -259,16 +259,16 @@ vid de angivna stegen. Utför UI-flödet en gång.
 
 **Förväntat resultat:**
 
-- Först visas **Skyttel kunde inte slutföra uppdraget. Försök igen.**
+- Först visas **Modellen är tillfälligt otillgänglig. Valet är kvar.**
   Otillgängligt samtal ersätter sedan detta besked och inaktiverar Skicka.
 - Kontaktavbrottet ersätter otillgängligheten. Bara en notis visas.
 - Efter återkomst syns otillgängligheten igen, tills operatören återställer
   samtalet. Uppdragsfelet syns då igen och texten finns kvar. Återkomsten till
   tillgängligt samtal läses upp i tur.
 
-### NOT-05: uppdragsfel försvinner vid stängning eller nytt försök
+### NOT-05: oavslutat modellarbete väntar på uttryckligt återförsök
 
-**Syfte:** Ge ett stängbart besked och bevara logiskt fokus.
+**Syfte:** Visa nästa steg för oavslutat modellarbete och bevara logiskt fokus.
 
 **Användare:** Alex.
 
@@ -292,7 +292,7 @@ vid de angivna stegen. Utför UI-flödet en gång.
   },
   "reference": "Chromium och kontrollerade text-/mediesvar enligt angiven separat förberedelse; faktisk röst eller uppläsning bedöms separat.",
   "outcomes": [
-    "Ge ett stängbart besked och bevara logiskt fokus."
+    "Visa nästa steg för oavslutat modellarbete och bevara logiskt fokus."
   ]
 }
 ```
@@ -301,22 +301,24 @@ vid de angivna stegen. Utför UI-flödet en gång.
 
 **Steg:**
 
-1. Skicka ett uppdrag och låt det misslyckas enligt tidslinjen. Kontrollera
-   fältets fokus.
-2. Välj **Stäng notisen** med tangentbord.
-3. Skicka ett nytt uppdrag och låt även detta misslyckas enligt tidslinjen.
-4. Skicka **Ett nytt försök.** Läs först medan svaret väntar och sedan det
-   förberedda svaret **Ett nytt svar.**.
+1. Skicka **Ge ett förslag.** och låt det misslyckas enligt tidslinjen.
+   Läs det klassificerade felet och kontrollera fältets fokus.
+2. Nå **Försök igen** med tangentbord och tryck Retur. Operatören släpper
+   ännu ett fel. Läs notisen igen och kontrollera fältets fokus.
+3. Aktivera **Försök igen** på nytt. Läs först medan svaret väntar och
+   sedan det förberedda svaret **Ett nytt svar.**.
 
 **Förväntat resultat:**
 
-- Notisen visar en varningstriangel och texten
-  **Skyttel kunde inte slutföra uppdraget. Försök igen.** Texten läses i tur.
-  Fältet behåller fokus när notisen visas.
-- Stängning återför fokus till **Prata med Skyttel**. Det andra felet ger ett
-  nytt stängbart besked.
-- Det tredje försöket tar bort notisen redan medan svaret väntar. Det nya svaret
-  står sedan i samtalstexten. Utkastet finns kvar.
+- Varningstriangeln och feltexten skiljer tillfälligt modellfel från
+  saknad åtkomst. Begäran och genomförda förslag bevaras. Senare kö väntar.
+- Notisen visar återförsök, **Oavslutad begäran**, avstående och
+  **Stoppa allt**. Den har ingen **Stäng notisen** som gömmer återstående
+  arbete. Fältet behåller fokus när felet visas.
+- Det uttryckliga återförsöket tar bort notisen medan arbetet pågår.
+  Fokus återgår till meddelandefältet när kontrollerna försvinner. Ett nytt
+  fel visar nästa steg igen. Svaret står sedan i samma samtal; utkastet
+  finns kvar.
 
 ### NOT-06: ett avslutat hinder kräver ett nytt tryck vid nästa avbrott
 
@@ -468,18 +470,18 @@ konfiguration före samma steg.
 1. Skicka **Ge ett förslag.** och låt det misslyckas enligt tidslinjen.
 2. Stäng textvyn. Läs notisen, röstrutan och kartans status.
 3. Fokusera **Skriv till Skyttel** och tryck Tab till röstrutans
-   **Modell och resonemang**. Tryck Tab igen och Retur på **Stäng notisen**.
+   **Modell och resonemang**. Tryck Tab till **Försök igen**, sedan till
+   **Oavslutad begäran** och **Avstå från det oavslutade arbetet**. Tryck Retur.
 
 **Förväntat resultat:**
 
 - På bred skärm står notisen i ett eget kort under röstrutan. På smal skärm står
   kortet ovanför röstrutan, över hela bredden. Symbolen står till vänster,
-  texten bredvid och stängknappen uppe till höger.
-- Ingen överlappning döljer röstrutan eller återkopplingen. Tab går från
-  textknappen via **Modell och resonemang** till notisens stängknapp när
-  ingen Avbryt-knapp finns.
-- Stängning återför fokus till mikrofonknappen. Mikrofonen och **Lyssnar** finns
-  kvar; att stänga ett felbesked avslutar inget samtal.
+  texten och de uttryckliga nästa stegen bredvid.
+- Ingen överlappning döljer röstrutan eller återkopplingen. Tab når
+  återförsök, den gamla begäran och avstående efter **Modell och resonemang**.
+- Avstående återför fokus till mikrofonknappen. Mikrofonen och **Lyssnar**
+  finns kvar. Det aktuella utkastet bevaras och samtalet fortsätter.
 
 ## Symboler och läsbarhet
 
@@ -941,7 +943,7 @@ konfiguration före den första UI-handlingen. Välj 820 × 1180.
   "reference": "Chromium 820 × 1180; påslagen mikrofon och kontrollerat uppdragsfel.",
   "outcomes": [
     "Röstruta, notis och kartåterkoppling täcker inte varandra.",
-    "Tab når Stäng notisen; stängning återför fokus utan att avsluta samtalet."
+    "Tab når avstående; handlingen återför fokus utan att avsluta samtalet."
   ]
 }
 ```
@@ -959,7 +961,7 @@ konfiguration före den första UI-handlingen. Välj 820 × 1180.
 **Förväntat resultat:**
 
 - Röstruta, notis och kartåterkoppling täcker inte varandra.
-- Tab når Stäng notisen; stängning återför fokus utan att avsluta samtalet.
+- Tab når avstående; handlingen återför fokus utan att avsluta samtalet.
 
 ### NOT-22: röstruta och uppdragsnotis vid 390 × 844
 
@@ -985,7 +987,7 @@ konfiguration före den första UI-handlingen. Välj 390 × 844.
   "reference": "Chromium 390 × 844; påslagen mikrofon och kontrollerat uppdragsfel.",
   "outcomes": [
     "Röstruta, notis och kartåterkoppling täcker inte varandra.",
-    "Tab når Stäng notisen; stängning återför fokus utan att avsluta samtalet."
+    "Tab når avstående; handlingen återför fokus utan att avsluta samtalet."
   ]
 }
 ```
@@ -1003,7 +1005,7 @@ konfiguration före den första UI-handlingen. Välj 390 × 844.
 **Förväntat resultat:**
 
 - Röstruta, notis och kartåterkoppling täcker inte varandra.
-- Tab når Stäng notisen; stängning återför fokus utan att avsluta samtalet.
+- Tab når avstående; handlingen återför fokus utan att avsluta samtalet.
 
 ### NOT-23: symbolkontrast i mörkt tema
 

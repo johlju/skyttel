@@ -17,7 +17,9 @@ const disconnectedActive =
 const disconnectedIdle = 'Ingen kontakt med Skyttel. Försök igen när kontakten är tillbaka.';
 const unavailable =
   'Samtal med Skyttel är inte tillgängligt just nu. Kontakta administratören om det fortsätter.';
-const failed = 'Skyttel kunde inte slutföra uppdraget. Försök igen.';
+const failed =
+  'Modellen är tillfälligt otillgänglig. Valet är kvar. Försök igen genom en egen handling när felet är löst.';
+const failedAnnouncement = `${failed} Det oavslutade arbetet och senare kö väntar. Genomförda ändringar finns kvar. Försök igen.`;
 // Availability and recovery can wait for the five-second HTTP check plus its response.
 const networkRecheckTimeout = 10_000;
 const notice = (page: Page) => page.getByRole('region', { name: 'Samtalsnotis', exact: true });
@@ -379,7 +381,7 @@ test('NOT-04: bruten kontakt går före otillgängligt samtal och uppdragsfel', 
   }
 });
 
-test('NOT-05: uppdragsfelet kan stängas eller försvinna vid nästa försök och fokus stannar logiskt', async ({
+test('NOT-05: oavslutat modellarbete väntar på uttryckligt återförsök och fokus stannar logiskt', async ({
   page,
 }) => {
   let fail = true;
@@ -398,18 +400,20 @@ test('NOT-05: uppdragsfelet kan stängas eller försvinna vid nästa försök oc
     await field(page).fill('Ge ett förslag.');
     await page.getByRole('button', { name: 'Skicka', exact: true }).click();
     await expect(notice(page)).toContainText(failed);
-    await expect(polite(page)).toHaveText(failed);
+    await expect(polite(page)).toHaveText(failedAnnouncement);
     await expect(field(page)).toBeFocused();
-    await notice(page).getByRole('button', { name: 'Stäng notisen' }).click();
-    await expect(notice(page)).toHaveCount(0);
-    await expect(microphoneButton(page)).toBeFocused();
-    await field(page).fill('Försök igen.');
-    await page.getByRole('button', { name: 'Skicka', exact: true }).click();
+    await expect(notice(page).getByRole('button', { name: 'Stäng notisen' })).toHaveCount(0);
+    const retry = notice(page).getByRole('button', { name: 'Försök igen', exact: true });
+    await retry.focus();
+    await page.keyboard.press('Enter');
+    await expect.poll(() => model.requests.length).toBe(2);
     await expect(notice(page)).toContainText(failed);
+    await expect(field(page)).toBeFocused();
     fail = false;
-    await field(page).fill('Ett nytt försök.');
-    await page.getByRole('button', { name: 'Skicka', exact: true }).click();
+    await retry.focus();
+    await page.keyboard.press('Enter');
     await expect(notice(page)).toHaveCount(0);
+    await expect(field(page)).toBeFocused();
     await expect.poll(() => Boolean(release)).toBe(true);
     release?.([modelMessage('Ett nytt svar.')]);
     await expect(textView(page).getByRole('log')).toContainText('Ett nytt svar.');
@@ -605,11 +609,22 @@ for (const viewport of [
         voiceBox(page).getByRole('button', { name: /^Modell och resonemang:/ }),
       ).toBeFocused();
       await page.keyboard.press('Tab');
-      await expect(notice(page).getByRole('button', { name: 'Stäng notisen' })).toBeFocused();
+      await expect(
+        notice(page).getByRole('button', { name: 'Försök igen', exact: true }),
+      ).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(notice(page).locator('summary')).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(
+        notice(page).getByRole('button', {
+          name: 'Avstå från det oavslutade arbetet',
+          exact: true,
+        }),
+      ).toBeFocused();
       await page.keyboard.press('Enter');
       await expect(notice(page)).toHaveCount(0);
       await expect(microphoneButton(page)).toBeFocused();
-      await expect(voiceBox(page)).toHaveText('Lyssnar');
+      await expect(voiceBox(page)).toContainText('Lyssnar');
     } finally {
       await app.close();
     }

@@ -1,5 +1,5 @@
 import { type APIRequestContext, request } from '@playwright/test';
-import { afterEach, expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
@@ -16,6 +16,7 @@ afterEach(async () => {
   await browser?.dispose();
   await other?.dispose();
   await app?.close();
+  vi.restoreAllMocks();
 });
 
 test.each([
@@ -393,6 +394,7 @@ test('an active request retains its model and a queued request binds the later c
 });
 
 test('a disabled default is preserved and no provider call probes it or silently changes it', async () => {
+  const diagnostic = vi.spyOn(console, 'error').mockImplementation(() => {});
   const model = textModel(() => [modelMessage('Ett svar.')]);
   app = await createInstallation(undefined, {
     modelFetch: model.provider,
@@ -428,6 +430,24 @@ test('a disabled default is preserved and no provider call probes it or silently
   });
   expect(model.requests).toHaveLength(0);
   expect(model.authorizationRequests).toHaveLength(0);
+  const failure = diagnostic.mock.calls.flatMap(([value]) => {
+    try {
+      const event = JSON.parse(String(value));
+      return event.event === 'assistant_model_failed' ? [event] : [];
+    } catch {
+      return [];
+    }
+  });
+  expect(failure).toEqual([
+    {
+      event: 'assistant_model_failed',
+      model: 'gpt-6.1-terra',
+      effort: 'high',
+      category: 'assistant_model_unsupported',
+      reference: expect.any(String),
+      at: expect.any(String),
+    },
+  ]);
   expect(
     (
       await post(`${base}/${view.id}/model-choice`, { model: 'gpt-6.1-sol', effort: 'low' })
@@ -522,6 +542,7 @@ test.each([
 ])(
   'provider HTTP %s has a distinct outcome without retries or choice changes',
   async (status, error) => {
+    const diagnostic = vi.spyOn(console, 'error').mockImplementation(() => {});
     let calls = 0;
     app = await createInstallation(undefined, {
       modelFetch: async () => {
@@ -555,5 +576,24 @@ test.each([
       .toBe('error');
     expect(view).toMatchObject({ error, modelChoice: { model: 'gpt-6.1-terra', effort: 'high' } });
     expect(calls).toBe(1);
+    const failures = diagnostic.mock.calls.flatMap(([value]) => {
+      try {
+        const event = JSON.parse(String(value));
+        return event.event === 'assistant_model_failed' ? [event] : [];
+      } catch {
+        return [];
+      }
+    });
+    expect(failures).toEqual([
+      {
+        event: 'assistant_model_failed',
+        model: 'gpt-6.1-terra',
+        effort: 'high',
+        category: error,
+        reference: expect.any(String),
+        at: expect.any(String),
+      },
+    ]);
+    expect(Number.isFinite(Date.parse(failures[0].at))).toBe(true);
   },
 );

@@ -41,6 +41,36 @@ automatiskt.
 Kostnadsöversikten kan sakna prisuppgift för en modell; saknade priser
 visas som okända och betyder inte noll kostnad.
 
+## Fortsätt efter modellfel
+
+När modellen inte kan slutföra ett uppdrag visar samtalsnotisen vilken
+begäran som har oavslutat arbete. Genomförda förslag och tidigare
+sparresultat finns kvar. Senare meddelanden i kön väntar. Modellbyte och
+återställd kontoåtkomst startar inget arbete.
+
+Vid tillfälligt fel väljer du **Försök igen**. Vid saknad kontoåtkomst
+eller ett alternativ som inte stöds, välj först en tillgänglig modell och
+nivå och sedan **Fortsätt med valt alternativ**. Samma ursprungliga
+begäran fortsätter med valet som gäller när återförsöket börjar. Skyttel
+läser aktuellt underlag och fortsätter bara det som återstår. En gammal
+upphävd sparbegäran gäller fortfarande inte; lämna en ny sparbegäran när
+du har läst det aktuella utkastet.
+
+Om genomförda förslag har ändrats eller kastats frågar Skyttel hur du
+vill fortsätta. Dina manuella ändringar bevaras. Välj **Avstå från det
+oavslutade arbetet** för att lämna just den gamla återstående delen, och
+skriv sedan en ny fullständig instruktion. Det redan genomförda arbetet
+och ditt aktuella utkast ligger kvar. Senare kö fortsätter i sin ordning.
+**Stoppa allt** avbryter återstående arbete och hela kön, med samma
+bevarande av förslag och väntande delar som **Avbryt**.
+
+Om det är oklart om en ändring eller ett sparande genomfördes måste
+utfallet först kontrolleras. Använd notisens kontrollknapp. Kontrollen
+startar inget modellarbete och ger ingen ny sparbehörighet. När utfallet
+är känt kan notisen erbjuda **Fortsätt det oavslutade arbetet** för en
+kvarvarande del, till exempel en beställd förklaring. Samma val gäller
+skrivna och talade uppdrag.
+
 ## Medgivande
 
 Skyttel behöver ditt medgivande innan ett samtal startar. Textversion 4
@@ -431,10 +461,11 @@ att du behöver vänta eller kontakta administratören; Skicka är avstängd
 Utan pågående samtal ser båda samtalsknapparna avstängda ut vid ett sådant
 hinder, men ett tryck visar förklaringen. Textvyn öppnas inte. Notisen går
 att stänga och försvinner också när hindret upphör. I ett pågående samtal
-står hinder kvar tills de är borta. **Skyttel kunde inte slutföra
-uppdraget. Försök igen.** kan stängas med **Stäng notisen** och försvinner
-också vid nästa försök. Att stänga notisen avslutar inte samtalet och
-ändrar inte utkastet.
+står hinder kvar tills de är borta. Felbesked utan kvarvarande
+modellarbete kan stängas med **Stäng notisen**. Det avslutar inte samtalet
+eller ändrar utkastet. När modellarbete återstår visar notisen den gamla
+begäran och uttryckliga val för att försöka igen, avstå eller stoppa allt.
+Notisen ligger kvar tills du väljer hur arbetet ska fortsätta.
 
 Beskriv vad du vill hitta, lägga till eller rätta. Skyttel använder
 hushållets egna typer och ditt befintliga privata utkast. Förslag från
