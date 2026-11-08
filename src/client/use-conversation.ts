@@ -20,6 +20,10 @@ import { useVoice, type Voice } from './use-voice.js';
 const deliveryUnavailableMessage =
   'Instruktionen skickades inte. Skyttel kunde inte öppna anslutningen för hela svaret. Texten finns kvar; försök igen när kontakten fungerar.';
 
+function resetReplyId(view: Pick<TextAssistantView, 'id' | 'contextRevision'>) {
+  return `new-${view.id}-${view.contextRevision ?? 0}`;
+}
+
 function conversationResultReply(
   view: Pick<TextAssistantView, 'reply' | 'result' | 'requiredNotice' | 'error'> & {
     failed?: boolean;
@@ -295,7 +299,7 @@ export function useConversation({
           next.reply
             ? [
                 {
-                  id: `new-${next.id}-${next.revision}`,
+                  id: resetReplyId(next),
                   role: 'assistant',
                   text: next.reply,
                   voiced: next.resetSource === 'voice' ? true : next.replyVoiced,
@@ -314,7 +318,7 @@ export function useConversation({
         !(next.completedReplies ?? []).some((reply) => reply.reply === next.reply)
       ) {
         showTranscript({
-          id: `discard-${next.id}-${next.revision}`,
+          id: next.resetSource ? resetReplyId(next) : `discard-${next.id}-${next.revision}`,
           role: 'assistant',
           text: next.reply,
           voicePending: voiceConnected.current,
@@ -323,7 +327,7 @@ export function useConversation({
       if (next.replyVoiced !== undefined)
         setTranscript((rows) =>
           rows.map((row) =>
-            row.id === `new-${next.id}-${next.revision}`
+            row.id === resetReplyId(next)
               ? { ...row, voiced: next.replyVoiced, voicePending: false }
               : row,
           ),
@@ -363,7 +367,10 @@ export function useConversation({
           });
         else if ((reply.result || reply.requiredNotice) && resultReply)
           showTranscript({
-            id: `result-${next.id}-${reply.revision}`,
+            id:
+              reply.resetContextRevision === undefined
+                ? `result-${next.id}-${reply.revision}`
+                : resetReplyId({ id: next.id, contextRevision: reply.resetContextRevision }),
             role: 'assistant',
             text: resultReply,
             voiced,
@@ -413,7 +420,10 @@ export function useConversation({
         (next.reply !== previous?.reply || next.revision !== previous?.revision)
       )
         showTranscript({
-          id: `result-${next.id}-${next.revision}`,
+          id:
+            next.resetSource && next.discarded
+              ? resetReplyId(next)
+              : `result-${next.id}-${next.revision}`,
           role: 'assistant',
           text: resultReply,
           voiced,
@@ -1089,14 +1099,13 @@ export function useConversation({
         result.reply
           ? [
               {
-                id: `new-${result.id}-${result.revision}`,
+                id: resetReplyId(result),
                 role: 'assistant',
                 text: result.reply,
-                voiced: rows.find((row) => row.id === `new-${result.id}-${result.revision}`)
-                  ?.voiced,
+                voiced: rows.find((row) => row.id === resetReplyId(result))?.voiced,
                 voicePending:
-                  rows.find((row) => row.id === `new-${result.id}-${result.revision}`)
-                    ?.voicePending ?? voiceConnected.current,
+                  rows.find((row) => row.id === resetReplyId(result))?.voicePending ??
+                  voiceConnected.current,
               },
             ]
           : [],

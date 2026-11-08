@@ -5,15 +5,17 @@ import {
   closeConversationText,
   microphoneButton,
   openConversationText,
+  openSavedHistory,
   startConversationWithText,
   turnMicrophoneOff,
   turnMicrophoneOn,
   voiceBox,
 } from '../support/conversation-page.js';
+import { readTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
-import { expect, test } from '../support/test.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 import { readVoiceProposal } from '../support/voice-work-reading.js';
 
@@ -398,6 +400,166 @@ test('KÖ-03: röstrutans stopp avbryter talat arbete och textkön utan att änd
     expect(
       fixtures.live.sent.filter(({ event }) => event.type === 'session.commentary.append'),
     ).toHaveLength(0);
+  } finally {
+    for (const item of fixtures.held) item.release([]);
+    await app.close();
+  }
+});
+
+test('KÖ-07: två enheter delar ordningen men stopp gäller bara ett samtal', async ({
+  page,
+  browser,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const fixtures = providers();
+  const { app } = await arrange(page, fixtures);
+  const otherContext = await createPreparedContext(browser, {
+    viewport: { width: 1280, height: 900 },
+  });
+  const other = await otherContext.newPage();
+  try {
+    await signIn(other.request, app.origin);
+    await other.goto(app.origin);
+    await startConversationWithText(other);
+    await send(page, 'Hållet uppdrag.');
+    await expect.poll(() => fixtures.held.length).toBe(1);
+    await send(page, 'Ska strykas.');
+    await send(other, 'Den andra enhetens uppdrag.');
+    await expect(log(other)).toContainText('Väntar på tidigare uppdrag');
+    expect(fixtures.held.map((item) => item.message)).toEqual(['Hållet uppdrag.']);
+    await field(page).press('Escape');
+    await expect(region(page).locator('.text-view-canceled')).toHaveText(canceled);
+    await expect.poll(() => fixtures.held.length).toBe(2);
+    expect(fixtures.held[1].message).toBe('Den andra enhetens uppdrag.');
+    fixtures.held[1].release([modelMessage('Den andra enhetens svar.')]);
+    await expect(log(other)).toContainText('Den andra enhetens svar.');
+    await expect(log(other)).not.toContainText('Hållet uppdrag.');
+    await expect(log(page)).not.toContainText('Den andra enhetens svar.');
+    fixtures.held[0].release([modelMessage('För sent i det första samtalet.')]);
+    await expect(log(page)).not.toContainText('För sent i det första samtalet.');
+    expect(fixtures.held.map((item) => item.message)).not.toContain('Ska strykas.');
+    await readVoiceProposal(page);
+  } finally {
+    for (const item of fixtures.held) item.release([]);
+    await otherContext.close();
+    await app.close();
+  }
+});
+
+test('KÖ-09: nytt samtal köar kastandet och stopp bevarar andra enhetens arbete', async ({
+  page,
+  browser,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const fixtures = providers();
+  const { app, value } = await arrange(page, fixtures);
+  const otherContext = await createPreparedContext(browser, {
+    viewport: { width: 1280, height: 900 },
+  });
+  const other = await otherContext.newPage();
+  try {
+    await signIn(other.request, app.origin);
+    await other.goto(app.origin);
+    await startConversationWithText(other);
+    await send(page, 'Hållet uppdrag.');
+    await expect.poll(() => fixtures.held.length).toBe(1);
+    await send(other, 'Nytt samtal och kasta utkastet.');
+    await expect(log(other)).toContainText('Väntar på tidigare uppdrag');
+    await expect(log(other)).not.toContainText('Utkastet är tomt');
+    await field(other).press('Escape');
+    await expect(region(other).locator('.text-view-canceled')).toHaveText(canceled);
+    fixtures.held[0].release([modelMessage('Första arbetet är klart.')]);
+    await expect(log(page)).toContainText('Första arbetet är klart.');
+    await readVoiceProposal(other);
+
+    await send(page, 'Byt namn på Lo till Lo Lind.');
+    await expect.poll(() => fixtures.held.length).toBe(2);
+    await send(other, 'Nytt samtal och kasta utkastet.');
+    await expect(log(other)).toContainText('Väntar på tidigare uppdrag');
+    await expect(log(other)).not.toContainText('Utkastet är tomt');
+    fixtures.held[1].release([
+      modelTool('submit_changes', {
+        version: fixtures.held[1].draft.version,
+        contentVersion: fixtures.held[1].draft.contentVersion,
+        completion: 'draft',
+        operations: [
+          {
+            name: 'propose_object',
+            arguments: {
+              id: 'lo',
+              baseRevision: null,
+              value: { ...value, name: 'Lo Lind' },
+            },
+          },
+        ],
+      }),
+    ]);
+    await expect(log(page)).toContainText('Lo Exempel bytte namn till Lo Lind.');
+    await expect(log(other)).toHaveText('Skyttel: Nytt samtal. Utkastet är tomt.');
+    await expect(log(other)).not.toContainText('Hållet uppdrag.');
+    await expect(log(other)).not.toContainText('Skyttel arbetar…');
+    await expect(log(page)).not.toContainText('kunde inte genomföras');
+    expect(fixtures.held).toHaveLength(2);
+  } finally {
+    for (const item of fixtures.held) item.release([]);
+    await otherContext.close();
+    await app.close();
+  }
+});
+
+test('KÖ-08: ett nytt köat meddelande kräver ett nytt uttryckligt sparande', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const fixtures = providers();
+  const { app, value, read } = await arrange(page, fixtures);
+  try {
+    await send(page, 'Spara hela utkastet.');
+    await expect.poll(() => fixtures.held.length).toBe(1);
+    await send(page, 'Rätta namnet till Lo Lind.');
+    fixtures.held[0].release([
+      modelTool('save_draft', {
+        version: fixtures.held[0].draft.version,
+        contentVersion: fixtures.held[0].draft.contentVersion,
+      }),
+    ]);
+    await expect.poll(() => fixtures.held.length).toBe(2);
+    const draft = fixtures.held[1].draft;
+    fixtures.held[1].release([
+      modelTool('submit_changes', {
+        version: draft.version,
+        contentVersion: draft.contentVersion,
+        completion: 'draft',
+        operations: [
+          {
+            name: 'propose_object',
+            arguments: { id: 'lo', baseRevision: null, value: { ...value, name: 'Lo Lind' } },
+          },
+        ],
+      }),
+    ]);
+    await expect(log(page)).not.toContainText('Skyttel arbetar…');
+    await expect(log(page)).toContainText('Be om sparande igen');
+    expect((await read()).objects).toEqual([]);
+    await readVoiceProposal(page, 'Lo Lind');
+    await send(page, 'Spara hela utkastet.');
+    await expect.poll(() => fixtures.held.length).toBe(3);
+    fixtures.held[2].release([
+      modelTool('save_draft', {
+        version: fixtures.held[2].draft.version,
+        contentVersion: fixtures.held[2].draft.contentVersion,
+      }),
+    ]);
+    await expect(log(page).locator('.assistant').last()).toHaveText('Skyttel: Sparat.');
+    const saved = await readTableObject(page, 'Lo Lind');
+    for (const [label, text] of [
+      ['Namn', 'Lo Lind'],
+      ['Typ', 'Person'],
+      ['Beskrivning', 'Påhittad uppgift'],
+    ])
+      await expect(
+        saved.locator('dt').filter({ hasText: label }).locator('..').locator('dd'),
+      ).toContainText(text);
+    const history = await openSavedHistory(page);
+    await expect(history.getByRole('article')).toHaveCount(1);
   } finally {
     for (const item of fixtures.held) item.release([]);
     await app.close();

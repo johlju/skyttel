@@ -271,11 +271,31 @@ test.each([true, false])(
         contentVersion: previous.review.contentVersion,
       },
     });
-    expect(response.status()).toBe(success ? 201 : 409);
+    expect(response.status(), await response.text()).toBe(success ? 201 : 409);
     const current = await (await browser.get(`${path}/${started.id}`)).json();
     expect(current.review).toEqual(started.review);
     expect(current.contextRevision).toBe(0);
+    expect(current.modelReply).toBe(previous.modelReply);
+    expect(current.receipt).toBeUndefined();
+    expect(current.operations).toEqual([]);
+    expect(current.modelChoice).toEqual(started.modelChoice);
+    for (const request of [...model.requests, ...model.authorizationRequests]) {
+      expect(request.model).toBe(started.modelChoice?.model);
+      expect(request.reasoning.effort).toBe(started.modelChoice?.effort);
+    }
+    const summarySource = model.requests
+      .filter((request) => !request.tools.length)
+      .map((request) => JSON.parse(String(request.input[0].content)).source)
+      .join('');
+    expect(summarySource).toContain('Lång historisk bakgrund.');
+    expect(summarySource).toContain('Äldre historiskt provord.');
+    const mapPath = path.replace('/text-assistant', '/map');
+    const map = await (await browser.get(mapPath)).json();
+    expect(map.draft.changes).toEqual(started.review.changes);
+    expect(map.objects).toEqual([]);
+    expect((await (await browser.get(`${mapPath}/history`)).json()).history).toEqual([]);
     if (success) {
+      expect(summarySource).toContain(previous.modelReply);
       expect(live.requests).toHaveLength(1);
       expect(JSON.stringify(live.requests[0].session.input).length).toBeLessThan(30_000);
       expect(JSON.stringify(live.requests[0].session.input)).toContain('Lo Exempel');

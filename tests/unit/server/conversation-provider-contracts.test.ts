@@ -9,10 +9,12 @@ import { modelMessage, modelTool, pendingUpdate, textModel } from '../../support
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
 let browser: APIRequestContext;
+const peers: APIRequestContext[] = [];
 let base: string;
 let release = () => {};
 afterEach(async () => {
   release();
+  for (const peer of peers.splice(0)) await peer.dispose();
   await browser?.dispose();
   await app?.close();
 });
@@ -48,14 +50,18 @@ async function send(
   session: TextAssistantView,
   text = 'Beskriv mitt utkast.',
   extra: Record<string, unknown> = {},
+  client = browser,
 ) {
-  const response = await post(`${base}/text-assistant/${session.id}/messages`, {
-    revision: session.revision,
-    draftVersion: session.review.version,
-    contentVersion: session.review.contentVersion,
-    requestId: crypto.randomUUID(),
-    text,
-    ...extra,
+  const response = await client.post(`${base}/text-assistant/${session.id}/messages`, {
+    headers: { origin: app.origin },
+    data: {
+      revision: session.revision,
+      draftVersion: session.review.version,
+      contentVersion: session.review.contentVersion,
+      requestId: crypto.randomUUID(),
+      text,
+      ...extra,
+    },
   });
   expect(response.status(), await response.text()).toBe(202);
   return (await response.json()) as TextAssistantView;
@@ -331,6 +337,13 @@ test('an explicit complete restatement scopes capacity-paused work while retaini
       const current = JSON.parse(
         String(request.input.findLast((item) => item.role === 'user')?.content),
       );
+      if (current.message === 'Spara hela utkastet.')
+        return [
+          modelTool('save_draft', {
+            version: current.draft.version,
+            contentVersion: current.draft.contentVersion,
+          }),
+        ];
       expect(current.message).toBe(narrower);
       expect(JSON.stringify(request.input)).not.toContain(original);
       expect(current.unfinishedRequests.map((item: { text: string }) => item.text)).toEqual([
@@ -358,7 +371,7 @@ test('an explicit complete restatement scopes capacity-paused work while retaini
       if (!request.instructions.startsWith('SKYTTEL_TURN_SCOPE'))
         return [modelMessage('{"decision":"allow","complete":true}')];
       const { current, earlier } = JSON.parse(String(request.input[0].content));
-      if (current !== original) {
+      if (current !== original && current !== 'Spara hela utkastet.') {
         expect(earlier).toEqual([]);
         expect(request.instructions).toContain('SKYTTEL_SCOPE_RESTATEMENT');
       }
@@ -391,6 +404,15 @@ test('an explicit complete restatement scopes capacity-paused work while retaini
       return model.provider(input, init);
     },
   });
+  const peer = await request.newContext();
+  peers.push(peer);
+  await signIn(peer, app.origin);
+  const otherResponse = await peer.post(`${base}/text-assistant`, {
+    headers: { origin: app.origin },
+    data: approvedForVisit,
+  });
+  expect(otherResponse.status()).toBe(201);
+  const other: TextAssistantView = await otherResponse.json();
   const premature = await post(`${base}/text-assistant/${session.id}/messages`, {
     revision: session.revision,
     draftVersion: session.review.version,
@@ -403,6 +425,7 @@ test('an explicit complete restatement scopes capacity-paused work while retaini
   const working = await send(session, original);
   await expect.poll(() => entered).toBe(true);
   await send(working, 'Ett annat köat uppdrag.');
+  await send(other, 'Spara hela utkastet.', { requestId: 'cross-session-paused-save' }, peer);
   release();
   const stopped = await settled(working);
   expect(stopped).toMatchObject({
@@ -441,6 +464,29 @@ test('an explicit complete restatement scopes capacity-paused work while retaini
   expect((await readMap()).draft.changes[0].after?.name).toBe('Avgränsad stol');
   expect((await readMap()).objects).toEqual([]);
   expect(model.requests).toHaveLength(1);
+  const stillWaiting: TextAssistantView = await (
+    await peer.get(`${base}/text-assistant/${other.id}`)
+  ).json();
+  expect(stillWaiting.tasks).toContainEqual(
+    expect.objectContaining({ id: 'cross-session-paused-save', status: 'queued' }),
+  );
+  expect((await post(`${base}/text-assistant/${session.id}/cancel`, { all: true })).status()).toBe(
+    200,
+  );
+  let resumedSave = stillWaiting;
+  await expect
+    .poll(async () => {
+      resumedSave = await (await peer.get(`${base}/text-assistant/${other.id}`)).json();
+      return resumedSave.tasks?.find((task) => task.id === 'cross-session-paused-save')?.status;
+    })
+    .toBe('completed');
+  expect(resumedSave).toMatchObject({
+    phase: 'ready',
+    requiredNotice: expect.stringContaining('Be om sparande igen'),
+  });
+  expect(resumedSave.receipt).toBeUndefined();
+  expect((await readMap()).objects).toEqual([]);
+  expect((await (await browser.get(`${base}/map/history`)).json()).history).toEqual([]);
 });
 
 test.each([

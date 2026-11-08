@@ -13,7 +13,7 @@ afterEach(async () => {
 });
 
 test.each(['Rätta namnet till Slutvärdet.', 'Spara inte.'])(
-  'input during saving is processed before any write: %s',
+  'input during saving requires a fresh save request: %s',
   { tags: ['technical'] },
   async (correction) => {
     let release: (value: unknown[]) => void = () => {};
@@ -21,11 +21,21 @@ test.each(['Rätta namnet till Slutvärdet.', 'Spara inte.'])(
       release = resolve;
     });
     let typeId = '';
+    let saveRequests = 0;
     const model = textModel((body) => {
-      const message = JSON.parse(
+      const input = JSON.parse(
         String(body.input.findLast((item) => item.role === 'user')?.content),
-      ).message;
-      if (message === 'Spara hela utkastet.') return held;
+      );
+      const { message } = input;
+      if (message === 'Spara hela utkastet.')
+        return saveRequests++ === 0
+          ? held
+          : [
+              modelTool('save_draft', {
+                version: input.draft.version,
+                contentVersion: input.draft.contentVersion,
+              }),
+            ];
       if (message === 'Spara inte.')
         return [modelMessage('Ändringarna ligger kvar i ditt utkast.')];
       if (body.input.findLast((item) => item.role !== 'developer')?.type === 'function_call_output')
@@ -107,19 +117,36 @@ test.each(['Rätta namnet till Slutvärdet.', 'Spara inte.'])(
     const finished = await (await browser.get(`${base}/${path}`)).json();
     const state = await (await browser.get(`${base}/map`)).json();
     const history = await (await browser.get(`${base}/map/history`)).json();
+    expect(finished.operations).toEqual([]);
+    expect(finished.receipt).toBeUndefined();
+    expect(history.history).toEqual([]);
+    expect(state.objects).toEqual(before.objects);
     if (correction === 'Spara inte.') {
-      expect(finished.operations).toEqual([]);
-      expect(history.history).toEqual([]);
-      expect(state.objects).toEqual(before.objects);
       expect(state.draft.changes).toMatchObject([
         { id: 'proposal', after: { name: 'Första värdet' } },
       ]);
     } else {
-      expect(finished.operations).toHaveLength(1);
-      expect(finished.receipt).toBeDefined();
-      expect(history.history).toHaveLength(1);
-      expect(state.objects).toMatchObject([{ id: 'proposal', name: 'Slutvärdet' }]);
-      expect(state.draft.changes).toEqual([]);
+      expect(state.draft.changes).toMatchObject([
+        { id: 'proposal', after: { name: 'Slutvärdet' } },
+      ]);
+      expect(
+        (
+          await post(`${path}/messages`, {
+            revision: finished.revision,
+            draftVersion: state.draft.version,
+            contentVersion: state.contentVersion,
+            requestId: 'renewed-save',
+            text: 'Spara hela utkastet.',
+          })
+        ).status(),
+      ).toBe(202);
+      await expect
+        .poll(async () => (await (await browser.get(`${base}/${path}`)).json()).receipt)
+        .toBeDefined();
+      const saved = await (await browser.get(`${base}/map`)).json();
+      expect(saved.objects).toMatchObject([{ id: 'proposal', name: 'Slutvärdet' }]);
+      expect(saved.draft.changes).toEqual([]);
+      expect((await (await browser.get(`${base}/map/history`)).json()).history).toHaveLength(1);
     }
   },
 );

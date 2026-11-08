@@ -81,7 +81,7 @@ export function voiceWork({
   let questionInputVersion = 0;
   let automaticReplyConsumed = false;
   let owned: number | undefined;
-  let dispatching: AbortController | undefined;
+  let dispatching: { controller: AbortController; requestId?: string } | undefined;
   let canceling: Promise<{ revision: number; view: TextAssistantView } | undefined> =
     Promise.resolve(undefined);
   const inFlight = new Map<number, number>();
@@ -124,7 +124,7 @@ export function voiceWork({
     const hadWork = (inFlight.get(generation) ?? 0) > 0;
     generation++;
     collecting = undefined;
-    dispatching?.abort();
+    dispatching?.controller.abort();
     dispatching = undefined;
     const revision = owned ?? (hadWork ? rendered.revision : undefined);
     owned = undefined;
@@ -317,7 +317,7 @@ export function voiceWork({
         const pending = view.operations.filter((operation) => operation.status === 'pending');
         if (pending.length === 1 && /^slutför samma sparförsök[.!]?$/iu.test(text.trim())) {
           const controller = new AbortController();
-          dispatching = controller;
+          dispatching = { controller };
           view = await recover(
             'retry',
             { operationId: pending[0].operationId, revision: view.revision },
@@ -326,8 +326,8 @@ export function voiceWork({
         }
       } else {
         const controller = new AbortController();
-        dispatching = controller;
         requestId = randomUUID();
+        dispatching = { controller, requestId };
         observe?.('backend_request', { delegationId: id, requestId, text, context });
         owned = view.phase === 'working' ? view.revision : view.revision + 1;
         view = await request(
@@ -440,6 +440,7 @@ export function voiceWork({
         if (!stopped && allowed() && generation === recoveryGeneration) failed();
       }
     } finally {
+      if (requestId && dispatching?.requestId === requestId) dispatching = undefined;
       if (!resultObserved && (requestId || resultStatus === 'failed'))
         result(
           resultStatus === 'incomplete' && (stopped || generation !== task)
@@ -590,14 +591,18 @@ export function voiceWork({
     }
     void collect(event.delegation.id);
   });
-  function retire() {
+  function retire(resetRequestId?: string) {
     commentary.close();
     stopped = true;
     input?.(false);
     generation++;
     collecting = undefined;
-    dispatching?.abort();
-    dispatching = undefined;
+    // The validated reset owns retirement of this executor. Keep only its
+    // own dispatch alive, and reachable by a later Stop or newer reset.
+    if (!resetRequestId || dispatching?.requestId !== resetRequestId) {
+      dispatching?.controller.abort();
+      dispatching = undefined;
+    }
     owned = undefined;
     fragments = [];
     pending = [];
@@ -631,11 +636,16 @@ export function voiceWork({
           delivered?.({ id: reply.id, voiced: true });
           continue;
         }
-        // Spoken executors hand their own results to Live. OFF completions are
-        // consumed too: enabling capture later must not replay old text.
-        if (reply.source === 'voice' || !microphoneOn) {
+        // A reset retires the spoken executor before its queued discard can
+        // finish. Its replacement delivers that outcome, including after OFF.
+        const resetReply = reply.resetContextRevision !== undefined;
+        const spokenExecutorDelivered = reply.source === 'voice' && !resetReply;
+        if (
+          spokenExecutorDelivered ||
+          (!microphoneOn && !(resetReply && reply.source === 'voice'))
+        ) {
           answeredReplies.add(reply.id);
-          delivered?.({ id: reply.id, voiced: reply.source === 'voice' });
+          delivered?.({ id: reply.id, voiced: spokenExecutorDelivered });
           if (reply.revision !== undefined) answered.add(reply.revision);
           continue;
         }
@@ -685,7 +695,7 @@ export function voiceWork({
     },
     /** The conversation has started over. Its own work is already stopped, and nothing said before is passed on. */
     reset(view: TextAssistantView) {
-      retire();
+      if (!stopped) retire();
       answeredReplies.clear();
       answered.add(view.revision);
       rendered = {

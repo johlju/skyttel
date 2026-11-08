@@ -411,7 +411,7 @@ export function createApp({
   app.route('/api', themePreferenceRoutes(database, auth, config.origin));
   app.route('/', assistantRoutes(database, auth, config.origin));
   let stopVoice: ((sessionId: string) => void) | undefined;
-  let retireVoiceWork: ((sessionId: string) => void) | undefined;
+  let retireVoiceWork: ((sessionId: string, requestId?: string) => void) | undefined;
   let summarizeVoice: ((sessionId: string, signal: AbortSignal) => Promise<void>) | undefined;
   let newVoiceConversation:
     | ((view: TextAssistantView, deferVoiceClose?: boolean) => void)
@@ -440,7 +440,7 @@ export function createApp({
       modelUsage?.(attempt);
     },
     onStop: (sessionId) => stopVoice?.(sessionId),
-    onResetStart: (sessionId) => retireVoiceWork?.(sessionId),
+    onResetStart: (sessionId, requestId) => retireVoiceWork?.(sessionId, requestId),
     onSummary: (sessionId, signal) => summarizeVoice?.(sessionId, signal),
     onNewConversation: (view, deferVoiceClose) => newVoiceConversation?.(view, deferVoiceClose),
   });

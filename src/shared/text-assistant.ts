@@ -41,6 +41,8 @@ export type ConversationReply = {
   request?: string;
   text: string;
   revision?: number;
+  /** The reset whose queued discard completes; shares its startup transcript row. */
+  resetContextRevision?: number;
   source?: 'voice' | 'text';
   /** Voice poll handoff disposition; absent until that connection consumes the reply. */
   voiced?: boolean;
@@ -80,6 +82,8 @@ export interface TextAssistantView {
   contextSummaries?: { id: string; text: string }[];
   /** Origin of the explicit reset; pre-release spoken work still gets its voice reply. */
   resetSource?: 'voice' | 'text';
+  /** This context's explicit reset is waiting for its queued discard to finish. */
+  resetDiscardPending?: boolean;
   /** Startup handoff disposition for the reset statement. */
   replyVoiced?: boolean;
   /** Verified whole-draft discard, shown as conversation text. */

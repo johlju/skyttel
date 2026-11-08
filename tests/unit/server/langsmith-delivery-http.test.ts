@@ -148,6 +148,21 @@ async function setup(
   return { path, session: await start.json() };
 }
 
+async function independentDraft(browser: APIRequestContext) {
+  await signIn(browser, app.origin);
+  // One actor's work in one household shares a FIFO draft across devices.
+  // Another household gives these concurrent tasks independent drafts.
+  const bootstrap = await (await browser.get(`${app.origin}/api/bootstrap`)).json();
+  app.seedMembership(bootstrap.user.id, 'other-home', 'Det andra hushållet', 'administrator');
+  const path = `${app.origin}/api/households/other-home`;
+  const started = await browser.post(`${path}/text-assistant`, {
+    headers: { origin: app.origin },
+    data: approvedForVisit,
+  });
+  expect(started.status(), await started.text()).toBe(201);
+  return { path, session: await started.json() };
+}
+
 async function send(
   path: string,
   session: {
@@ -636,7 +651,7 @@ test.each(['concurrent text', 'voice stopped'])(
   15000,
 );
 
-test('concurrent voice sessions keep overlapping delegation and late results under their own roots', async () => {
+test('concurrent voice sessions on independent drafts keep overlapping delegation and late results under their own roots', async () => {
   const live = liveProvider();
   const releases = new Map<string, () => void>();
   const signals = new Map<string, AbortSignal | null | undefined>();
@@ -654,8 +669,12 @@ test('concurrent voice sessions keep overlapping delegation and late results und
     liveSideband: live.attach,
   });
   const other = await request.newContext();
-  const connect = async (browser: APIRequestContext, current: typeof session) => {
-    const response = await browser.post(`${path}/text-assistant/${current.id}/voice`, {
+  const connect = async (
+    browser: APIRequestContext,
+    current: typeof session,
+    householdPath = path,
+  ) => {
+    const response = await browser.post(`${householdPath}/text-assistant/${current.id}/voice`, {
       headers: { origin: app.origin },
       data: {
         sdp: 'synthetic-offer',
@@ -668,15 +687,9 @@ test('concurrent voice sessions keep overlapping delegation and late results und
     return { voice: (await response.json()).voice, providerId: [...live.channels.keys()].at(-1)! };
   };
   try {
-    await signIn(other, app.origin);
-    const second = await (
-      await other.post(`${path}/text-assistant`, {
-        headers: { origin: app.origin },
-        data: approvedForVisit,
-      })
-    ).json();
+    const { path: otherPath, session: second } = await independentDraft(other);
     const alpha = await connect(client, session);
-    const beta = await connect(other, second);
+    const beta = await connect(other, second, otherPath);
     for (const [voice, text] of [
       [alpha, 'Alfa'],
       [beta, 'Beta'],
@@ -721,7 +734,7 @@ test('concurrent voice sessions keep overlapping delegation and late results und
     await expect
       .poll(
         async () =>
-          (await (await other.get(`${path}/text-assistant/${second.id}`)).json()).modelReply,
+          (await (await other.get(`${otherPath}/text-assistant/${second.id}`)).json()).modelReply,
       )
       .toBe('Svar för Beta');
     releases.get('Alfa')!();
@@ -753,7 +766,7 @@ test('concurrent voice sessions keep overlapping delegation and late results und
     expect(
       JSON.stringify(live.sent.filter((item) => item.sessionId === alpha.providerId)),
     ).not.toContain('Svar för Alfa');
-    await other.post(`${path}/text-assistant/${second.id}/voice/${beta.voice.id}/stop`, {
+    await other.post(`${otherPath}/text-assistant/${second.id}/voice/${beta.voice.id}/stop`, {
       headers: { origin: app.origin },
       data: {},
     });
@@ -2384,7 +2397,7 @@ test.each(['healthy', 'disabled', 'failing'])(
   20000,
 );
 
-test('overlapping devices keep separate task evidence and a canceled late model cannot finish another task', async () => {
+test('overlapping devices on independent drafts keep separate task evidence and a canceled late model cannot finish another task', async () => {
   const reached: string[] = [];
   const releases = new Map<string, () => void>();
   const model = textModel(async (request) => {
@@ -2399,13 +2412,7 @@ test('overlapping devices keep separate task evidence and a canceled late model 
   const other = await request.newContext();
   let beta: ReturnType<typeof send> | undefined;
   try {
-    await signIn(other, app.origin);
-    const started = await other.post(`${path}/text-assistant`, {
-      headers: { origin: app.origin },
-      data: approvedForVisit,
-    });
-    expect(started.status(), await started.text()).toBe(201);
-    const second = await started.json();
+    const { path: otherPath, session: second } = await independentDraft(other);
     const submitted = await client.post(`${path}/text-assistant/${session.id}/messages`, {
       headers: { origin: app.origin },
       data: {
@@ -2417,7 +2424,7 @@ test('overlapping devices keep separate task evidence and a canceled late model 
       },
     });
     expect(submitted.status()).toBe(202);
-    beta = send(path, second, 'same-request', 'Beta', other);
+    beta = send(otherPath, second, 'same-request', 'Beta', other);
     await expect.poll(() => reached.length).toBe(2);
     await expect
       .poll(

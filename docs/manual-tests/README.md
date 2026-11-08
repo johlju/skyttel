@@ -476,6 +476,9 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   uppdrag samt kvarvarande utkast, oskickad text och återkoppling.
   KÖ-05 avser verklig utrustning. KÖ-06 provar ett samlat slutbesked
   med utkaständringar, misslyckade uppdrag och kvarstående frågor.
+  KÖ-07 provar ordning mellan enheter och samtalsavgränsat stopp.
+  KÖ-08 kräver förnyat uttryckligt sparande efter nytt köat meddelande.
+  KÖ-09 köar kastande vid nytt samtal och provar stopp under väntan.
 - [Röst och text i samma samtal](conversation-voice-text.md): skrivna svar
   med röst när mikrofonen är på, text när den är av, ordnad överlämning av
   långa svar, kvarvarande samtalstext och artig uppläsning bara av nya
