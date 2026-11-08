@@ -5,7 +5,10 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
 import { buildIdentity } from '../shared/build-identity.js';
-import { conversationConsentTextVersion } from '../shared/conversation-consent.js';
+import {
+  conversationConsentTextVersion,
+  conversationProviderConsentTextVersion,
+} from '../shared/conversation-consent.js';
 import { normalizeHouseholdName } from '../shared/household-name.js';
 import type { TextAssistantView } from '../shared/text-assistant.js';
 import { AdministrationError } from './administration.js';
@@ -80,7 +83,7 @@ export function createApp({
   auth: Auth;
   identity?: typeof buildIdentity;
   /** The version of the conversation consent text, when it is not the release's own. */
-  consentTextVersion?: number;
+  consentTextVersion?: number | (() => number);
   modelFetch?: typeof fetch;
   modelUsage?: TextModelUsage;
   liveFetch?: typeof fetch;
@@ -137,9 +140,15 @@ export function createApp({
     callerObservation || deliveryObservation
       ? (event) => {
           callerObservation?.(event);
-          // Only the conversation's original information version authorizes
-          // live evidence. A later saved acceptance cannot upgrade that session.
-          if (sending.canSend() && event.consentTextVersion === conversationConsentTextVersion)
+          // New request approval cannot make an older context eligible.
+          if (
+            sending.canSend() &&
+            event.consentTextVersion !== undefined &&
+            event.consentTextVersion >= conversationProviderConsentTextVersion &&
+            event.consentTextVersion <= conversationConsentTextVersion &&
+            (event.conversationConsentTextVersion ?? event.consentTextVersion) >=
+              conversationProviderConsentTextVersion
+          )
             deliveryObservation?.(event);
         }
       : undefined;

@@ -16,6 +16,7 @@ import { adoptLegacyInstallationAuthority } from '../../src/server/legacy-login-
 import type { LiveSidebandFactory, LiveUsage } from '../../src/server/live-provider.js';
 import { attachTaskDelivery } from '../../src/server/task-delivery-transport.js';
 import type { TextModelUsage } from '../../src/server/text-assistant-model.js';
+import { conversationConsentTextVersion } from '../../src/shared/conversation-consent.js';
 import { seedLargeMap, seedTableScrollMap } from './large-map.js';
 import { legacyAuth } from './legacy-auth.js';
 
@@ -227,7 +228,8 @@ export async function createInstallation(
       liveProfile: databaseOptions.liveProfile,
       observe: databaseOptions.observe,
       traceDelivery: databaseOptions.traceDelivery,
-      consentTextVersion: databaseOptions.consentTextVersion,
+      consentTextVersion: () =>
+        databaseOptions.consentTextVersion ?? conversationConsentTextVersion,
       now: databaseOptions.now,
     });
     closeApp = app.close;
@@ -333,6 +335,10 @@ export async function createInstallation(
     },
     setConversationAvailable(value: boolean) {
       config.openaiApiKey = value ? 'synthetic-model-key' : undefined;
+    },
+    /** Current information is configuration; existing work retains its starting terms. */
+    setConversationConsentTextVersion(version: number) {
+      databaseOptions.consentTextVersion = version;
     },
     // Arrange another household on the same installation for boundary checks.
     seedMembership(userId: string, householdId: string, name: string, role = 'member') {

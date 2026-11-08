@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { type APIRequestContext, request } from '@playwright/test';
 import { afterEach, expect, test, vi } from 'vitest';
 import {
+  type AssistantObservation,
   backendTaskObservationContext,
   type ObserveAssistant,
 } from '../../../src/server/assistant-observation.js';
@@ -1989,7 +1990,7 @@ test('voice startup and exact transcripts reach a separate trace without transpo
         owner: 'voice',
         conversation_id: session.id,
         voice_session_id: voice.id,
-        consent_text_version: 3,
+        consent_text_version: 4,
         status: 'incomplete',
       },
     },
@@ -2143,7 +2144,7 @@ test('complete text evidence preserves the exact model exchange and all actions 
 
 test('later current acceptance never makes an old conversation eligible for live evidence', async () => {
   const live = liveProvider();
-  const observed: { consentTextVersion?: number }[] = [];
+  const observed: AssistantObservation[] = [];
   const { path, session } = await setup({
     consentTextVersion: 2,
     liveFetch: live.provider,
@@ -2152,10 +2153,14 @@ test('later current acceptance never makes an old conversation eligible for live
   });
   const current = await send(path, session, 'old-before');
   expect(endpoint.received).toEqual([]);
-  const { user, household } = await (await client.get(`${app.origin}/api/bootstrap`)).json();
-  app.seedConversationConsent(user.id, household.id, 3);
+  app.setConversationConsentTextVersion(4);
+  const approved = await client.post(`${path}/conversation-consent`, {
+    headers: { origin: app.origin },
+    data: { textVersion: 4 },
+  });
+  expect(approved.status(), await approved.text()).toBe(200);
   expect(await (await client.get(`${path}/conversation-consent`)).json()).toMatchObject({
-    saved: { textVersion: 3 },
+    saved: { textVersion: 4 },
   });
   const after = await send(path, current, 'old-after');
   const connected = await client.post(`${path}/text-assistant/${session.id}/voice`, {
@@ -2182,7 +2187,40 @@ test('later current acceptance never makes an old conversation eligible for live
   });
   expect(endpoint.received).toEqual([]);
   expect(observed.length).toBeGreaterThan(0);
-  expect(observed.every((event) => event.consentTextVersion === 2)).toBe(true);
+  expect(observed.filter((event) => event.taskId === 'old-before')).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ kind: 'task_completed', consentTextVersion: 2 }),
+    ]),
+  );
+  expect(observed.filter((event) => event.taskId === 'old-after')).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ kind: 'task_completed', consentTextVersion: 4 }),
+    ]),
+  );
+  const laterWork = observed.filter((event) => event.taskId === 'old-after');
+  expect(laterWork.some((event) => event.kind === 'work_result')).toBe(true);
+  expect(laterWork.every((event) => event.consentTextVersion === 4)).toBe(true);
+  expect(laterWork.every((event) => event.conversationConsentTextVersion === 2)).toBe(true);
+  expect(
+    observed
+      .filter((event) => event.context?.owner === 'voice')
+      .every((event) => event.consentTextVersion === 4),
+  ).toBe(true);
+  const reset = await client.post(`${path}/text-assistant/${session.id}/new`, {
+    headers: { origin: app.origin },
+    data: {},
+  });
+  expect(reset.status(), await reset.text()).toBe(200);
+  await send(path, await reset.json(), 'current-context');
+  await expect
+    .poll(() =>
+      endpoint.received.some(
+        (item) =>
+          (item.body.extra as { metadata?: { consent_text_version?: number } })?.metadata
+            ?.consent_text_version === 4,
+      ),
+    )
+    .toBe(true);
 });
 
 test.each(['large text', 'many content parts'])(
@@ -2860,18 +2898,26 @@ test.each([
   'ingestion $status suspends durably without backlog until explicit operator recovery',
   async ({ status, reason }) => {
     let failing = true;
-    const { path, session } = await setup({}, (_request, response) =>
+    let turn = 0;
+    const model = textModel(
+      () =>
+        turn++ === 0 ? [modelTool('read_map', { query: 'Lina' })] : [modelMessage('Lina är läst.')],
+      readOnlyScope,
+    );
+    const { path, session } = await setup({ modelFetch: model.provider }, (_request, response) =>
       response
         .writeHead(failing ? status : 204)
         .end(failing ? 'synthetic-secret-error' : undefined),
     );
-    expect(await send(path, session)).toMatchObject({ phase: 'ready' });
+    expect(await send(path, session)).toMatchObject({ phase: 'ready', unfinishedRequests: [] });
     const health = async () => (await client.get(`${app.origin}/api/operator/tracing`)).json();
     await expect.poll(async () => (await health()).state).toBe('suspended');
     expect(await health()).toMatchObject({ suspension: reason, lastError: reason });
     expect(endpoint.received).toHaveLength(1);
     const oldRoot = endpoint.received[0].body.id;
+    const modelCalls = model.requests.length + model.authorizationRequests.length;
     await restart();
+    expect(model.requests.length + model.authorizationRequests.length).toBe(modelCalls);
     expect(await health()).toMatchObject({
       state: 'suspended',
       suspension: reason,
@@ -3317,13 +3363,20 @@ test.each(['deliver', 'discard'])(
   async (ending) => {
     const held: ServerResponse[] = [];
     let blocked = true;
-    const { path, session } = await setup({}, (_request, response) => {
+    let turn = 0;
+    const model = textModel(
+      () =>
+        turn++ === 0 ? [modelTool('read_map', { query: 'Lina' })] : [modelMessage('Lina är läst.')],
+      readOnlyScope,
+    );
+    const { path, session } = await setup({ modelFetch: model.provider }, (_request, response) => {
       if (blocked) held.push(response);
       else response.writeHead(204).end();
     });
-    expect(await send(path, session)).toMatchObject({ phase: 'ready' });
+    expect(await send(path, session)).toMatchObject({ phase: 'ready', unfinishedRequests: [] });
     await expect.poll(() => endpoint.received.length).toBe(1);
     const rootId = endpoint.received[0].body.id;
+    const modelCalls = model.requests.length + model.authorizationRequests.length;
     const started = performance.now();
     await restart(() => {
       if (ending === 'deliver') {
@@ -3332,6 +3385,7 @@ test.each(['deliver', 'discard'])(
       }
     });
     expect(performance.now() - started).toBeLessThan(2500);
+    expect(model.requests.length + model.authorizationRequests.length).toBe(modelCalls);
     await expect.poll(() => endpoint.received[0].closed).toBe(true);
     expect((endpoint.received[0].closedAt ?? Infinity) - started).toBeLessThan(2500);
     expect(endpoint.received.filter((item) => item.path === `/runs/${rootId}`)).toHaveLength(

@@ -229,7 +229,7 @@ TAL-03.
     "spec": "tests/integration/voice-assistant.spec.ts",
     "caseId": "TAL-03"
   },
-  "reference": "Chromium och kontrollerade text-/mediesvar enligt angiven separat förberedelse; faktisk röst eller uppläsning bedöms separat.",
+  "reference": "Chromium och kontrollerade text-/mediesvar enligt angiven separat förberedelse. Samtalet återkommer pausat efter faktisk serveromstart; sparutfallet läses före Nytt samtal. Faktisk röst eller uppläsning bedöms separat.",
   "outcomes": [
     "Bekräfta verklig markering och återhämta samma beständiga sparförsök.",
     "Beskrivningen går att läsa i korta uppgiftsfönster efter hela svaret."
@@ -260,11 +260,12 @@ till TAL-17/23/24.
    sparförsöket enligt tidslinjen. Läs Skyttel kunde inte kontrollera om
    utkastet sparades. Mikrofonen är av.
 3. Startoperatören behåller samma databas och startar om enligt tidslinjen.
-   Efter borttagen blockering, ladda om och välj Tabell. Starta sedan samtalet
-   med medgivande om det behövs.
+   Efter borttagen blockering, ladda om och välj Tabell. Öppna **Skriv till
+   Skyttel** och läs att samtalet är pausat och när det löper ut.
 4. Läs Kontrollen visar att hela utkastet sparades. Ändringarna finns i
    hushållets karta. Läs hela sparade Lo Exempel, typ Person och beskrivningen
-   Påhittad uppgift.
+   Påhittad uppgift. Välj därefter **Nytt samtal**, godkänn medgivandet om det
+   behövs och slå på mikrofonen.
 5. Bryt den kontrollerade leverantörskontakten efter sparandet. Ladda om och
    öppna Rapporter → Ändringshistorik. Öppna Identifiera sparandet och
    användaren och läs samma sparande.
@@ -277,8 +278,10 @@ till TAL-17/23/24.
 - Markering bekräftas först efter den verkliga webbläsarens återkoppling. Ett
   accepterat kommentarspaket är inte bevis för hörbart tal.
 - Beskrivningens text går att läsa även i det kortaste uppgiftsfönstret.
-- Omstart glömmer samtalet men bevarar utkast och sparförsök. Samma försök
-  slutförs exakt en gång; korta ja eller nya allmänna uppdrag ersätter det inte.
+- Omstart återställer samtalet pausat. Det registrerade sparförsöket
+  kontrolleras separat och slutförs exakt en gång. Läs dess utfall före ett
+  uttryckligt nytt samtal; korta ja eller nya allmänna uppdrag ersätter inte
+  försöket.
 - Avbrutet ljud återtar inget genomfört sparande. Saknad slutlig mätning förblir
   osäker: 12 följt av 15 är 15 kända sekunder, inte 27 eller säkert noll.
 

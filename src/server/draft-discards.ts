@@ -4,7 +4,7 @@ type Discard = { householdId: string; userId: string; version: number };
 const listeners = new WeakMap<Database.Database, Set<(event: Discard) => void>>();
 const transactions = new WeakMap<Database.Database, Discard[]>();
 
-/** Process-local conversations end on restart; only committed whole-draft discards matter. */
+/** Only committed whole-draft discards retire draft-dependent conversation parts. */
 export function draftDiscards(database: Database.Database) {
   let current = listeners.get(database);
   if (!current) {

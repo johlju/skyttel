@@ -28,6 +28,9 @@ export function authenticationCleanup({
   const hasTasks = (
     database.prepare('PRAGMA table_info(assistant_connection)').all() as { name: string }[]
   ).some((column) => column.name === 'taskExpiresAt');
+  const hasConversations = Boolean(
+    database.prepare("SELECT 1 FROM sqlite_master WHERE name = 'conversation'").get(),
+  );
   let closed = false;
   let running = false;
   let continuation: NodeJS.Immediate | undefined;
@@ -102,12 +105,20 @@ export function authenticationCleanup({
         `expiresAt <= ?
       AND NOT EXISTS (SELECT 1 FROM session WHERE session.id = browser_binding.sessionId)
       ${
+        hasConversations
+          ? `AND NOT EXISTS (SELECT 1 FROM conversation
+        WHERE browserBindingId = browser_binding.id AND expiresAt > ?)`
+          : ''
+      }
+      ${
         hasTasks
           ? `AND NOT EXISTS (SELECT 1 FROM assistant_connection
         WHERE browserBindingId = browser_binding.id AND taskExpiresAt > ?)`
           : ''
       }`,
-        ...(hasTasks ? [now(), now()] : [now()]),
+        now(),
+        ...(hasConversations ? [now()] : []),
+        ...(hasTasks ? [now()] : []),
       ),
     () => hasResults && remove('storage_action_result', 'id', 'checkUntil <= ?', now()),
     () => remove('verification', 'id', `${milliseconds('expiresAt')} <= ?`, now()),

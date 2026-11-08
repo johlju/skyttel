@@ -246,9 +246,22 @@ audio or household content.
 A denied microphone, blocked audio or broken voice connection leaves text
 and forms usable. Check browser permissions, secure origin and network
 access, then start a fresh voice connection. Voice does not reconnect
-automatically. After an application restart, start a new assistant session.
-A saved conversation consent remains. A consent given only for the visit
-lasts until the page is reloaded.
+automatically. After an application restart, consented conversation text and
+unfinished work remain paused in installation storage until their original
+seven-day inactivity deadline. A new authenticated visit checks household
+access, ownership and current content before showing this material. No
+model work or new save starts during restoration. A saved conversation
+consent remains; new conversation work can require approval again when
+the earlier approval only covered a visit or the information changes.
+
+Logout pauses the conversation. Explicit end and expiry remove conversation
+text, queued work, pending parts and their save blockers. They do not save
+or discard draft proposals. Pending changes in retained conversations
+block new saves of the same draft even before restoration loads the old
+conversation. Existing registered save attempts retain their independent
+recovery and precedence. Preserve the database and apply the backup limits
+to consented conversation content. Background work and status checks do
+not renew its lifetime.
 
 Stopping a session or losing a connection does not undo a completed save.
 Skyttel automatically checks uncertain saves when contact returns. It

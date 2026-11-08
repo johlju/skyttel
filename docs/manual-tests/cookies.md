@@ -66,7 +66,9 @@ KAK-01.
 2. Öppna **Visa nödvändig lagring** och läs namn, plats, innehåll och tider.
 3. Öppna **Visa serverns lagringsposter**. Läs posterna för inloggning,
    resultatkontroll och installationens säkerhetsgeneration samt informationen
-   om samtalets arbetsminne och transportkvittens.
+   om medgivet samtal och separat arbetsminne för transportkvittens. Läs
+   posten **conversation**: version 4, sju dygn efter eget meddelande eller
+   uttrycklig återupptagning, paus vid återkomst och separata sparförsök.
 4. Ladda om sidan. Välj **Till startsidan**. Kontrollera **Vi använder
    kakor**, tryck Escape och kontrollera fokus på **Endast nödvändiga**.
 

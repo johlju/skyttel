@@ -111,6 +111,7 @@ export type Conversation = {
    * microphone, the unsent text and the draft stay as they are.
    */
   newConversation: () => Promise<void>;
+  endConversation: () => Promise<void>;
   recover: () => Promise<void>;
   retry: (operationId: string) => Promise<void>;
 };
@@ -292,6 +293,25 @@ export function useConversation({
       }
       active.current = next;
       setSession(next);
+      if (next.paused) {
+        setTranscript([
+          ...(next.conversation ?? []).map((row, index) => ({
+            ...row,
+            id: `restored-${next.id}-${index}`,
+            voicePending: false,
+          })),
+          ...(next.queuedRequests ?? [])
+            .filter(({ source }) => source !== 'voice')
+            .map(({ id, text }) => ({
+              id,
+              role: 'user' as const,
+              text,
+              voicePending: false,
+            })),
+        ]);
+        setTaskFailed(false);
+        return;
+      }
       if ((next.contextRevision ?? 0) > (previous?.contextRevision ?? 0)) {
         setUnknown(false);
         setError('');
@@ -549,13 +569,23 @@ export function useConversation({
         // Without an answer the consent box asks. The server decides what is valid.
         if (!controller.signal.aborted) setSavedConsent(null);
       });
+    void request<{ conversation?: TextAssistantView }>(
+      `${path}/restore`,
+      undefined,
+      controller.signal,
+    )
+      .then((result) => {
+        if (!controller.signal.aborted && !active.current && result.conversation)
+          update(result.conversation);
+      })
+      .catch(() => {});
     return () => {
       mounted.current = false;
       requestEpoch.current++;
       consentEpoch.current++;
       controller.abort();
       const current = active.current;
-      if (current) void request(`${path}/${current.id}/stop`, {}).catch(() => undefined);
+      if (current) void request(`${path}/${current.id}/pause`, {}).catch(() => undefined);
       // A conversation that is enabled again starts as it does the first time.
       clear();
       setAvailable(null);
@@ -573,7 +603,7 @@ export function useConversation({
       revoking.current = false;
       setError('');
     };
-  }, [path, consentPath, enabled, clear]);
+  }, [path, consentPath, enabled, clear, update]);
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
@@ -653,7 +683,7 @@ export function useConversation({
     // A refusal for a revoked consent ends the conversation, not the access.
     onAccessLost: fail,
     onTranscript: showTranscript,
-    inputBlocked: !connected || available === false,
+    inputBlocked: !connected || available === false || session?.paused === true,
     saveChecking,
     contextFailed: session?.contextSummaryState === 'failed',
     onRecoveryNeeded: () => setUnknown(true),
@@ -835,8 +865,14 @@ export function useConversation({
           visitConsent ? { consent: { textVersion: conversationConsentTextVersion } } : {},
         );
         if (!mounted.current || epoch !== requestEpoch.current) {
-          void request(`${path}/${result.id}/stop`, {}).catch(() => undefined);
+          void request(`${path}/${result.id}/pause`, {}).catch(() => undefined);
           return;
+        }
+        // This start follows the user's explicit new-conversation action.
+        if (active.current?.paused) {
+          active.current = null;
+          completion.current = conversationCompletion();
+          setTranscript([]);
         }
         setUnknown(false);
         update(result);
@@ -1000,6 +1036,7 @@ export function useConversation({
     const current = session;
     if (
       !current ||
+      current.paused ||
       revoking.current ||
       !text.trim() ||
       inputBlocked ||
@@ -1082,6 +1119,10 @@ export function useConversation({
   async function newConversation(discard = false) {
     const current = active.current;
     if (!current || resetInProgress.current || saveChecking || revoking.current) return;
+    if (current.paused && !consentValid) {
+      setRequested('text');
+      return;
+    }
     // A reset may interrupt a pending message, but a second reset must not
     // replace the first one's retained microphone while the server answers.
     resetInProgress.current = true;
@@ -1235,6 +1276,28 @@ export function useConversation({
       else await cancelWork();
     },
     newConversation,
+    endConversation: async () => {
+      const current = active.current;
+      if (!current || pending) return;
+      const epoch = ++requestEpoch.current;
+      setPending(true);
+      endVoice.current();
+      try {
+        await request(`${path}/${current.id}/stop`, {});
+        if (epoch !== requestEpoch.current) return;
+        active.current = null;
+        completion.current = conversationCompletion();
+        setSession(null);
+        setTranscript([]);
+        setUnknown(false);
+        setTaskFailed(false);
+        callbacks.current.onMapChange();
+      } catch (failure) {
+        if (epoch === requestEpoch.current) fail(failure);
+      } finally {
+        if (mounted.current && epoch === requestEpoch.current) setPending(false);
+      }
+    },
     recover,
     retry: (operationId) => command('retry', { operationId }),
   };

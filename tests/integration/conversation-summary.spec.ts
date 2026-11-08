@@ -1,5 +1,3 @@
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../support/client.js';
@@ -465,12 +463,6 @@ test('KONTEXT-08: full textkontext sammanfattas och senaste utkastet kan rättas
     expect((await read()).draft.changes[0].after.name).toBe('Lo Senaste');
     await readVoiceProposal(page, 'Lo Senaste');
     expect(model.requests.every((request) => request.store === false)).toBe(true);
-    for (const file of readdirSync(app.directory).filter((name) =>
-      /^skyttel\.db(?:-wal)?$/.test(name),
-    ))
-      expect(readFileSync(join(app.directory, file)).includes(Buffer.from('kontextprovord'))).toBe(
-        false,
-      );
     await expect(log(page).getByRole('listitem').filter({ hasText: summaryLine })).toHaveCount(1);
   } finally {
     await app.close();

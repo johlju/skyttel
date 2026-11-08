@@ -1,6 +1,6 @@
 # Manuella testfall för samtalets kontext
 
-Fallen provar att samma tillfälliga samtal följer text och röst, även efter
+Fallen provar att samma samtal följer text och röst, även efter
 utkaständringar, sparande, avbrott och fel. De provar också aktuella
 kommandon för nytt samtal och för att kasta hela utkastet.
 Kontextmätaren och röstrutans procenttal provas med kontrollerade
@@ -9,6 +9,11 @@ Full kontext provas också med automatiska sammanfattningar, kvarvarande
 utkast och samtalstext, säkert röstbyte och ett uttryckligt felhinder.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 Kontrollerade röstspår är tysta; faktiskt hört tal redovisas separat.
+
+KONTEXT-24 provar beständigt bevarande genom omladdning, utloggning,
+serveromstart och uttryckligt avslut. Exakta utgångsgränser har separat
+tekniskt HTTP-underlag; klientåterställning ensam bevisar inte beständig
+lagring.
 
 ## Konfigurerade användare
 
@@ -80,7 +85,7 @@ avbrott och fel”.
   "outcomes": [
     "Den senaste ändringen kan rättas efter att den har lagts i utkastet. Sparande, avbrott och fel raderar inte sammanhanget.",
     "**För sent.** visas inte. Ett äldre sparbesked ger inget nytt sparande eller nytt kvitto. Felet kan följas av ett nytt vanligt uppdrag.",
-    "Samtalet är tillfälligt. Automationen kontrollerar att provorden inte finns i SQLite eller dess transaktionsfil och att leverantörsanropen använder `store:false`. Ingen samtalslogg skapas."
+    "Samtalet bevaras efter medgivande. Leverantörsanropen använder `store:false` och serverns vanliga diagnostik innehåller inte provorden."
   ]
 }
 ```
@@ -112,9 +117,8 @@ avbrott och fel”.
   Sparande, avbrott och fel raderar inte sammanhanget.
 - **För sent.** visas inte. Ett äldre sparbesked ger inget nytt sparande
   eller nytt kvitto. Felet kan följas av ett nytt vanligt uppdrag.
-- Samtalet är tillfälligt. Automationen kontrollerar att provorden inte
-  finns i SQLite eller dess transaktionsfil och att leverantörsanropen
-  använder `store:false`. Ingen samtalslogg skapas.
+- Samtalet bevaras efter medgivande. Leverantörsanropen använder
+  `store:false`; serverns vanliga diagnostik innehåller inte provorden.
 
 ### KONTEXT-02: röst och text delar kontext över avstängning och ny röstanslutning
 
@@ -660,7 +664,7 @@ utkastet kan rättas”.
   "reference": "Chromium, kontrollerad leverantör, riktig server och SQLite. Angiven ingång, mikrofonval och bredd skyddar kontextens gräns, bevarat utkast och återstart.",
   "outcomes": [
     "Sammanfattningen kortar kontexten utan att ta bort samtalstext eller utkast. Det senaste förslaget går att rätta med samma hänvisning.",
-    "Orden **Spara hela utkastet nu** i historiska data ger inget sparande. Automationen kontrollerar `store:false` och att provordet saknas i SQLite och dess transaktionsfil. Samtalet loggas inte av servern."
+    "Orden **Spara hela utkastet nu** i historiska data ger inget sparande. Automationen kontrollerar `store:false`. Bevarande på installationen ändrar inte leverantörslagringen."
   ]
 }
 ```
@@ -688,8 +692,8 @@ utkastet kan rättas”.
 - Sammanfattningen kortar kontexten utan att ta bort samtalstext eller
   utkast. Det senaste förslaget går att rätta med samma hänvisning.
 - Orden **Spara hela utkastet nu** i historiska data ger inget sparande.
-  Automationen kontrollerar `store:false` och att provordet saknas i
-  SQLite och dess transaktionsfil. Samtalet loggas inte av servern.
+  Automationen kontrollerar `store:false`. Bevarande på installationen
+  ändrar inte leverantörslagringen.
 
 ### KONTEXT-09: full röstkontext sammanfattas med bevarat mikrofonläge
 
@@ -2014,3 +2018,134 @@ teman och vid zoom.
 - Tal inspelat före släpp finns kvar genom sammanfattningen; inget nytt tal
   spelas in efter släpp. Ett faktiskt hört sparkvitto avslutas före röstbyte.
   Procent, symbol och text kan läsas i båda teman och vid zoom.
+
+## Bevarat samtal
+
+### KONTEXT-24: omladdning bevarar pausat samtal och avslut lämnar utkastet
+
+**Syfte:** Återfå samtalets text, fråga och modellval efter omladdning,
+utloggning och omstart utan fortsatt arbete, och kunna ta bort samtalet
+utan att kasta utkastet.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Kontrollerad installation i ett datorfönster med
+bredd 1280 px. Skapa Kontextprov och ett osparat Lo Exempel av typen
+Person, utan beskrivning. Börja ett textsamtal och godkänn den aktuella
+medgivandetexten utan att spara medgivandet.
+
+**Separat förberedelse:** Använd
+[frågan före omladdning](conversation-preparation.md#fråga-före-omladdning)
+vid steg 2. Starta en ny installation för fallet och avsluta med `quit`.
+
+**Automatiskt motsvarande test:**
+[conversation-persistence.spec.ts](../../tests/integration/conversation-persistence.spec.ts),
+KONTEXT-24. Provet använder riktig server, SQLite och kontrollerad modell.
+Separat HTTP-underlag provar tal utan uppdrag och fördröjd delegering med
+kontrollerad klocka. Det skiljer den mottagna repliken från senare arbete
+och verifierar sjudygnsgränsen genom verklig omstart.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/conversation-persistence.spec.ts",
+    "caseId": "KONTEXT-24"
+  },
+  "reference": "Dator 1280 px, textläge och nödvändig webbläsarlagring. Riktig server med kontrollerad modell. HTTP-underlaget skiljer faktisk databasbeständighet från klientåterställning.",
+  "outcomes": [
+    "Efter omladdning, utloggning och verklig serveromstart visas den exakta instruktionen, frågan och Sol/låg, med pausat arbete och en utgångstid.",
+    "Avslut raderar samtalstext och fråga även efter en ny omladdning, medan Lo-förslaget ligger kvar osparat. Tangentbordsfokus går till Nytt samtal."
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-persistence-http.test.ts",
+      "title": "actual restart restores the exact conversation and choice without starting model work",
+      "purpose": "Faktisk omstart med samma SQLite återställer samtal och val utan nytt modellarbete."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-persistence-http.test.ts",
+      "title": "logout pauses exact unfinished work, queued work and pending-part identities across restart",
+      "purpose": "Utloggning, verklig omstart och ny inloggning behåller väntande delars identitet och status samt kön, utan fortsatt modellarbete."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-persistence-http.test.ts",
+      "title": "seven-day expiry survives restart and ignores model completion, polling and restoration",
+      "purpose": "Kontrollerad klocka och verklig omstart bevisar den ursprungliga sjudygnsgränsen; modellarbete och upprepad visning förlänger den inte."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-persistence-http.test.ts",
+      "title": "non-delegated speech renews the seven-day lifetime across restart without renewal by other voice activity",
+      "purpose": "Tal utan delegerat uppdrag flyttar sjudygnsgränsen från mottagandet och består genom verklig omstart; tomt tal, Skyttels tal, ljudaktivitet och kontroller flyttar den inte."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-persistence-http.test.ts",
+      "title": "spoken instructions and pending parts survive actual restart with voice paused and no provider reconnect",
+      "purpose": "Fördröjd delegering av ett redan mottaget talat uppdrag flyttar inte sjudygnsgränsen; samma gräns och väntande del består genom verklig omstart."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-persistence-http.test.ts",
+      "title": "expiry erases held conversation work while an unknown registered save keeps its barrier",
+      "purpose": "Ett sent modellsvar återskapar inte utgånget samtal eller ändrar utkastet; registrerat okänt sparutfall behåller sin oberoende spärr."
+    }
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna **Modell och resonemang** vid textfältet, välj **Låg**, öppna
+   modellnamnet och välj **GPT-6.1 Sol**. Stäng dialogen med Escape.
+2. Skriv **Byt cykelns namn till Blå, men ändra inte ägaren.** och välj
+   **Skicka**. Släpp den kontrollerade frågan enligt förberedelsen.
+   Läs **Vilken cykel?** i samtalstexten.
+3. Skicka **Beskriv garaget utan att ändra.** och lämna modellsvaret
+   hållet i terminalen. Skicka sedan **Förklara vem som använder cykeln,
+   men ändra eller spara ingenting.** medan arbetet pågår.
+4. Ladda om sidan och välj **Skriv till Skyttel**. Läs hela instruktionen
+   och frågan igen. Kontrollera **Samtalet är pausat**, **Löper ut** med
+   tidpunkt och modellvalet **GPT-6.1 Sol, Låg**. Det köade meddelandet
+   visas ordagrant i samma samtalstext. Ingen arbetsrad ska visas.
+5. Öppna **Din profil → Logga ut**. Logga in igen med **Fortsätt med
+   Google → Fortsätt till Google**. Öppna textvyn och läs samma instruktion,
+   fråga och pausbesked. Kör `restart` i förberedelseterminalen och invänta
+   `restarted`. Ladda om sidan och läs samma innehåll igen.
+6. Öppna **Visa utkastet → Visa förslaget: Lo Exempel**. Läs Person och
+   Lo Exempel utan beskrivning; stäng dialogen. Flytta tangentbordsfokus
+   till **Avsluta samtalet** och tryck Enter. Den tidigare instruktionen
+   och frågan ska försvinna. Fokus ska gå till **Nytt samtal**.
+7. Ladda om igen och öppna textvyn. Den tidigare samtalstexten ska saknas.
+   Läs Lo-förslaget på samma sätt igen; det ska vara kvar osparat.
+
+**Förväntat resultat:**
+
+- Samtalstext, fråga, köat meddelande och eget modellval består genom
+  omladdning,
+  utloggning och omstart.
+  Återkomsten visar pausat arbete och utgångstid, utan automatisk körning.
+- Uttryckligt avslut raderar samtalet. Omladdning återställer det inte.
+  Utkastet varken sparas eller kastas av avslutet. Tangentbordsfokus går
+  till **Nytt samtal** när den fokuserade avslutsknappen försvinner.

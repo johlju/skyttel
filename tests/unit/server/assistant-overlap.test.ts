@@ -164,9 +164,17 @@ for (const mode of ['sequential', 'overlap'] as const) {
     const unknown = events.find((event) => event.kind === 'work_result');
     expect(unknown).toMatchObject({
       taskId: 'controlled',
+      consentTextVersion: 4,
+      conversationConsentTextVersion: 4,
       status: 'incomplete',
       data: { disposition: 'unknown', reason: 'batch_outcome_unknown' },
     });
+    app.setConversationConsentTextVersion(5);
+    const approval = await client.post(`${flow.path}/conversation-consent`, {
+      headers: { origin: app.origin },
+      data: { textVersion: 5 },
+    });
+    expect(approval.status()).toBe(200);
     delivery.blockStatus(false);
     const recovered = await client.post(`${flow.path}/text-assistant/${flow.session.id}/recover`, {
       headers: { origin: app.origin },
@@ -181,6 +189,8 @@ for (const mode of ['sequential', 'overlap'] as const) {
     expect(results).toHaveLength(2);
     expect(results[1]).toMatchObject({
       taskId: 'controlled',
+      consentTextVersion: 4,
+      conversationConsentTextVersion: 4,
       status: 'completed',
       context: {
         providerCallId: unknown?.context?.providerCallId,

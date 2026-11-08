@@ -53,6 +53,9 @@ function serve(routes: Record<string, Reply[]>) {
   routes['/api/households/linden/text-assistant'] ??= Array.from({ length: 8 }, () => ({
     data: { available: false },
   }));
+  routes['/api/households/linden/text-assistant/restore'] ??= Array.from({ length: 8 }, () => ({
+    data: { available: false },
+  }));
   routes['/api/households/linden/map/conversation-preferences'] ??= [
     { data: defaultConversationPreferences },
   ];

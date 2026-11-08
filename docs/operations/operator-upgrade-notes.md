@@ -6,6 +6,27 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Preserve consented conversations during upgrade
+
+Before rollout, stop new conversation requests to the old release. Let
+accepted work finish under its original terms. Users must approve the
+updated conversation information before new work or conversation storage.
+Old temporary text is not copied before that approval. Manual map work
+remains available when a user declines.
+
+Preserve and protect the installation database and its backups. Consented
+conversation text and unfinished work now remain on the installation for
+seven days after the last user message or explicit resume. Background work
+does not renew this period. Verify the original deadline and expiry after
+a restart with synthetic data. Apply the existing backup deletion limits
+to conversation content as well.
+
+Restored work is paused. A restart or restored provider access must not
+start new model work or a new save. Logout pauses the conversation; explicit
+end and expiry remove its text and unfinished work. Draft proposals and
+registered save attempts remain separate. Verify an unknown save outcome
+before further changes; conversation deletion does not clear its barrier.
+
 ### Preserve operation recovery state
 
 Preserve the installation database during rollout. After rollout, use
@@ -226,16 +247,15 @@ discards buffers and cancels delivery where possible. It cannot recall
 accepted requests or delete cloud data. Stop sending before recovery and
 repair forward; an older image against upgraded data is unsupported.
 
-### Renew conversation consent before diagnostic sending
+### Verify conversation consent before diagnostic sending
 
-End active conversations when deploying this update. Users must accept the
-current conversation information before they can start again. Previous
-saved or visit-only acceptance does not cover LangSmith processing. Keep
+Before the first enabled release, verify that the accepted conversation
+information covers LangSmith processing. Earlier information that does
+not cover this processing cannot authorize diagnostic sending. Keep
 existing household data and saved changes.
 
-Verify the current information before the first enabled release. Each
-conversation keeps its original information version. Later acceptance
-does not authorize export of an older conversation. Opening voice can
+Each running request keeps its accepted information version. Later
+acceptance does not authorize export of earlier work. Opening voice can
 send identifiers and lifecycle evidence before context preparation or
 any transcript. Complete the rollout checks before opening it.
 
@@ -515,8 +535,9 @@ Check the complete text fallback and its audio notice with keyboard and
 screen reader users. Receipt confirms that the complete text reaches
 the browser; it does not confirm audio playback, reading or understanding.
 A lost connection, missing receipt or restart ends delivery without
-automatic replay. Check existing drafts and save results after login;
-temporary conversation text does not become stored conversation history.
+automatic replay. Check existing drafts and save results after login.
+Consented conversation history returns paused; delivery receipts do not
+authorize replay or new work.
 
 ### Conversation model
 

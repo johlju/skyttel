@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import type { MapDraft, SaveOperation, SaveReceipt } from '../shared/map.js';
+import { assertConversationSaveAllowed } from './conversation-storage.js';
 import { MapError } from './map-error.js';
 
 interface OperationRow {
@@ -113,6 +114,7 @@ export function mapOperations(database: Database.Database, userId: string, house
         return result(previous);
       }
       assertEditable();
+      assertConversationSaveAllowed(database, userId, householdId);
       const error = draft.version !== body.version ? 'draft_conflict' : null;
       database
         .prepare(

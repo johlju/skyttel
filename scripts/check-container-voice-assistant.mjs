@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { containerConversationConsent } from './container-conversation-consent.mjs';
 
 // All offers are rejected before provider creation. The production image must
 // load its real Live/sideband SDK while these checks make no paid model calls.
@@ -27,9 +28,7 @@ export async function checkContainerVoiceAssistant({
   }
   const map = await call('/map');
   assert.equal((await call('/text-assistant')).available, true);
-  // The consent for the current consent text, version 3 in
-  // src/shared/conversation-consent.ts.
-  const consent = { consent: { textVersion: 3 } };
+  const consent = await containerConversationConsent(command, name);
   const assistant = await call('/text-assistant', consent, 201);
   const receipt = assistant.operations.find((operation) => operation.status === 'succeeded');
   assert.ok(receipt, 'The preceding text-assistant check supplies a durable saved receipt');
@@ -57,6 +56,19 @@ export async function checkContainerVoiceAssistant({
 
   await command(['restart', name]);
   await waitUntilReady(name);
+  const { conversation: restored } = await call('/text-assistant/restore');
+  assert.equal(restored.id, assistant.id);
+  assert.equal(restored.paused, true);
+  assert.deepEqual(restored.modelChoice, assistant.modelChoice);
+  assert.deepEqual(
+    restored.operations.find((operation) => operation.operationId === receipt.operationId),
+    receipt,
+  );
+  const refusedRestore = await call(voice, { sdp: 'synthetic-invalid-offer', ...anchor }, 409);
+  assert.equal(refusedRestore.error, 'assistant_work_paused');
+  assert.deepEqual(await call('/map'), map);
+  // End the restored conversation before starting another one explicitly.
+  await call(`/text-assistant/${restored.id}/stop`, {});
   await call(voice, { sdp: 'synthetic-invalid-offer', ...anchor }, 404);
   const reconnected = await call('/text-assistant', consent, 201);
   assert.deepEqual(
@@ -65,6 +77,7 @@ export async function checkContainerVoiceAssistant({
   );
   assert.deepEqual(await call('/map'), map);
   await call(`/text-assistant/${reconnected.id}/stop`, {});
+  await call(`/text-assistant/${reconnected.id}`, undefined, 404);
   console.log(
     'PASS: production voice access, consent and stale-offer denial with shared receipt recovery; no Live or Terra calls',
   );

@@ -60,6 +60,13 @@ export type ConversationReply = {
   saveCheck?: SaveCheck;
 };
 export interface TextAssistantView {
+  /** Restored work never starts automatically. */
+  paused?: boolean;
+  expiresAt?: number;
+  conversation?: { role: 'user' | 'assistant'; text: string; partial?: boolean }[];
+  /** Authenticated original wording, distinct from model summaries. */
+  unfinishedRequests?: { id: string; text: string; paused?: boolean }[];
+  queuedRequests?: { id: string; text: string; source?: 'text' | 'voice' }[];
   modelChoice?: ConversationModelChoice;
   modelChoiceRevision?: number;
   enabledModelChoices?: ConversationModelChoice[];

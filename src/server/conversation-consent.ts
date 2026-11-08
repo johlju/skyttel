@@ -6,6 +6,14 @@ import {
 
 export type ConversationConsents = ReturnType<typeof conversationConsents>;
 
+/** Approval for a request is separate from eligibility of its original context. */
+export type ConversationConsentProvenance = {
+  /** Accepted information bound when this request starts, independent of later approval. */
+  consentTextVersion: number;
+  /** Original context eligibility, independent of approval for this request. */
+  conversationConsentTextVersion: number;
+};
+
 /**
  * The conversation consents of the installation, for the consent text version
  * that the running release has. A consent is valid when the user has saved it
@@ -13,15 +21,17 @@ export type ConversationConsents = ReturnType<typeof conversationConsents>;
  */
 export function conversationConsents(
   database: Database.Database,
-  textVersion = conversationConsentTextVersion,
+  informationVersion: number | (() => number) = conversationConsentTextVersion,
 ) {
+  const currentVersion = () =>
+    typeof informationVersion === 'function' ? informationVersion() : informationVersion;
   /** Whether a consent, saved or stated in a request, approves the current consent text. */
   function approvesCurrentText(consent: unknown) {
     return (
       typeof consent === 'object' &&
       consent !== null &&
       'textVersion' in consent &&
-      consent.textVersion === textVersion
+      consent.textVersion === currentVersion()
     );
   }
   function saved(userId: string, householdId: string) {
@@ -35,7 +45,9 @@ export function conversationConsents(
   }
   return {
     /** The running release's information version, captured at conversation start. */
-    textVersion,
+    get textVersion() {
+      return currentVersion();
+    },
     approvesCurrentText,
     saved,
     /** Saves the user's consent to the current consent text for the household. */
@@ -47,7 +59,7 @@ export function conversationConsents(
           SELECT householdId, userId, ?, ? FROM membership WHERE householdId = ? AND userId = ?
           ON CONFLICT(householdId, userId)
           DO UPDATE SET textVersion = excluded.textVersion, savedAt = excluded.savedAt`)
-        .run(textVersion, new Date().toISOString(), householdId, userId);
+        .run(currentVersion(), new Date().toISOString(), householdId, userId);
       return saved(userId, householdId);
     },
     /** Removes the user's saved consent for the household, whatever text version it approves. */

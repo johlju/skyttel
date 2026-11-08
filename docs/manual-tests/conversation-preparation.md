@@ -7,6 +7,32 @@ verkliga leverantörsanrop eller fysiska ljudprov ingår här.
 
 ## Utkastbatch och sparande
 
+### Fråga före omladdning
+
+För KONTEXT-24: använd det nya REQUEST från `held` efter meddelandet
+**Byt cykelns namn till Blå, men ändra inte ägaren.**. Skicka följande
+kontrollerade svar och invänta att frågan visas före omladdning:
+
+<!-- markdownlint-disable MD013 -->
+```text
+tool REQUEST ask_questions {"questions":[{"kind":"change","request":"Byt cykelns namn till Blå, men ändra inte ägaren.","question":"Vilken cykel?","dependsOnDraft":true}]}
+```
+<!-- markdownlint-enable MD013 -->
+
+Efter omladdningen ska inget nytt `held` visas. Avsluta med `quit` efter
+UI-proceduren; provkatalogen tas bort. Vid omstart använder du det
+befintliga kommandot `restart` och inväntar `restarted` innan omladdning.
+Exakta tidsgränser verifieras separat genom de publika HTTP-kontrollerna.
+
+Lämna svaret på **Beskriv garaget utan att ändra.** hållet före
+omladdningen. Det följande köade meddelandet ska inte skapa ett nytt
+modelluppdrag. Återleverera inte det tidigare verktygsanropet eller
+skapa ett nytt uppdrag för att återställa samtalet. `restart` släpper
+kvarvarande gamla leverantörssvar och startar samma databas på nytt;
+pausat arbete och kön ska fortfarande inte starta.
+
+### Aktuella värden för ändringar
+
 Vid ett angivet släpp i ett vanligt fall: kopiera `id`, `draft.version`,
 `draft.contentVersion`, Lo-förslagets `id` och hela `after` från aktuellt
 `held`. Vid nästa uppdrag används dess nya `id` och aktuella `draft`.
@@ -175,8 +201,9 @@ utkastversion. Läs hela förslaget före nästa sparande.
 Kör `hold-save on` före **Spara hela utkastet nu.**.
 Släpp verktygsanropet `save_draft` enligt ovan och vänta på
 `save-registered` innan återkallanderutan öppnas. Anteckna dess
-`operationId` separat. Efter bekräftat återkallande körs `release-save`.
-Samtalet är då avslutat;
+`operationId` separat. Bekräfta återkallandet och invänta
+**Medgivandet är återkallat** innan `release-save` körs. Kontrollera därefter
+att inget modellarbete väntar. Samtalet är då avslutat;
 släpp inget efterföljande slutbesked. Under **Identifiera sparandet
 och användaren** kan detta råa ID jämföras som tekniskt underlag.
 Kör `hold-save off` efteråt, eller `quit` som även släpper en kvarvarande
@@ -389,8 +416,10 @@ verkliga ID:t. Kör följande hela Console-paket för varje egen anslutning:
 })()
 ```
 
-Läs status 200 och `voice.phase:"closed"` för varje ID. Ladda därefter
-om sidan och öppna **Skriv till Skyttel**. Kontrollera noll kontext,
+Läs status 200 och `voice.phase:"closed"` för varje ID. Transportstoppet
+bevarar samtalet, som återställs pausat vid omladdning. Välj därför
+**Avsluta samtalet** i textvyn innan nästa självständiga fall.
+Ladda därefter om sidan och öppna **Skriv till Skyttel**. Kontrollera noll kontext,
 borttagen tidigare samtalstext och samma hela sparade karta, historik
 och Robins privata förslag. Gör nästa rättelse i det vanliga
 objektformuläret och läs hela förslaget. Välj därefter **Nytt samtal**,

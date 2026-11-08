@@ -43,10 +43,11 @@ visas som okända och betyder inte noll kostnad.
 
 ## Medgivande
 
-Skyttel behöver ditt medgivande innan ett samtal startar. Textversion 3
-beskriver även felsökning hos LangSmith när installationens sändning är
-aktiv. Ett sparat medgivande eller ett besöksmedgivande för version 1
-eller 2 räcker inte; du behöver godkänna den aktuella informationen.
+Skyttel behöver ditt medgivande innan ett samtal startar. Textversion 4
+beskriver installationens lagring av samtalet, dess livslängd och
+felsökning hos LangSmith när installationens sändning är aktiv. Ett
+medgivande för en tidigare version räcker inte; du behöver godkänna den
+aktuella informationen innan nytt arbete eller beständigt bevarande.
 Samma medgivande
 gäller röst och text. Medgivanderutan **Samtal med Skyttel** visas när du
 väljer **Prata med Skyttel** eller börjar använda samtalet i textvyn.
@@ -55,8 +56,8 @@ Att bara öppna textvyn eller läsa utkastet kräver inget medgivande.
 tangentkombinationen och hur uppgifterna behandlas.
 
 1. Läs texten i rutan. Den beskriver OpenAI:s behandling, eventuell
-   felsökning hos LangSmith och att Skyttel sparar ändringar först när du
-   ber om det.
+   felsökning hos LangSmith, installationens lagring och att Skyttel
+   sparar ändringar i kartan först när du ber om det.
 2. Markera **Fråga inte igen för det här hushållet** om du vill spara
    medgivandet. Det gäller då dig i det här hushållet, på alla dina enheter.
 3. Välj **Godkänn och starta**. Samtalet startar med röst eller text, efter
@@ -113,8 +114,43 @@ Medgivandet är skilt från cookieval och från andra klienters medgivanden
 under **Assistentanslutningar**, och från installationsansvarigs beslut
 om sändning till LangSmith. Ett samtal behåller den informationsversion
 som godkändes när det började. Ett senare godkännande gör inte äldre
-samtalsinnehåll tillgängligt för sändning. Vid uppdateringen avslutas
-pågående samtal; börja ett nytt och godkänn den aktuella informationen.
+samtalsinnehåll tillgängligt för sändning. Pågående arbete får slutföras
+under sina ursprungliga villkor. Nytt arbete väntar på det uppdaterade
+medgivandet. Äldre tillfällig samtalstext kopieras inte till beständig
+lagring före godkännandet. Du kan fortsätta arbeta manuellt i kartan om du
+avstår.
+
+## Återkomst, utgång och avslut
+
+Efter ditt medgivande bevarar installationen samtalstext, exakta
+oavslutade instruktioner och begränsningar, väntande delar, kö, status och
+samtalets modellval. Uppgifterna hålls åtskilda för varje
+Skyttel-användare och hushåll. De ingår inte i hushållets karta eller
+fullständiga export. Leverantörernas lagring och webbläsarens
+lagringssamtycke är separata från detta bevarande.
+
+Vid omladdning och serveromstart kan samma webbläsare återfå samtalet med
+arbetet pausat. Öppna **Skriv till Skyttel** och läs texten, frågorna och
+modellvalet. **Samtalet är pausat** betyder att återkomsten inte startar
+modellarbete eller nya sparförsök. Inloggning, hushållsåtkomst och aktuellt
+innehåll kontrolleras på nytt. Pausat arbete och dess kö fortsätter inte
+automatiskt. **Nytt samtal** tar bort det tidigare samtalet och behåller
+utkastet; ett nytt samtal kan kräva medgivande igen.
+Köade skrivna meddelanden visas ordagrant i den återställda samtalstexten.
+
+**Löper ut** visar den bestämda tidpunkten. Samtalet raderas efter sju
+dygn utan ett meddelande från dig eller uttrycklig återupptagning.
+Modellarbete, visning och statuskontroller förlänger inte tiden.
+Serveromstart flyttar inte tidpunkten. Inloggningens tidsgränser kan
+kräva ny inloggning innan samtalet löper ut.
+
+**Avbryt** avbryter återstående arbete och kön men behåller samtalstext,
+väntande delar och genomförda utkaständringar. **Logga ut** pausar
+samtalet. **Avsluta samtalet** raderar texten, kön och oavslutade delar
+med deras sparhinder. Utgång gör samma sak. Varken avslut eller utgång
+sparar eller kastar utkastet. Registrerade sparförsök och sparkvitton
+består separat; ett okänt sparutfall blockerar fortfarande ändringar
+tills det klarläggs. Kontrollera utfallet före ett nytt försök.
 
 ## Håll in för att tala
 
@@ -650,8 +686,9 @@ uppdrag kan börja.
 
 En avstängd mikrofon behåller samtalstexten i det pågående samtalet.
 **Nytt samtal** tömmer samtalstexten och kontexten.
-Samtalet avslutas när du lämnar hushållets karta, laddar om sidan eller
-när åtkomsten upphör.
+När du lämnar hushållets karta, laddar om sidan eller loggar ut bevaras
+ett medgivet samtal med arbetet pausat till sin utgångstid. Återkallad
+hushållsåtkomst avslutar tillgången till samtalet.
 En skriven instruktion som servern tar emot medan du är inloggad får bli
 klar inom 30 minuter från mottagandet, även om inloggningen går ut under
 tiden. Köväntan ingår i tiden. Nya instruktioner och nya sparbegäranden
@@ -662,7 +699,7 @@ Utloggning, återkallat medgivande eller återkallad åtkomst stoppar fortsatt
 arbete. Återimport eller byte av innehållsägare kräver en ny anslutning.
 Redan lagrade förslag finns i ditt utkast efter ny inloggning. Sparade
 uppgifter och kvitton finns också kvar. Vid serveromstart fortsätter inget
-modellarbete, och den lokala samtalstexten försvinner. Uppgifter som redan
+modellarbete; medgiven samtalstext återställs pausad. Uppgifter som redan
 skickats till LangSmith kan finnas kvar där. Ett svar som servern gör klart
 är ingen bekräftelse på att det har nått din webbläsare.
 
@@ -670,10 +707,11 @@ skickats till LangSmith kan finnas kvar där. Ett svar som servern gör klart
 
 Med ditt medgivande behandlar OpenAI ljud som spelas in medan mikrofonen
 är på, det du skriver, hela ditt utkast och de uppgifter i hushållets karta
-som behövs. Samtalets tillfälliga text ingår också, så att Skyttel kan svara
+som behövs. Samtalets text ingår också, så att Skyttel kan svara
 i samma sammanhang. Tal från starten kan vänta i webbläsaren och skickas
 efter släpp, medan ny inspelning stängs av direkt. Bilder skickas inte till
-OpenAI. Skyttel har inget lokalt samtalsarkiv. Säg eller skriv inga lösenord,
+OpenAI. Skyttel bevarar samtalet på installationen enligt den beskrivna
+sjudygnsgränsen. Säg eller skriv inga lösenord,
 koder eller fullständiga konto- och kortnummer.
 
 Skyttel begär att OpenAI inte lagrar samtalet. OpenAI kan ändå behålla
@@ -782,6 +820,6 @@ En redan mottagen skriven instruktion kan få sitt svar där efter att
 inloggningen går ut, om samma anslutning fortfarande är öppen. Uppgiftens
 ursprungliga gräns på 30 minuter gäller även leveransen. Ett avbrott,
 utebliven mottagning eller omstart ger ett leveransfel. För ett nytt försök
-lämnar du instruktionen igen. Samtalstexten är tillfällig. Redan lagrat
-utkast och sparresultat finns kvar. Kontrollera dem efter ny inloggning
-innan du ber om ett nytt sparande.
+ska du först läsa det bevarade pausade arbetet och kontrollera tidigare
+utfall. Redan lagrat utkast och sparresultat finns kvar. Kontrollera dem
+efter ny inloggning innan du ber om ett nytt sparande.

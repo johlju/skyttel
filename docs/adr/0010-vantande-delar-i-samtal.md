@@ -22,10 +22,11 @@ Användaren ska uttryckligen återta en väntande del för att överge den;
 ett stopp ska inte innebära att hela begäran överges.
 
 Väntande delar ska följa samtalets livslängd. Sammanfattning, vanliga fel,
-stängd textvy och byte mellan text och röst ska bevara dem. Nytt samtal,
-omladdning, utloggning och serveromstart ska avsluta dem och ta bort deras
-hinder för sparande; utkastets förslag och vanliga validering ska finnas
-kvar. Detta bevarar gränsen mellan tillfälliga samtal och beständiga utkast.
+stängd textvy och byte mellan text och röst ska bevara dem. Omladdning,
+utloggning och serveromstart pausar arbetet. Nytt samtal, uttryckligt
+avslut och sju dygns inaktivitet avslutar delarna och deras sparhinder.
+Utkastets förslag och vanliga validering finns kvar. Samtal och utkast
+har därmed skilda livslängder.
 
 Att kasta utkastet ska avsluta väntande ändringar och frågor som beror på
 de kastade förslagen, men bevara oberoende begäranden om information.
@@ -42,11 +43,13 @@ tillståndsändringarna, avvisa okända identiteter och inaktuella resultat,
 bevara övriga delar och kontrollera att nödvändiga ändringar lyckas innan
 en del markeras som klar. Sparmedgivande ska kontrolleras separat.
 
-Hindret från väntande ändringar ska gälla både samtalets sparverktyg och
-manuellt sparande i webbläsaren som äger samtalet. Andra klienter och
-externa assistenter ska behålla sina befintliga sparregler; tillfälliga
-samtal ska inte införa ett globalt sparhinder. Alla sparvägar ska fortsatt
-kontrollera utkastets vanliga villkor.
+Hindret från väntande ändringar gäller samtalets sparverktyg och manuellt
+sparande. När samtalet bevaras gäller hindret nya sparförsök mot samma
+utkast även från andra samtal och externa assistenter, innan det gamla
+samtalet har lästs in efter omstart. Bara ett generiskt hinder lämnas ut;
+andra samtals instruktioner och frågor visas inte. Ett redan registrerat
+sparförsök har företräde och behåller sin egen återhämtning. Alla
+sparvägar kontrollerar också utkastets vanliga villkor.
 
 Innan en väntande del fortsätter efter andra klienters ändringar eller
 sparande ska Skyttel kontrollera aktuellt utkast och sparade uppgifter.
@@ -70,10 +73,12 @@ Textservern lämnar `pendingParts` med serverägda identiteter till modellen.
 användaruppgift. Sparkvitton avslutar inte oberoende informationsfrågor.
 
 Att bara behålla strängar ger varken säker omformulering eller tillräckligt
-underlag för selektivt avslut. En beständig uppgiftslista skulle i stället
-utöka produktens livslängd och krav på synkronisering. Valet är därför ett
-strukturerat, tillfälligt tillstånd inom det befintliga samtalet, utan ny
-uppgiftspanel eller beständig samtalshistorik.
+underlag för selektivt avslut. Delarna är strukturerat tillstånd inom
+samtalet, utan en separat uppgiftslista. Efter uttryckligt medgivande till
+lagringen bevaras samtalet på installationen, åtskilt per användare och
+hushåll, med en fast utgångstid efter senaste användarmeddelande eller
+uttryckliga återupptagning. Modellarbete och statuskontroller förnyar inte
+tiden. Utkast och registrerade sparförsök har egna livslängder.
 
 ## Tillstånd och ansvar
 
@@ -200,18 +205,35 @@ hushåll och ägande klient, och kontrollera dess ofärdiga ändringar i
 samma kritiska förlopp som sparförsöket registreras. Ett gammalt eller
 felaktigt angivet samtal ska ge omläsning eller fel, inte en väg runt
 kontrollen. UI-spärren ska spegla serverns besked. Klienter utan detta
-samtal och externa MCP-klienter följer sina befintliga sparregler;
-samtalsidentiteten utgör inte ett nytt globalt behörighetskrav.
+samtal och externa MCP-klienter får inte kringgå kvarvarande ofärdiga
+ändringsdelars sparhinder. Servern kontrollerar även beständiga samtal
+som ännu inte har lästs in efter omstart, för aktuell innehållsägare och
+innehållsversion. Kontrollen förmedlar bara ett sparhinder och visar inte
+andra användares privata instruktioner eller frågor. Samtalsidentiteten
+utgör inte ett nytt globalt behörighetskrav. Ett redan registrerat
+sparförsök behåller sina egna villkor och kontrolleras före nya sparhinder.
+
+Ett okänt batchutfall hindrar fortsatt assistentarbete över samma utkast
+även när det bevarade samtalet ännu inte har lästs in. Vanliga manuella
+rättelser och kontrollen av oföränderliga operationsbegäranden följer sina
+befintliga regler. Återhämtningen måste läsa aktuellt utkast efter en
+sådan rättelse. Statuskontroll får inte starta senare köat arbete så länge
+det ursprungliga samtalet är pausat med en oavslutad instruktion.
 
 Vid ändrad utkastversion ska servern läsa om utkast, relevanta sparade
 uppgifter och sparoperationer innan delen fortsätter. Ett tomt utkast
 eller en ny version bevisar inte att begäran är uppfylld eller kastad.
 Verifierade resultat kan avsluta berörda delar; annat arbete ska bevaras
 eller få en ny fråga. För att skilja kastande från sparande ska den
-gemensamma utkastmutationen meddela aktiva samtal om ett lyckat kastande,
-med ägare, hushåll, innehållsversion och berörd utkastversion. Detta
-gäller även kastande via andra klienter och MCP. Meddelandet behövs bara
-i processen: serveromstart avslutar redan alla samtal.
+gemensamma utkastmutationen uppdatera aktiva och bevarade samtal vid ett
+lyckat kastande, med ägare, hushåll, innehållsversion och berörd
+utkastversion. Ändringsdelar och beroende informationsdelar får status
+`discarded` även innan samtalet läses in; oberoende informationsdelar
+bevaras. Detta gäller även kastande via andra klienter och MCP.
+Efter omladdning eller
+omstart ska återhämtningen läsa aktuellt auktoriserat utkast och
+operationsunderlag innan gammalt delunderlag får påverka fortsatt arbete.
+En äldre utkastbild bevisar inte vad som finns kvar.
 
 ## Livscykel och presentation
 
@@ -223,9 +245,36 @@ Kastande ska avsluta ändringsdelar och beroende informationsdelar först
 när kastandet är verifierat. Ett misslyckat kastande ska bevara dem.
 Kastande utan nytt samtal ska bevara oberoende informationsdelar.
 
-Nytt samtal, omladdning, utloggning, behörighetsförlust, serveromstart
-och samtalets utgång ska avsluta tillståndet. Sammanfattning och stängd
-textvy ska bevara det. Ett byte av inmatningssätt använder samma tillstånd.
+Nytt samtal, uttryckligt avslut, behörighetsförlust och samtalets utgång
+avslutar tillståndet. Omladdning, utloggning och serveromstart bevarar det
+med arbetet pausat. Sammanfattning och stängd textvy bevarar det. Ett byte
+av inmatningssätt använder samma tillstånd.
+
+Beständigt underlag innehåller ordagranna oavslutade instruktioner,
+delidentiteter och status, kö, genomförandestatus och samtalets modellval.
+Det innehåller inte processens klienter, anrop, avbrottssignaler eller
+transportkvittens. Ett återställt samtal startar inga nya modelluppdrag
+eller sparförsök. Aktuell användare, hushållsåtkomst, innehållsägare och
+innehållsversion kontrolleras innan underlaget visas. Återställning ändrar
+inte användarens senaste uttryckliga personliga modellval.
+
+Samtalsmedgivandets version för lagring hålls skild från den version som
+gäller samtalets ursprungliga leverantörsbehandling. Uppdaterat medgivande
+krävs före beständig lagring och nytt arbete; pågående arbete får slutföras
+under sina ursprungliga villkor. Besökets aktuella godkännande är separat
+från redan pågående uppdrags villkor. Varje nytt uppdrag och ny
+röstanslutning binds till den godkända version som gäller när arbetet
+börjar; senare godkännande skriver inte om tidigare observationsunderlag.
+Samtalskontextens ursprungliga medgivande styr separat om dess underlag får
+sändas för felsökning. Nytt godkännande uppgraderar inte äldre kontext.
+Uttryckligt nytt samtal tömmer kontexten och binder den nya kontexten till
+det aktuella godkännandet; ett kvarvarande operationsunderlag behåller sina
+ursprungliga villkor.
+Äldre tillfällig text kopieras inte före
+godkännandet. Leverantörslagring och webbläsarens lagringssamtycke ändras
+inte av bevarandet. Utgång och avslut raderar samtalets underlag, men inte
+utkast, registrerade sparförsök eller sparkvitton. Ett okänt sparutfall
+behåller sin spärr tills det klarläggs.
 
 Text och röst ska få en gemensam serverbild med delarnas identiteter och
 revisioner. `questionPending` ska härledas från delar som väntar på svar;

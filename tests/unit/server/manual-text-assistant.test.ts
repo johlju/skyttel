@@ -117,10 +117,20 @@ test('manual text controls hold actual provider work, reject a stale release and
     expect((await (await browser.get(`${base}/map`)).json()).draft.changes).toEqual([]);
     const failing = await send(stale.revision, 'Läs mitt utkast.');
     await command(`fail ${failing.id}`);
-    expect((await completed()).phase).toBe('error');
+    const beforeRestart = await completed();
+    expect(beforeRestart.phase).toBe('error');
     await command('restart', 'restarted');
-    expect((await browser.get(assistant)).status()).toBe(404);
-    expect((await browser.get(`${base}/map`)).status()).toBe(200);
+    const restored = await browser.get(assistant);
+    expect(restored.status(), await restored.text()).toBe(200);
+    expect(await restored.json()).toMatchObject({
+      id: session.id,
+      paused: true,
+      conversation: beforeRestart.conversation,
+      unfinishedRequests: beforeRestart.unfinishedRequests,
+    });
+    const map = await browser.get(`${base}/map`);
+    expect(map.status()).toBe(200);
+    expect((await map.json()).draft.changes).toEqual([]);
     await command('quit', 'closed');
     await expect(access(ready.directory)).rejects.toThrow();
   } finally {

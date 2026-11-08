@@ -1,5 +1,3 @@
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { format } from 'node:util';
 import type { Page } from '@playwright/test';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
@@ -108,15 +106,6 @@ function utterance(live: ReturnType<typeof liveProvider>, text: string) {
 }
 function speak(live: ReturnType<typeof liveProvider>, text: string) {
   utterance(live, text)();
-}
-function noPersistentConversation(
-  app: Awaited<ReturnType<typeof createInstallation>>,
-  marker: string,
-) {
-  for (const file of readdirSync(app.directory).filter((name) =>
-    /^skyttel\.db(?:-wal)?$/.test(name),
-  ))
-    expect(readFileSync(join(app.directory, file)).includes(Buffer.from(marker))).toBe(false);
 }
 
 test('KONTEXT-01: kontexten består efter utkast, sparande, avbrott och fel', async ({ page }) => {
@@ -242,7 +231,6 @@ test('KONTEXT-01: kontexten består efter utkast, sparande, avbrott och fel', as
     await expect(log(page)).toContainText('Samtalet finns kvar.');
     for (const request of model.requests)
       expect((request as ModelRequest & { store: boolean }).store).toBe(false);
-    noPersistentConversation(app, 'Kontrollera samtalets tillfälliga provord.');
     expect(messages.join('\n')).not.toContain('Kontrollera samtalets tillfälliga provord.');
   } finally {
     await app.close();
@@ -399,8 +387,7 @@ test('KONTEXT-03: skrivna och talade kommandon börjar om samtalet och kastar ut
     await expect.poll(() => model.requests.length).toBe(3);
     expect(model.requests[2].input).toHaveLength(1);
     expect(JSON.stringify(model.requests[2].input)).not.toContain('Ett tillfälligt samtalsord.');
-    noPersistentConversation(app, 'Ett tillfälligt samtalsord.');
-    // Leaving really ends the ephemeral context; the draft remains private data.
+    // Logout pauses the consented conversation; the draft remains independent.
     await openProfile(page);
     await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
     await page.getByRole('button', { name: 'Logga ut', exact: true }).click();

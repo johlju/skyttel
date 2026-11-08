@@ -256,8 +256,9 @@ efter känt utfall, avsluta med `quit` och starta nytt mellan fallen.
 
 1. Som Alex, välj **Skriv till Skyttel → Nytt samtal**, markera **Fråga inte
    igen för det här hushållet** och välj **Godkänn och starta**.
-2. Ladda om sidan och välj **Prata med Skyttel**. Samtalet ska starta direkt med
-   mikrofonen.
+2. Ladda om sidan. Öppna **Skriv till Skyttel**, läs pausbeskedet och välj
+   **Nytt samtal**. Välj sedan **Prata med Skyttel**. Ingen medgivanderuta
+   ska visas; det uttryckligen nya samtalet börjar med mikrofonen.
 3. Be operatören förbereda Alex andra inloggning och invänta bekräftelse. Logga
    in som Alex i ytterligare en webbläsarprofil, som en andra enhet. Välj
    **Skriv till Skyttel → Nytt samtal**; samtalet ska starta direkt.

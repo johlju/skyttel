@@ -128,6 +128,22 @@ Google och Microsoft styr lagringen på sina egna webbplatser.
 **Samtalsmedgivande** till OpenAI är ett separat val under
 **Samtal med Skyttel**; information om kakor ger inget sådant medgivande.
 
+Efter medgivande version 4 bevaras samtalstext och oavslutat arbete på
+installationen, åtskilt per användare och hushåll. Samtalet löper ut sju
+dygn efter ditt senaste meddelande eller uttryckliga återupptagning.
+Modellarbete, statuskontroller och serveromstart flyttar inte tidpunkten.
+Omladdning, omstart och utloggning återställer arbetet pausat. Avslut och
+utgång raderar samtalet och dess sparhinder utan att spara eller kasta
+utkastet. Registrerade sparförsök och sparkvitton har egen lagring.
+
+Säkerhetskakan kan hitta medgivna samtal i samma webbläsare efter ny
+inloggning. Den ger aldrig egen åtkomst. En utgången serverkoppling kan
+behålla den minimala hänvisningen till samtalets utgång, utan att
+förlänga inloggningen eller kakans livstid. Samtalstext läggs inte i
+localStorage eller sessionStorage. Detta ändrar inte valfria ändamål
+för webbläsarlagring; lagringssamtyckets informationsversion är
+fortsatt 1. Läs [samtalets livslängd](text-assistant.md#återkomst-utgång-och-avslut).
+
 ## Efter uppdaterad inloggningshantering
 
 När en äldre inloggning avslutas vid uppdateringen behöver du logga in

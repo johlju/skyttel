@@ -106,8 +106,10 @@ Ingen förklaring eller nytt sparande startar genom statuskontrollen.
 
 Låt användaren granska Lo och Kim och stänga förslaget. Kör därefter
 `restart`, invänta `restarted` och låt användaren ladda om sidan och
-granska utkastet igen. Avsluta med `quit`; den tillfälliga databasen tas
-bort. Detta prov använder faktisk verktygsleverans efter genomförande,
+öppna textvyn. Invänta **Samtalet är pausat.** och läs den ursprungliga
+instruktionen i samtalstexten. Granska utkastet igen i samma återställda
+samtal. Avsluta med `quit`; den tillfälliga databasen tas bort.
+Detta prov använder faktisk verktygsleverans efter genomförande,
 utan offlineläge eller verkliga leverantörsanrop.
 
 ## Separat överlappningsförsök

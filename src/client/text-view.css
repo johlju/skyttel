@@ -138,6 +138,19 @@
 .text-view-body > :is(div, .assistant-panel) {
   margin: 12px 14px 0;
 }
+.text-view-lifetime {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.text-view-lifetime p {
+  margin: 0;
+}
+.text-view-lifetime button {
+  justify-self: start;
+  min-height: 44px;
+}
 .household-map.workspace-shell .text-view .assistant-panel {
   order: 0;
   padding: 0;

@@ -235,7 +235,7 @@ test('MEDGIVANDE-06: Spara medgivandet sparar direkt utan att starta ett samtal'
     await expect(consent.buttons).toHaveText(['Återkalla medgivandet']);
     await expect(consent.revoke).toBeFocused();
     const { saved } = await (await page.request.get(consentPath)).json();
-    expect(saved).toEqual({ textVersion: 3, savedAt: expect.any(String) });
+    expect(saved).toEqual({ textVersion: 4, savedAt: expect.any(String) });
     expect(Date.parse(saved.savedAt)).toBeGreaterThanOrEqual(before);
     // Saving started neither a conversation nor the microphone.
     expect(sent).toEqual([]);
@@ -602,7 +602,7 @@ test('MEDGIVANDE-14: ändrad medgivandetext kräver ett nytt sparat medgivande',
     await expect(consent.feedback).toHaveText('Medgivandet är sparat');
     await expect(consent.status(await savedStatus(page.request, consentPath))).toBeVisible();
     await expect(consent.buttons).toHaveText(['Återkalla medgivandet']);
-    expect((await (await page.request.get(consentPath)).json()).saved.textVersion).toBe(3);
+    expect((await (await page.request.get(consentPath)).json()).saved.textVersion).toBe(4);
   } finally {
     await app.close();
     await rm(directory, { recursive: true, force: true });

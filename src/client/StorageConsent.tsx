@@ -310,7 +310,7 @@ export const necessaryStorageEntries: StorageEntry[] = [
   {
     name: 'skyttel_binding',
     purpose:
-      'Binder begärd inloggning till den här webbläsaren. Vid HTTPS: __Host-skyttel_binding.',
+      'Binder begärd inloggning och återkomst till ett medgivet samtal till den här webbläsaren. Ger ingen egen åtkomst. Vid HTTPS: __Host-skyttel_binding.',
     duration: 'Sessionskaka. Serverns åtkomstgränser gäller separat.',
   },
   {

@@ -62,6 +62,16 @@ function conversationInstallation() {
   });
 }
 
+async function loadSecondaryHousehold(page: Page, url: string) {
+  // Restoring a same-login tab deliberately pauses its existing conversation.
+  // Finish loading the second tab before starting work in the first tab.
+  const restored = page.waitForResponse((response) =>
+    new URL(response.url()).pathname.endsWith('/text-assistant/restore'),
+  );
+  await page.goto(url);
+  expect((await restored).status()).toBe(200);
+}
+
 test('ARBETE-07: pending erasure retires microphone, unsent forms and an admitted save before reloading', async ({
   page,
 }) => {
@@ -136,6 +146,8 @@ test('ARBETE-07: pending erasure retires microphone, unsent forms and an admitte
       ).toBe(200);
     const before = await read();
     const viewBefore = await (await page.request.get(`${path}/map/view`)).json();
+    await loadSecondaryHousehold(otherPage, installation.origin);
+    await openMap(otherPage);
     await startConversation(page, installation.origin);
     await page.getByLabel('Meddelande till Skyttel').fill('Berätta om lampan');
     await page.getByRole('button', { name: 'Skicka', exact: true }).click();
@@ -144,8 +156,6 @@ test('ARBETE-07: pending erasure retires microphone, unsent forms and an admitte
     );
     await page.getByLabel('Meddelande till Skyttel').fill('Gammalt oskickat svar');
     await openMap(page);
-    await otherPage.goto(installation.origin);
-    await openMap(otherPage);
     await openNewObject(otherPage);
     await otherPage.getByLabel('Namn', { exact: true }).fill('Gammal oskickad cykel');
     await expect(otherPage.getByLabel('Namn', { exact: true })).toHaveValue(
@@ -556,11 +566,11 @@ test('ARBETE-04: replaced household content retires hidden work and microphone',
       await page.request.post(`${path}/exports`, { headers, data: {} })
     ).json();
     const archive = await (await page.request.get(`${path}/exports/${exported.id}`)).body();
+    await loadSecondaryHousehold(importPage, `${installation.origin}/households/${household.id}`);
     await startConversation(page, installation.origin);
     await openMap(page);
     await openNewObject(page);
     await page.getByLabel('Namn', { exact: true }).fill('Gammal oskickad cykel');
-    await importPage.goto(`${installation.origin}/households/${household.id}`);
     await openSettings(importPage);
     await importPage
       .getByRole('navigation', { name: 'Inställningarnas sidor' })
@@ -577,6 +587,11 @@ test('ARBETE-04: replaced household content retires hidden work and microphone',
     await importPage
       .getByRole('checkbox', { name: 'Jag vill ersätta allt hushållsinnehåll' })
       .check();
+    await expect(voiceBox(page)).toHaveText('Lyssnar');
+    await expect(page.getByLabel('Namn', { exact: true })).toHaveValue('Gammal oskickad cykel');
+    expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks)).toEqual([
+      { enabled: true, state: 'live' },
+    ]);
     await importPage.getByRole('button', { name: 'Ersätt hushållets innehåll' }).click();
     await expect(
       importPage.getByText('Hushållets innehåll är ersatt. Nuvarande åtkomst är bevarad.'),

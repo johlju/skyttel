@@ -14,7 +14,7 @@ afterEach(async () => {
   await app?.close();
 });
 
-test.each(['new', 'cancel', 'stop', 'revoke'] as const)(
+test.each(['new', 'cancel', 'stop', 'revoke', 'pause'] as const)(
   'a late summary cannot replace context after %s, and the original private draft remains intact',
   async (action) => {
     let summarySignal: AbortSignal | null | undefined;
@@ -89,7 +89,7 @@ test.each(['new', 'cancel', 'stop', 'revoke'] as const)(
     await expect.poll(() => summarySignal?.aborted).toBe(true);
     release();
     await expect.poll(() => model.requests.length).toBe(2);
-    if (action === 'new' || action === 'cancel') {
+    if (action === 'new' || action === 'cancel' || action === 'pause') {
       await expect
         .poll(async () => (await (await browser.get(sessionPath)).json()).contextSummaryState)
         .not.toBe('summarizing');
@@ -98,6 +98,11 @@ test.each(['new', 'cancel', 'stop', 'revoke'] as const)(
       expect(current.contextSummaries ?? []).toEqual([]);
       expect(JSON.stringify(current)).not.toContain('Obsolete private summary.');
       expect(current.phase).toBe('ready');
+      if (action === 'pause') {
+        expect(current.paused).toBe(true);
+        expect(current.contextSummaryState).toBe('needed');
+        expect(model.requests).toHaveLength(2);
+      }
     } else expect((await browser.get(sessionPath)).status()).toBe(action === 'revoke' ? 403 : 404);
     expect((await (await browser.get(`${householdPath}/map`)).json()).draft).toEqual(
       original.draft,

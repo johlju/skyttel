@@ -107,7 +107,14 @@ test('the mandatory maintenance stop closes Live and delivery, rejects a late mo
     stopped = false;
     await signIn(client, app.origin);
     expect(await (await client.get(`${app.origin}${mapPath}`)).json()).toEqual(before);
-    expect((await client.get(`${app.origin}${path}/${session.id}`)).status()).toBe(404);
+    const restored = await client.get(`${app.origin}${path}/${session.id}`);
+    expect(restored.status(), await restored.text()).toBe(200);
+    expect(await restored.json()).toMatchObject({
+      id: session.id,
+      paused: true,
+      conversation: [{ role: 'user', text: 'Lägg till Sent.' }],
+      unfinishedRequests: [{ id: 'held-before-upgrade', text: 'Lägg till Sent.' }],
+    });
     expect(model.requests).toHaveLength(1);
     expect(messages.some((message) => message.state === 'awaiting-receipt')).toBe(false);
   } finally {

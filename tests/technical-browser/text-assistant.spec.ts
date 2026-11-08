@@ -6,6 +6,7 @@ import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../support/client.js';
 import {
   openConversationDraft,
+  openConversationText,
   startConversationWithText,
   turnMicrophoneOn,
 } from '../support/conversation-page.js';
@@ -198,7 +199,13 @@ for (const mode of ['text', 'voice'] as const) {
       child.stdin.write('restart\n');
       await expect.poll(() => events.find((event) => event.event === 'restarted')).toBeTruthy();
       await page.reload();
-      await startConversationWithText(page);
+      await openConversationText(page);
+      await expect(
+        page.getByRole('status', { name: 'Samtalets livslängd', exact: true }),
+      ).toContainText('Samtalet är pausat.');
+      await expect(page.getByRole('log', { name: 'Samtalstext', exact: true })).toContainText(
+        instruction,
+      );
       const retained = await openConversationDraft(page);
       await expect(retained).toContainText('Lo Exempel');
       await expect(retained).toContainText('Kim');

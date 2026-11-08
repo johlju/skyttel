@@ -12,8 +12,10 @@ inte
 
 Starta en ny installation. Skapa Tryckprov, välj **Skriv till Skyttel** och
 **Nytt samtal**, markera **Fråga inte igen för det här hushållet** och välj
-**Godkänn och starta**. Ladda om sidan så
-att inget samtal ännu pågår. Öppna Console och kör hela blocket:
+**Godkänn och starta**. Ladda om sidan. Öppna textvyn och kontrollera att
+det återställda samtalet är pausat. Välj **Avsluta samtalet** och stäng
+textvyn så att nästa mikrofontryck startar ett nytt samtal. Utkastet
+behålls. Öppna Console och kör hela blocket:
 
 <!-- markdownlint-disable MD013 -->
 ```javascript
@@ -136,10 +138,12 @@ await fetch('VOICE-ADRESS/VOICE-ID/stop', {
 }).then(async response => ({ status: response.status, ...await response.json() }))
 ```
 
-Kräv status 200 och `voice.phase: 'closed'` innan omladdning. Omladdning ensam
-avslutar inte serverns gamla röstsession; en ny samtalsstart kan annars stänga
-den som förlorad åtkomst. Installera därefter blocken på nytt. Avsluta launchern
-med `quit` och kontrollera borttagen katalog enligt röstguiden.
+Kräv status 200 och `voice.phase: 'closed'` innan omladdning så att just
+provets transport har verifierad städning. Omladdningen återställer samtalet
+pausat. Öppna textvyn, läs dess pausade status, välj **Avsluta samtalet** och
+stäng textvyn före nästa fristående startprov. Installera därefter blocken på
+nytt. Avsluta launchern med `quit` och kontrollera borttagen katalog enligt
+röstguiden.
 
 De två separata tekniska proven för publika kontroller i
 [voice-controls-preparation.spec.ts](../../tests/technical-browser/voice-controls-preparation.spec.ts)
@@ -345,11 +349,12 @@ förberedelse. Läs det verkliga held-anropets värden varje gång. Alla uppgift
    kontrollen. Kör `restart` i terminalen.
 4. Ta bort nätblockeringen och ladda om webbläsaren. Skyttel kontrollerar och
    slutför själv det registrerade försöket, innan något nytt samtal startas
-   eller något medgivande ges. Välj sedan **Skriv till Skyttel → Nytt samtal**
-   och godkänn medgivandet om det behövs. Kräv förklaringen
+   eller något medgivande ges. Öppna **Skriv till Skyttel**. Kräv det pausade
+   samtalet med utgångstid och förklaringen
 **Kontrollen visar att hela utkastet
    sparades. Ändringarna finns i hushållets karta.**
-   i samtalstexten. Slå på mikrofonen för resten av fallet.
+   i samtalstexten. Välj därefter **Nytt samtal**, godkänn medgivandet om det
+   behövs och slå på mikrofonen för resten av fallet.
 5. Kontrollera ett genomfört kvitto med samma operation-ID och Lo i kartan. Kör
    `drop` efter sparandet; kontrollera att det genomförda kvittot finns kvar
    även om ett ljudsvar inte hördes. Vänta på avstängd röst, ladda om och välj

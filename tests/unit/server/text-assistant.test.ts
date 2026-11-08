@@ -506,7 +506,15 @@ test('old completed polls retain their original results and reply prefixes after
       const result = await (
         await browser.get(`${path}/${session.id}/messages/turn-${turn}`)
       ).json();
-      expect(result).toEqual({ ...original, tasks: session.tasks });
+      expect(result).toEqual({
+        ...original,
+        tasks: session.tasks,
+        paused: session.paused,
+        expiresAt: session.expiresAt,
+        conversation: session.conversation,
+        queuedRequests: session.queuedRequests,
+        unfinishedRequests: session.unfinishedRequests,
+      });
       expect(result.completedReplies).toHaveLength(turn);
       expect(result.modelReply).toBe(`Svar ${turn}.`);
     }

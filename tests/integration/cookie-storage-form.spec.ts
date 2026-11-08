@@ -189,7 +189,7 @@ for (const [width, caseId] of [
           settings: { ...view.settings, background: true, version: undefined },
         },
       });
-      await page.request.post(`${origin}${consent}`, { headers, data: { textVersion: 3 } });
+      await page.request.post(`${origin}${consent}`, { headers, data: { textVersion: 4 } });
       const before = await Promise.all([
         read('/api/theme-preference'),
         read(`${map}/view`),

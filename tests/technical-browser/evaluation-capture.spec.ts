@@ -18,6 +18,7 @@ test('consecutive captures exclude pending prior audio and retain the new render
   tag: '@technical',
 }, async () => {
   const live = await evaluationVoiceProvider(3, { manual: true });
+  const applicationRequests: string[] = [];
   let environment: Awaited<ReturnType<typeof evaluationEnvironment>> | undefined;
   let connection: Awaited<ReturnType<typeof speechConnection>> | undefined;
   try {
@@ -36,16 +37,22 @@ test('consecutive captures exclude pending prior audio and retain the new render
         ) as LiveEvaluationProfile,
         liveFetch: live.provider,
         liveSideband: live.attach,
-        deliverResponse: (request, response) =>
-          new URL(request.url).pathname === '/__evaluation_output.js'
+        deliverResponse: (request, response) => {
+          const path = new URL(request.url).pathname;
+          if (path === '/api/bootstrap' || path.endsWith('/restore'))
+            applicationRequests.push(path);
+          return path === '/__evaluation_output.js'
             ? new Response(outputRecordingWorklet, {
                 headers: { 'Content-Type': 'application/javascript' },
               })
-            : response,
+            : response;
+        },
       },
     );
     connection = await speechConnection(environment);
+    await expect(connection.page).toHaveTitle('Skyttel voice evaluation');
     await connection.start();
+    expect(applicationRequests).toEqual([]);
     // Control only browser MessagePort delivery. The PCM itself comes from the
     // actual worklet rendering the original negotiated peer stream. Retain old
     // messages after a snapshot, then deliver them immediately before the next

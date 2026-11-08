@@ -1,8 +1,10 @@
 import type { Page } from '@playwright/test';
 import { createHousehold, signIn } from '../support/client.js';
 import {
+  closeConversationText,
   consentBox,
   giveConversationConsent,
+  openConversationText,
   startConversationWithText,
   startConversationWithVoice,
   turnMicrophoneOff,
@@ -34,6 +36,19 @@ async function installation(page: Page, mac = false) {
   await page.goto(app.origin);
   return { app, live };
 }
+async function prepareFreshVoiceStart(page: Page) {
+  await startConversationWithText(page, { remember: true });
+  await page.reload();
+  await openConversationText(page);
+  const text = page.getByRole('region', { name: 'Skriv till Skyttel', exact: true });
+  await expect(text).toContainText('Samtalet är pausat');
+  await text.getByRole('button', { name: 'Avsluta samtalet', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Arbetsyta', exact: true })).toHaveAttribute(
+    'data-session-active',
+    'false',
+  );
+  await closeConversationText(page);
+}
 async function down(page: Page) {
   // Map startup adds toolbar controls and can move the microphone. Hover
   // waits for a stable, unobscured target before the native held press.
@@ -54,9 +69,7 @@ test('MIKROFONTRYCK-05: tal under starten förs över efter släpp utan ny inspe
     reached = resolve;
   });
   try {
-    await startConversationWithText(page, { remember: true });
-    await page.reload();
-    await expect(microphone(page)).toBeVisible();
+    await prepareFreshVoiceStart(page);
     await page.route(/\/voice$/, async (route) => {
       if (route.request().method() !== 'POST') return route.continue();
       reached();
@@ -153,9 +166,7 @@ test('MIKROFONTRYCK-06: avbruten start kasserar inspelningen inför nästa start
     resume = resolve;
   });
   try {
-    await startConversationWithText(page, { remember: true });
-    await page.reload();
-    await expect(microphone(page)).toBeVisible();
+    await prepareFreshVoiceStart(page);
     await page.route(/\/text-assistant$/, async (route) => {
       if (route.request().method() !== 'POST') return route.continue();
       await delayed;

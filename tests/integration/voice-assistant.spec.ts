@@ -1037,7 +1037,12 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
     liveSideband: live.attach,
   });
   try {
+    const conversationStarted = page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/text-assistant') && response.request().method() === 'POST',
+    );
     const { path } = await simpleMap(page, app);
+    const originalConversation = await (await conversationStarted).json();
     speak(live, 'Markera Lo Exempel.');
     await expect(
       page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true }),
@@ -1115,7 +1120,14 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
     await app.restart();
     await page.unroute('**/text-assistant/*/recover');
+    const conversationRestored = page.waitForResponse((response) =>
+      response.url().endsWith('/text-assistant/restore'),
+    );
     await page.reload();
+    expect((await (await conversationRestored).json()).conversation).toMatchObject({
+      id: originalConversation.id,
+      paused: true,
+    });
     await openTable(page);
     await expect
       .poll(
@@ -1124,8 +1136,10 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
       )
       .toBe('succeeded');
     await expect(microphoneButton(page)).toBeEnabled();
-    await consent(page);
-    await startVoice(page);
+    await openConversationText(page);
+    await expect(page.getByRole('status', { name: 'Samtalets livslängd' })).toContainText(
+      'Samtalet är pausat.',
+    );
     await expect(page.getByRole('log', { name: 'Samtalstext' })).toContainText(
       'Kontrollen visar att hela utkastet sparades. Ändringarna finns i hushållets karta.',
     );
@@ -1140,6 +1154,11 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
     await expect(savedLo).toContainText('Person');
     await expect(savedLo).toContainText('Påhittad uppgift');
     expect(model.requests).toHaveLength(4);
+    expect(live.requests).toHaveLength(1);
+    // Reading the recovered result starts no work. Start the next conversation
+    // deliberately before testing a fresh provider connection.
+    await consent(page);
+    await startVoice(page);
     const providerId = [...live.channels.keys()].at(-1);
     if (!providerId) throw new Error('Missing active voice after saved receipt');
     live.channels.get(providerId)?.emit('close', 1006, '', []);

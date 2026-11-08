@@ -220,11 +220,13 @@ test('MEDGIVANDE-03: sparat medgivande följer användaren men inte andra medlem
     const { saved } = await (
       await page.request.get(`${householdPath}/conversation-consent`)
     ).json();
-    expect(saved).toEqual({ textVersion: 3, savedAt: expect.any(String) });
+    expect(saved).toEqual({ textVersion: 4, savedAt: expect.any(String) });
     expect(Date.parse(saved.savedAt)).toBeGreaterThanOrEqual(before);
 
-    // A reloaded page starts directly, with the button that is chosen.
+    // Return is paused. An explicit new conversation can use saved consent.
     await page.reload();
+    await openConversationText(page);
+    await newConversation(page);
     await chooseConversationVoice(page);
     await expect(voiceBox(page)).toHaveText('Lyssnar');
     await expect(consentBox(page)).toBeHidden();

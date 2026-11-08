@@ -2,11 +2,12 @@ import type { ResponseInputItem } from 'openai/resources/responses/responses';
 import type { ConversationModelChoice } from '../shared/conversation-model.js';
 import type { DraftBatchRequest } from '../shared/draft-batch.js';
 import type { PendingPartReference, TextAssistantView } from '../shared/text-assistant.js';
-import type { PendingPartsState } from './pending-parts.js';
+import type { ConversationConsentProvenance } from './conversation-consent.js';
+import type { PendingPartsState, pendingParts } from './pending-parts.js';
 import type { QueuedRequestReference } from './queued-request-context.js';
 import type { AssistantResultSnapshot } from './text-assistant-snapshot.js';
 
-export type ConversationMessage = {
+export type ConversationMessage = Partial<ConversationConsentProvenance> & {
   id: string;
   text: string;
   voice: boolean;
@@ -38,9 +39,11 @@ type AcceptedMessage = {
   deadline: number;
 };
 /** The single owner of recoverable conversation data; no live process resources. */
-export type ConversationState = TextAssistantView & {
+export type ConversationState = Omit<TextAssistantView, 'conversation' | 'unfinishedRequests'> & {
+  /** Storage approval is independent of the original provider information. */
+  storageConsentVersion?: number;
   modelChoice: ConversationModelChoice;
-  readonly consentTextVersion: number;
+  consentTextVersion: number;
   pendingPartsLedger: PendingPartsState;
   answers?: string[];
   id: string;
@@ -96,7 +99,10 @@ export type ConversationState = TextAssistantView & {
     resolves: PendingPartReference[];
     messageId?: string;
     /** The submitting instruction also survives an explicit conversation reset. */
-    message?: Pick<ConversationMessage, 'text'>;
+    message?: Pick<
+      ConversationMessage,
+      'text' | 'consentTextVersion' | 'conversationConsentTextVersion'
+    >;
     discarded: boolean;
     /** Independent whole-request verdict before delivery; batch evidence alone is insufficient. */
     finishesRequest: boolean;
@@ -110,3 +116,20 @@ export type ConversationState = TextAssistantView & {
   voiceInputPending?: boolean;
   lastVoiceInputAt?: number;
 };
+
+export function syncConversationQuestions(state: ConversationState, questions: string[]) {
+  state.questions = questions.length ? questions : undefined;
+  state.newQuestions = state.newQuestions?.filter((question) => questions.includes(question));
+}
+
+/** Retire draft-dependent work while preserving independent information requests. */
+export function discardConversationDraftParts(
+  state: ConversationState,
+  parts: ReturnType<typeof pendingParts>,
+  workVersion?: number,
+) {
+  parts.discard();
+  syncConversationQuestions(state, parts.questions());
+  state.saveIntent = undefined;
+  if (workVersion !== undefined) state.workVersion = workVersion;
+}

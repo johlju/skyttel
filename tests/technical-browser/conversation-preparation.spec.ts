@@ -435,8 +435,8 @@ for (const seeded of [false, true]) {
       expect(await (await page.request.get(path)).json()).toEqual(savedState);
       expect(await (await page.request.get(`${path}/history`)).json()).toEqual(savedHistory);
       // Individual manual cases start afresh. Retire every actual owned voice
-      // transport before reloading this combined proof into a text-only case.
-      // A microphone-off or a browser reload alone retains its server transport.
+      // transport, then explicitly end the retained conversation before the
+      // next text-only case. Transport stop alone preserves its conversation.
       expect(voiceStarts.length).toBeGreaterThan(0);
       const retired = [];
       for (const response of voiceStarts) {
@@ -454,6 +454,8 @@ for (const seeded of [false, true]) {
         body: JSON.stringify(retired, null, 2),
         contentType: 'application/json',
       });
+      await page.getByRole('button', { name: 'Avsluta samtalet', exact: true }).click();
+      await expect(log).not.toContainText('Vad gjorde vi?');
       await page.reload();
       await openConversationText(page);
       await expect(log).not.toContainText('Vad gjorde vi?');
@@ -462,6 +464,8 @@ for (const seeded of [false, true]) {
         '0',
       );
       expect(await (await page.request.get(path)).json()).toEqual(savedState);
+      expect(await (await page.request.get(`${path}/history`)).json()).toEqual(savedHistory);
+      expect((await (await member.request.get(path)).json()).draft).toEqual(privateDraft);
       await page.getByRole('button', { name: 'Nytt samtal', exact: true }).click();
       await giveConversationConsent(page);
       item = await send('Behåll den ursprungliga begäran vid kapacitetsstopp.');
@@ -546,6 +550,7 @@ for (const seeded of [false, true]) {
       await dialog
         .getByRole('button', { name: 'Återkalla och avsluta samtalet', exact: true })
         .click();
+      await expect(page.getByText('Medgivandet är återkallat', { exact: true })).toBeVisible();
       command('release-save');
       command('hold-save off');
       await expect

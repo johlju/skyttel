@@ -24,7 +24,7 @@ const entries = [
     place:
       'Säkerhetskaka på Skyttels kanoniska HTTPS-adress. Lokal utveckling på HTTP-loopback använder skyttel_binding.',
     content:
-      'En slumpmässig, ogenomskinlig nyckel binder begärda inloggningsförsök i samma webbläsare. Skapas först när du begär inloggning. Första lyckade inloggningen ersätter den tidigare inom bindningen och avslutar andra påbörjade försök. Utloggning avslutar åtkomsten och pågående försök här, utan att påverka andra bindningar. Nyckeln ger ingen egen åtkomst och är inte en separat kopia av lagringsvalet.',
+      'En slumpmässig, ogenomskinlig nyckel binder begärda inloggningsförsök i samma webbläsare och hittar medgivna samtal vid återkomst. Skapas först när du begär inloggning. Första lyckade inloggningen ersätter den tidigare inom bindningen och avslutar andra påbörjade försök. Utloggning avslutar åtkomsten och pågående försök här, utan att påverka andra bindningar. Nyckeln ger ingen egen åtkomst och är inte en separat kopia av lagringsvalet. Samtal läses först efter ny kontroll av rätt användare och hushåll.',
     time: 'Börjar som sessionskaka. Efter bekräftad ihågkommen inloggning gäller beständigheten till just den sessionens absoluta utgång, högst sju dygn från inloggningen. Vanlig inloggning använder sessionskaka och gäller högst åtta timmar, med 30 minuters inaktivitet. Den har Secure vid HTTPS, SameSite=Lax och Path=/, saknar Domain och kan läsas av JavaScript för samordnad registrering. Serverns behörighet är separat från kakans lagringstid.',
   },
   {
@@ -81,7 +81,7 @@ const serverEntries = [
     name: 'browser_binding och browser_binding_attempt',
     content:
       'En hash av säkerhetskakans nyckel, bekräftelse, revision och koppling till aktuell session samordnar samma webbläsare. Försöket binder OAuth-svaret till rätt bindning, inloggningsleverantör och versionsbundna val. Bindningen ger ingen egen hushållsåtkomst.',
-    time: 'Ett inloggningsförsök har högst tio minuter från serverns registrering. Ny inloggning, avstängning och utloggning avslutar berörda äldre försök. Bindningen gallras efter sin frist när ingen session eller tillåten ändlig uppgift behöver den för säkert stopp.',
+    time: 'Ett inloggningsförsök har högst tio minuter från serverns registrering. Ny inloggning, avstängning och utloggning avslutar berörda äldre försök. Bindningen gallras efter sin frist när ingen session, tillåten ändlig uppgift eller medgivet samtal behöver kopplingen. Samtalskopplingen ger ingen åtkomst efter inloggningens slut och försvinner senast när samtalet löper ut.',
   },
   {
     name: 'verification och login_link',
@@ -102,10 +102,16 @@ const serverEntries = [
     time: 'Den aktuella posten behövs så länge installationen används och ersätts vid nästa kontrollerade övergång. Den är ingen historik över lagringsval. En återställning måste spärras innan tjänsten öppnas igen; en äldre databas får inte ensam bestämma giltig åtkomst.',
   },
   {
-    name: 'theme_preferences och conversation_preferences',
+    name: 'theme_preferences, conversation_preferences och conversation_model_preferences',
     content:
-      'Ditt kontos temaval och samtalsvyer används på dina enheter. Temavalet kopieras inte till localStorage, sessionStorage eller en temakaka. Äldre lokala skyttel-theme-nycklar tas bort när appen öppnas.',
+      'Ditt kontos temaval, samtalsvyer och senaste uttryckliga modellval används på dina enheter. Ett bevarat samtal har sitt eget modellval och skriver inte över det senaste personliga valet vid återkomst. Temavalet kopieras inte till localStorage, sessionStorage eller en temakaka. Äldre lokala skyttel-theme-nycklar tas bort när appen öppnas.',
     time: 'Kontoval består efter utloggning och ändras genom respektive inställning. Utan inloggning följer temat enhetens systemval. Återställ samtycke tar inte bort kontoval.',
+  },
+  {
+    name: 'conversation',
+    content:
+      'Efter samtalsmedgivande version 4 bevaras samtalstext, exakta oavslutade instruktioner, väntande delar, kö, genomförandestatus och samtalets modellval på installationen. Uppgifterna hålls åtskilda per Skyttel-användare och hushåll och ingår inte i hushållets export. Åtkomst, ägare och innehåll kontrolleras före återställning. Detta är skilt från webbläsarens lagringssamtycke och ändrar inte leverantörernas lagring.',
+    time: 'Sju dygn efter ditt senaste meddelande eller uttrycklig återupptagning. Modellarbete och bakgrundskontroller förlänger inte tiden; omstart behåller den exakta utgången. Omladdning, omstart och utloggning pausar. Stopp behåller samtalet. Uttryckligt avslut, återkallelse och utgång raderar samtalet och dess sparhinder utan att spara eller kasta utkastet. Registrerade sparförsök och sparkvitton består separat. Gallring sker vid serverstart och minst varje minut; utgånget innehåll lämnas inte ut.',
   },
   {
     name: 'assistant_connection, oauthClient, oauthConsent, oauthAccessToken, oauthRefreshToken, oauthClientAssertion och jwks',
@@ -281,7 +287,7 @@ function CookieStorageContents({ userId }: { userId?: string }) {
       <section className="cookie-policy" aria-labelledby="cookie-policy-title">
         <h2 id="cookie-policy-title">Kakpolicy</h2>
         <p>
-          Senast uppdaterad: <time dateTime={cookiePolicyPublishedAt}>16 oktober 2026</time>.
+          Senast uppdaterad: <time dateTime={cookiePolicyPublishedAt}>4 november 2026</time>.
         </p>
         <h3>Vad är kakor och annan webbläsarlagring?</h3>
         <p>
@@ -546,14 +552,15 @@ function CookieStorageContents({ userId }: { userId?: string }) {
           i en separat historik över tidigare val.
         </p>
         <p>
-          Pågående samtal och leveransanslutningar har också tillfälliga uppgifter i serverns och
-          den öppna appens arbetsminne: samtalstext, uppgiftens ursprungliga tidsgräns, fryst helt
-          svar och transportstatus. De är inga Web Storage-nycklar och återupptas inte efter
-          serveromstart. Kvittens av hela texten krävs inom högst fem sekunder från att svaret
-          fryses, alltid inom uppgiftens tidsgräns. Kvittensen bevisar inte att någon har läst, hört
-          eller förstått svaret. Redan mottagen text kan visas medan appen är öppen; ny inloggning,
-          uttryckligt avslut och stängning av appen kan ta bort den lokala visningen. Hushållets
-          karta, ditt utkast, sparförsök och sparkvitton har separat beständig lagring.
+          Efter samtalsmedgivande bevaras samtalet på installationen enligt posten conversation.
+          Leveransanslutningar har separat tillfälligt tillstånd i serverns och appens arbetsminne:
+          uppgiftens ursprungliga tidsgräns, fryst svar och transportstatus. De är inga Web
+          Storage-nycklar och återställs inte som anslutningar efter serveromstart. Kvittens av hela
+          texten krävs inom högst fem sekunder från att svaret fryses, alltid inom uppgiftens
+          tidsgräns. Kvittensen bevisar inte att någon har läst, hört eller förstått svaret. Redan
+          mottagen text kan visas medan appen är öppen; ny inloggning, uttryckligt avslut och
+          stängning av appen kan ta bort den lokala visningen. Hushållets karta, ditt utkast,
+          sparförsök och sparkvitton har separat beständig lagring.
         </p>
         <p>
           Serverns behörighet kan upphöra före kakans livstid. Utgången behörighet bevisar inte

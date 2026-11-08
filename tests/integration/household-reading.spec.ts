@@ -6,19 +6,30 @@ import { prepareHouseholdReading } from '../support/household-reading.js';
 import { createInstallation } from '../support/installation.js';
 import { expect, test } from '../support/test.js';
 
-async function removeFromAnotherTab(page: Page, origin: string, names: string[]) {
+async function openAnotherTab(page: Page, origin: string) {
   const other = await page.context().newPage();
   try {
+    // Loading another same-login page deliberately pauses a restored conversation.
+    // Complete that preparation before the first tab starts its active conversation.
+    const restored = other.waitForResponse((response) =>
+      new URL(response.url()).pathname.endsWith('/text-assistant/restore'),
+    );
     await other.goto(origin);
+    expect((await restored).status()).toBe(200);
     await openTable(other);
-    const table = other.getByRole('region', { name: 'Hushållets tabell', exact: true });
-    for (const name of names) {
-      await table.getByRole('searchbox', { name: 'Sök objekt i tabellen' }).fill(name);
-      await table.getByRole('button', { name: `Ta bort ${name}`, exact: true }).click();
-      await expect(table.getByRole('button', { name, exact: true })).toHaveCount(0);
-    }
-  } finally {
+    return other;
+  } catch (error) {
     await other.close();
+    throw error;
+  }
+}
+
+async function removeFromAnotherTab(other: Page, names: string[]) {
+  const table = other.getByRole('region', { name: 'Hushållets tabell', exact: true });
+  for (const name of names) {
+    await table.getByRole('searchbox', { name: 'Sök objekt i tabellen' }).fill(name);
+    await table.getByRole('button', { name: `Ta bort ${name}`, exact: true }).click();
+    await expect(table.getByRole('button', { name, exact: true })).toHaveCount(0);
   }
 }
 
@@ -88,6 +99,7 @@ test('LÄS-06: a vanished sole second-page row restores the preceding control af
   const installation = await createInstallation(undefined, {
     modelFetch: async () => Response.json({ output: [] }),
   });
+  let other: Page | undefined;
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
@@ -109,6 +121,7 @@ test('LÄS-06: a vanished sole second-page row restores the preceding control af
     }
     for (let index = 1; index <= 51; index++) await propose(`item-${index}`, `Objekt ${index}`);
     await page.goto(installation.origin);
+    other = await openAnotherTab(page, installation.origin);
     await startConversationWithText(page);
     await page.getByRole('button', { name: 'Stäng textvyn', exact: true }).click();
     await page.getByRole('button', { name: 'Tabell', exact: true }).click();
@@ -117,7 +130,7 @@ test('LÄS-06: a vanished sole second-page row restores the preceding control af
     await expect(table.getByText('Sida 2 av 2 · 50 objekt per sida')).toBeVisible();
     await table.getByRole('button', { name: 'Samband för Objekt 51', exact: true }).click();
     const beforeRemoval = await read();
-    await removeFromAnotherTab(page, installation.origin, ['Objekt 51']);
+    await removeFromAnotherTab(other, ['Objekt 51']);
     expectOnlyRemoved(beforeRemoval, await read(), ['item-51']);
     await expect(
       page.getByRole('dialog', { name: 'Objektet finns inte längre', exact: true }),
@@ -133,6 +146,7 @@ test('LÄS-06: a vanished sole second-page row restores the preceding control af
     await propose('item-51', null);
     expect((await read()).draft.changes).toHaveLength(50);
   } finally {
+    await other?.close();
     await installation.close();
   }
 });
@@ -175,6 +189,7 @@ for (const fallback of ['previous', 'heading'] as const) {
     const installation = await createInstallation(undefined, {
       modelFetch: async () => Response.json({ output: [] }),
     });
+    let other: Page | undefined;
     try {
       await signIn(page.request, installation.origin);
       const { household } = await (await createHousehold(page.request, installation.origin)).json();
@@ -197,15 +212,13 @@ for (const fallback of ['previous', 'heading'] as const) {
       await propose('a', 'A');
       await propose('b', 'B');
       await page.goto(installation.origin);
+      other = await openAnotherTab(page, installation.origin);
       await startConversationWithText(page);
       await page.getByRole('button', { name: 'Stäng textvyn', exact: true }).click();
       await page.getByRole('button', { name: 'Tabell', exact: true }).click();
       await page.getByRole('button', { name: 'Samband för B', exact: true }).click();
       const beforeRemoval = await read();
-      await removeFromAnotherTab(page, installation.origin, [
-        'B',
-        ...(fallback === 'heading' ? ['A'] : []),
-      ]);
+      await removeFromAnotherTab(other, ['B', ...(fallback === 'heading' ? ['A'] : [])]);
       expectOnlyRemoved(beforeRemoval, await read(), [
         'b',
         ...(fallback === 'heading' ? ['a'] : []),
@@ -230,6 +243,7 @@ for (const fallback of ['previous', 'heading'] as const) {
         ...(fallback === 'heading' ? ['a'] : []),
       ]);
     } finally {
+      await other?.close();
       await installation.close();
     }
   });
@@ -427,6 +441,7 @@ test('LÄS-03: a vanished table opener returns to the next equivalent control af
   const installation = await createInstallation(undefined, {
     modelFetch: async () => Response.json({ output: [] }),
   });
+  let other: Page | undefined;
   try {
     const { read, post } = await prepareHouseholdReading(page.request, installation.origin, false);
     await post('draft', {
@@ -435,6 +450,7 @@ test('LÄS-03: a vanished table opener returns to the next equivalent control af
       value: { name: 'B Tillfälligt objekt', typeId: 'read-type' },
     });
     await page.goto(installation.origin);
+    other = await openAnotherTab(page, installation.origin);
     await startConversationWithText(page);
     await page.getByRole('button', { name: 'Stäng textvyn', exact: true }).click();
     await page.getByRole('button', { name: 'Tabell', exact: true }).click();
@@ -442,7 +458,7 @@ test('LÄS-03: a vanished table opener returns to the next equivalent control af
       .getByRole('button', { name: 'Samband för B Tillfälligt objekt', exact: true })
       .click();
     const beforeRemoval = await read();
-    await removeFromAnotherTab(page, installation.origin, ['B Tillfälligt objekt']);
+    await removeFromAnotherTab(other, ['B Tillfälligt objekt']);
     expectOnlyRemoved(beforeRemoval, await read(), ['temporary']);
     await expect(
       page.getByRole('dialog', { name: 'Objektet finns inte längre', exact: true }),
@@ -461,6 +477,7 @@ test('LÄS-03: a vanished table opener returns to the next equivalent control af
     await post('draft', { id: 'temporary', baseRevision: null, value: null });
     expectOnlyRemoved(beforeRemoval, await read(), ['temporary']);
   } finally {
+    await other?.close();
     await installation.close();
   }
 });

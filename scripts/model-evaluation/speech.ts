@@ -110,7 +110,16 @@ export async function speechConnection(
     storageState: await environment.client.storageState(),
   });
   const page = await context.newPage();
-  await page.goto(environment.installation.origin);
+  // The evaluator owns this renderer. Loading the application would restore
+  // and pause the conversation that the evaluator has already opened.
+  const documentUrl = new URL('/__evaluation_voice', environment.installation.origin).href;
+  await page.route(documentUrl, (route) =>
+    route.fulfill({
+      contentType: 'text/html',
+      body: '<!doctype html><title>Skyttel voice evaluation</title>',
+    }),
+  );
+  await page.goto(documentUrl);
   return {
     page,
     observedAt: () => page.evaluate(() => performance.timeOrigin + performance.now()),

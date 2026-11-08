@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { containerConversationConsent } from './container-conversation-consent.mjs';
 
 // No messages are submitted: the production SDK loads, but no model request
 // leaves the container. Authentication and MCP use their normal public routes.
@@ -19,7 +20,7 @@ export async function checkContainerTextAssistant({
       method: body === undefined ? 'GET' : 'POST',
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
-    assert.equal(response.status, expected);
+    assert.equal(response.status, expected, `${suffix}: ${response.body}`);
     assert.doesNotMatch(
       response.body,
       /synthetic-openai-container-key|access_token|refresh_token|Bearer |client_secret|code_verifier/u,
@@ -36,10 +37,13 @@ export async function checkContainerTextAssistant({
   const baselineConnections = await connections();
   assert.equal((await request(name, `${path}/text-assistant`)).status, 401);
   assert.equal((await call('/text-assistant')).available, true);
-  // A conversation starts only with a consent for the current consent text,
-  // version 3 in src/shared/conversation-consent.ts.
-  const consent = { consent: { textVersion: 3 } };
-  for (const body of [{}, { consent: { textVersion: 0 } }, { externalAi: true, mapWork: true }]) {
+  const consent = await containerConversationConsent(command, name);
+  for (const body of [
+    {},
+    { consent: { textVersion: 0 } },
+    { consent: { textVersion: consent.consent.textVersion - 1 } },
+    { externalAi: true, mapWork: true },
+  ]) {
     const refused = await call('/text-assistant', body, 403);
     assert.equal(refused.error, 'conversation_consent_required');
   }
@@ -81,12 +85,33 @@ export async function checkContainerTextAssistant({
   );
   assert.ok(session.operations.some((operation) => operation.status === 'succeeded'));
   assert.equal((await connections()).length, baselineConnections.length + 1);
+  const canceled = await call(`/text-assistant/${session.id}/cancel`, { all: true });
+  assert.equal(canceled.id, session.id);
+  assert.equal(canceled.canceled, true);
+  assert.equal(canceled.phase, 'ready');
+  assert.equal(
+    canceled.conversation.at(-1)?.text,
+    'Avbrutet. Föreslagna ändringar ligger kvar i utkastet.',
+  );
+  await call(`/text-assistant/${session.id}/pause`, {});
+  assert.deepEqual(await connections(), baselineConnections);
+  const { conversation: paused } = await call('/text-assistant/restore');
+  assert.equal(paused.id, session.id);
+  assert.equal(paused.paused, true);
+  assert.deepEqual(paused.conversation, canceled.conversation);
+  assert.deepEqual(paused.modelChoice, session.modelChoice);
+  assert.deepEqual(paused.review, canceled.review);
+  assert.equal((await connections()).length, baselineConnections.length + 1);
+  assert.deepEqual(await call('/map'), draft);
+  // This internal route is explicit End; user-facing Stop uses /cancel.
   await call(`/text-assistant/${session.id}/stop`, {});
   await call(`/text-assistant/${session.id}`, undefined, 404);
+  assert.equal((await call('/text-assistant/restore')).conversation, undefined);
   assert.deepEqual(await connections(), baselineConnections);
   assert.deepEqual(await call('/map'), draft);
 
-  const beforeRestart = await call('/text-assistant', consent, 201);
+  let beforeRestart = await call('/text-assistant', consent, 201);
+  beforeRestart = await call(`/text-assistant/${beforeRestart.id}/cancel`, { all: true });
   const saved = await call('/map/save', {
     version: draft.draft.version,
     contentVersion: draft.contentVersion,
@@ -95,9 +120,32 @@ export async function checkContainerTextAssistant({
   assert.ok(saved.receipt.changes.some((change) => change.after?.id === id));
   await command(['restart', name]);
   await waitUntilReady(name);
-  await call(`/text-assistant/${beforeRestart.id}`, undefined, 404);
   assert.deepEqual(await connections(), baselineConnections);
+  const { conversation: restored } = await call('/text-assistant/restore');
+  assert.equal(restored.id, beforeRestart.id);
+  assert.equal(restored.paused, true);
+  assert.equal(restored.phase, 'ready');
+  assert.deepEqual(restored.conversation, beforeRestart.conversation);
+  assert.deepEqual(restored.modelChoice, beforeRestart.modelChoice);
+  assert.deepEqual(restored.review.changes, []);
+  const recoveredAfterRestart = restored.operations.find(
+    (operation) => operation.operationId === saved.receipt.operationId,
+  );
+  assert.equal(recoveredAfterRestart?.status, 'succeeded');
+  assert.deepEqual(recoveredAfterRestart.receipt, saved.receipt);
+  const savedMap = await call('/map');
+  await call(`/text-assistant/${restored.id}/stop`, {});
+  await call(`/text-assistant/${restored.id}`, undefined, 404);
+  assert.equal((await call('/text-assistant/restore')).conversation, undefined);
+  assert.deepEqual(await connections(), baselineConnections);
+  assert.deepEqual(await call('/map'), savedMap);
+  assert.ok(
+    (await call('/map/history')).history.some(
+      (receipt) => receipt.operationId === saved.receipt.operationId,
+    ),
+  );
   const reconnected = await call('/text-assistant', consent, 201);
+  assert.notEqual(reconnected.id, beforeRestart.id);
   assert.deepEqual(reconnected.review.changes, []);
   const recovered = reconnected.operations.find(
     (operation) => operation.operationId === saved.receipt.operationId,
@@ -105,8 +153,9 @@ export async function checkContainerTextAssistant({
   assert.equal(recovered?.status, 'succeeded');
   assert.deepEqual(recovered.receipt, saved.receipt);
   await call(`/text-assistant/${reconnected.id}/stop`, {});
+  await call(`/text-assistant/${reconnected.id}`, undefined, 404);
   assert.deepEqual(await connections(), baselineConnections);
   console.log(
-    'PASS: production text-assistant consent, private MCP review, secret isolation, grant cleanup and restart receipt recovery without model calls',
+    'PASS: production text-assistant consent, Stop retention, paused restore, explicit End, private MCP cleanup and restart receipt recovery without model calls',
   );
 }

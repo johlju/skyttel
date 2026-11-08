@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash } from 'node:crypto';
+import type { ConversationConsentProvenance } from './conversation-consent.js';
 import { TraceJsonFailure, traceJson } from './trace-json.js';
 
 /** Reviewed, opt-in, in-memory observations shared by evaluation and live export.
@@ -100,12 +101,11 @@ function observationId(parts: string[]) {
 
 export type ObservationStatus = 'incomplete' | 'completed' | 'failed' | 'canceled' | 'disconnected';
 
-export type AssistantObservation = {
+export type AssistantObservation = Partial<ConversationConsentProvenance> & {
   at: number;
   sessionId: string;
   taskId?: string;
   revision?: number;
-  consentTextVersion?: number;
   context?: AssistantObservationContext;
   status?: ObservationStatus;
   evidenceGap?: 'unknown_parent' | 'missing_end' | 'excluded_content';
@@ -532,6 +532,7 @@ export function assistantObservationBoundary(
           'taskId',
           'revision',
           'consentTextVersion',
+          'conversationConsentTextVersion',
           'status',
           'evidenceGap',
           'kind',

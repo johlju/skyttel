@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { readFile, stat } from 'node:fs/promises';
-import { chromium } from '@playwright/test';
+import { chromium, type Page } from '@playwright/test';
 import { createHousehold, signIn } from '../support/client.js';
 import {
   closeConversationText,
@@ -20,6 +20,19 @@ const references = [
   { seeded: true, viewport: { width: 320, height: 250 } },
   { seeded: false, viewport: { width: 1280, height: 900 } },
 ];
+
+async function endRestoredConversation(page: Page) {
+  await openConversationText(page);
+  await expect(
+    page.getByRole('status', { name: 'Samtalets livslängd', exact: true }),
+  ).toContainText('Samtalet är pausat.');
+  await page.getByRole('button', { name: 'Avsluta samtalet', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Arbetsyta', exact: true })).toHaveAttribute(
+    'data-session-active',
+    'false',
+  );
+  await closeConversationText(page);
+}
 
 for (const { seeded, viewport } of references)
   test(`voice preparation controls the public launcher on ${seeded ? 'seeded' : 'empty'} content at ${viewport.width}x${viewport.height}`, {
@@ -84,6 +97,7 @@ for (const { seeded, viewport } of references)
       const history = await (await page.request.get(`${path}/history`)).json();
       await startConversationWithText(page, { remember: true });
       await page.reload();
+      await endRestoredConversation(page);
       await expect(microphoneButton(page)).toBeVisible();
       await page.evaluate(() => {
         Object.assign(window, { voiceOriginalFetch: window.fetch });
@@ -140,8 +154,8 @@ for (const { seeded, viewport } of references)
       expect(await (await page.request.get(path)).json()).toEqual(before);
       expect(await (await page.request.get(`${path}/history`)).json()).toEqual(history);
 
-      // The exact admitted transport must close before a replacement assistant.
-      // Reload alone leaves its server session alive.
+      // Verify cleanup of this exact transport before ending the retained
+      // conversation for the next independent preparation.
       const stoppedVoice = await page.request.post(`${admittedVoice.url()}/${firstVoice.id}/stop`, {
         headers: { origin: ready.origin },
         data: {},
@@ -154,6 +168,7 @@ for (const { seeded, viewport } of references)
         'before deliberate first-page reload',
       ).toBe('');
       await page.reload();
+      await endRestoredConversation(page);
       expect(
         unexpectedPreparationDiagnostics(diagnostics),
         'after deliberate first-page reload',
@@ -538,6 +553,7 @@ for (const { seeded, viewport } of references)
       await startConversationWithText(page, { remember: true });
       // Execute the moved ROSTFEL/NOT recipes at their documented boundaries.
       await page.reload();
+      await endRestoredConversation(page);
       await openConversationText(page);
       await page.getByRole('button', { name: 'Nytt samtal', exact: true }).click();
       await expect(page.getByRole('region', { name: 'Arbetsyta', exact: true })).toHaveAttribute(
@@ -581,6 +597,7 @@ for (const { seeded, viewport } of references)
       expect(stoppedPlayback.status()).toBe(200);
       expect((await stoppedPlayback.json()).voice.phase).toBe('closed');
       await page.reload();
+      await endRestoredConversation(page);
       child.stdin.write(`${unavailable}\n`);
       await expect(microphoneButton(page)).toHaveAccessibleDescription(
         /Inte tillgängligt just nu\./,
@@ -598,6 +615,7 @@ for (const { seeded, viewport } of references)
       // These are separate documented cases; reset the denied voice attempt
       // before the text task, so its failure is not masked by the old notice.
       await page.reload();
+      await endRestoredConversation(page);
       await openConversationText(page);
       await page.getByRole('button', { name: 'Nytt samtal', exact: true }).click();
       await expect(page.getByRole('region', { name: 'Arbetsyta', exact: true })).toHaveAttribute(

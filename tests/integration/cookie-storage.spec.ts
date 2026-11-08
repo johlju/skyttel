@@ -38,6 +38,14 @@ for (const [width, caseId] of [
       await expect(
         serverStorage.getByRole('heading', { name: 'installation_authority', exact: true }),
       ).toBeVisible();
+      await expect(
+        serverStorage.getByRole('heading', { name: 'conversation', exact: true }),
+      ).toBeVisible();
+      await expect(serverStorage).toContainText('samtalsmedgivande version 4');
+      await expect(serverStorage).toContainText('Sju dygn efter ditt senaste meddelande');
+      await expect(serverStorage).toContainText(
+        'Registrerade sparförsök och sparkvitton består separat',
+      );
       await expect(serverStorage).toContainText('24 timmar från ändringen');
       await expect(serverStorage).toContainText('högst fem sekunder');
       await expect(serverStorage).toContainText('läst, hört eller förstått');

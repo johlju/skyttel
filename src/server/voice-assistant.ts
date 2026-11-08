@@ -18,6 +18,7 @@ import {
 } from './assistant-observation.js';
 import type { Config } from './config.js';
 import { voiceConversationModel } from './conversation-capacity.js';
+import type { ConversationConsentProvenance } from './conversation-consent.js';
 import type {
   LiveModelProfile,
   LiveSideband,
@@ -29,13 +30,12 @@ import { MapError } from './map.js';
 import type { LocalDispatch } from './text-assistant-mcp.js';
 import { voiceWork } from './voice-work.js';
 
-type Voice = {
+type Voice = Partial<ConversationConsentProvenance> & {
   view: VoiceAssistantView;
   usage: LiveUsageAttempt;
   path: string;
   headers: Headers;
   assistant: TextAssistantView;
-  consentTextVersion?: number;
   channel: LiveSideband;
   heartbeat: number;
   finalized: boolean;
@@ -85,7 +85,12 @@ export function voiceAssistantRoutes({
   expireVoiceWork,
 }: {
   now?: () => number;
-  voiceAccess: (sessionId: string) => { expiresAt: number; guard: () => number } | undefined;
+  voiceAccess: (sessionId: string) =>
+    | (Partial<ConversationConsentProvenance> & {
+        expiresAt: number;
+        guard: () => number;
+      })
+    | undefined;
   expireVoiceWork: (sessionId: string) => void;
   config: Config;
   dispatch: LocalDispatch;
@@ -223,6 +228,7 @@ export function voiceAssistantRoutes({
         at: now(),
         sessionId: voice.assistant.id,
         consentTextVersion: voice.consentTextVersion,
+        conversationConsentTextVersion: voice.conversationConsentTextVersion,
         context: observationContext(voice),
         kind: 'voice_completed',
         status,
@@ -320,7 +326,9 @@ export function voiceAssistantRoutes({
       outcome: 'starting',
     };
     const voiceId = randomUUID();
-    const consentTextVersion = current.consentTextVersion;
+    const consentTextVersion = access.consentTextVersion ?? current.consentTextVersion;
+    const conversationConsentTextVersion =
+      access.conversationConsentTextVersion ?? current.consentTextVersion;
     let observationStarted = false;
     let providerObservationStarted = false;
     let providerObservationEnded = false;
@@ -344,6 +352,7 @@ export function voiceAssistantRoutes({
         at: now(),
         sessionId,
         consentTextVersion,
+        conversationConsentTextVersion,
         context: {
           owner: 'voice',
           traceId: voiceId,
@@ -370,6 +379,7 @@ export function voiceAssistantRoutes({
         at: now(),
         sessionId,
         consentTextVersion,
+        conversationConsentTextVersion,
         context: {
           owner: 'voice',
           traceId: voiceId,
@@ -486,6 +496,7 @@ export function voiceAssistantRoutes({
         at: now(),
         sessionId,
         consentTextVersion,
+        conversationConsentTextVersion,
         context: {
           owner: 'voice',
           traceId: voiceId,
@@ -591,6 +602,7 @@ export function voiceAssistantRoutes({
         headers: requestHeaders,
         assistant: current,
         consentTextVersion,
+        conversationConsentTextVersion,
         channel,
         usage,
         heartbeat: now(),
@@ -639,6 +651,7 @@ export function voiceAssistantRoutes({
           at: now(),
           sessionId,
           consentTextVersion,
+          conversationConsentTextVersion,
           context: {
             ...observationContext(voice),
             spanId: randomUUID(),

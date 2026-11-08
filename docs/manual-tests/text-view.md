@@ -314,6 +314,7 @@ testfallet “TEXTMOBIL-01: samma lägesregel ger rätt bredd och kompakt rad”
   },
   "reference": "1280 × 900, mus; bred datorreferens med sidofält och automatiskt fältfokus.",
   "outcomes": [
+    "Paus och utgångstid visas vid återkomst; avslut kan nås och ger fokus till Nytt samtal.",
     "Läsa, skriva och öppna utkastet på telefon, surfplatta och dator."
   ]
 }
@@ -331,11 +332,17 @@ testfallet “TEXTMOBIL-01: samma lägesregel ger rätt bredd och kompakt rad”
    öppet läge. Öppna **Visa förslaget: Lo Exempel**, läs **Person** och
    **Påhittad uppgift** och stäng uppgifterna. Hela sidan ryms utan
    horisontell sidrullning.
+4. Dölj utkastet och ladda om. Öppna **Skriv till Skyttel** och läs
+   **Samtalet är pausat** samt utgångstiden överst i samtalets rullbara del.
+   Rulla vid behov till **Avsluta samtalet** och välj knappen.
+   Kontrollera att svaret tas bort och fokus hamnar på **Nytt samtal**.
 
 **Förväntat resultat:**
 
 - På bred dator syns sidofält och karta bredvid; fältet får startfokus.
 - Skicka behåller fältfokus, svaret syns och hela Lo-utkastet går att öppna.
+- Återkomsten visar paus och utgångstid. Avslut går att nå även i korta
+  fönster och flyttar fokus till **Nytt samtal**.
 - Ingen horisontell sidrullning behövs. Kvarvarande smala/pekade/
   korta konfigurationer har egna identiteter nedan.
 
@@ -889,6 +896,7 @@ TEXTMOBIL-06.
   },
   "reference": "390 × 844, emulerad pekare CSS-pixlar; smal stående vy.",
   "outcomes": [
+    "Paus och utgångstid visas vid återkomst; avslut kan nås och ger fokus till Nytt samtal.",
     "Fältet får inget automatiskt startfokus; textvyn fyller bredden.",
     "Hela den kvarvarande native arbetsföljden genomförs i denna konfiguration."
   ]
@@ -935,6 +943,7 @@ TEXTMOBIL-07.
   },
   "reference": "844 × 390, emulerad pekare CSS-pixlar; kort liggande vy.",
   "outcomes": [
+    "Paus och utgångstid visas vid återkomst; avslut kan nås och ger fokus till Nytt samtal.",
     "Kompakt rad och fält på en rad; sidofält med karta bredvid.",
     "Hela den kvarvarande native arbetsföljden genomförs i denna konfiguration."
   ]
@@ -981,6 +990,7 @@ TEXTMOBIL-08.
   },
   "reference": "820 × 1180, emulerad pekare CSS-pixlar; bred stående pekare.",
   "outcomes": [
+    "Paus och utgångstid visas vid återkomst; avslut kan nås och ger fokus till Nytt samtal.",
     "Fast sidofält och inget automatiskt startfokus.",
     "Hela den kvarvarande native arbetsföljden genomförs i denna konfiguration."
   ]
@@ -1027,6 +1037,7 @@ TEXTMOBIL-09.
   },
   "reference": "320 × 250, mus CSS-pixlar; ytterst kort smal dator.",
   "outcomes": [
+    "Paus och utgångstid visas vid återkomst; avslut kan nås och ger fokus till Nytt samtal.",
     "Kompakt rad och fält på en rad; inget automatiskt startfokus.",
     "Hela den kvarvarande native arbetsföljden genomförs i denna konfiguration."
   ]
@@ -1073,6 +1084,7 @@ TEXTMOBIL-10.
   },
   "reference": "700 × 500, mus CSS-pixlar; smal kort dator.",
   "outcomes": [
+    "Paus och utgångstid visas vid återkomst; avslut kan nås och ger fokus till Nytt samtal.",
     "Kompakt rad, full bredd och inget automatiskt startfokus.",
     "Hela den kvarvarande native arbetsföljden genomförs i denna konfiguration."
   ]

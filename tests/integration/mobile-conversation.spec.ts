@@ -3,6 +3,7 @@ import { closeSupportDialog, createHousehold, signIn } from '../support/client.j
 import {
   closeConversationText,
   microphoneButton,
+  openConversationText,
   startConversationWithText,
   turnMicrophoneOn,
   voiceBox,
@@ -138,6 +139,22 @@ for (const size of [
         await expect(fullProposal).toContainText('Person');
         await expect(fullProposal).toContainText('Påhittad uppgift');
         await closeSupportDialog(page, 'Lo Exempel');
+        await view(page).getByRole('button', { name: 'Dölj utkastet (1)', exact: true }).click();
+        await page.reload();
+        await openConversationText(page);
+        const lifetime = view(page).getByRole('status', { name: 'Samtalets livslängd' });
+        await expect(lifetime).toContainText('Samtalet är pausat. Löper ut');
+        const deadline = await bounds(lifetime.locator('time'));
+        const restoredBody = await bounds(view(page).locator('.text-view-body'));
+        expect(deadline.y).toBeGreaterThanOrEqual(restoredBody.y);
+        expect(deadline.bottom).toBeLessThanOrEqual(restoredBody.bottom);
+        const end = view(page).getByRole('button', { name: 'Avsluta samtalet', exact: true });
+        await end.scrollIntoViewIfNeeded();
+        await end.click();
+        await expect(
+          view(page).getByRole('button', { name: 'Nytt samtal', exact: true }),
+        ).toBeFocused();
+        await expect(view(page).getByRole('log')).not.toContainText('Ett synligt provsvar.');
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
           true,
         );

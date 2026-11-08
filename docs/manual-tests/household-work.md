@@ -286,7 +286,8 @@ microphone”.
 **Användare:** Alex.
 
 **Förutsättningar:** En fullständig export av det tomma provhushållet
-enligt [exportguiden](../user-guide/household-export.md).
+enligt [exportguiden](../user-guide/household-export.md). Låt två flikar med
+samma inloggning ladda hushållet innan du startar samtalet i första fliken.
 
 **Integrationstest:**
 [household-work.spec.ts](../../tests/integration/household-work.spec.ts),
@@ -297,11 +298,12 @@ microphone”.
 
 1. Starta samtal och mikrofon. Öppna **Nytt objekt** och skriv
    **Gammal oskickad cykel** utan att skicka texten.
-2. Öppna samma hushåll i en andra flik med samma inloggning. Behåll
-   det första formuläret öppet. I den andra fliken, öppna **Inställningar**
-   och välj **Återimportera hushållet** i sidnavigationen. Välj exportfilen och
-   **Kontrollera importfil**.
-   Granska ersättningen och bekräfta uttryckligen att innehållet ska ersättas.
+2. Behåll det första formuläret öppet. I den färdigladdade andra fliken,
+   öppna **Inställningar** och välj **Återimportera hushållet** i
+   sidnavigationen. Välj exportfilen och **Kontrollera importfil**.
+   Granska ersättningen. Kontrollera att mikrofonen fortfarande lyssnar och
+   att det oskickade formuläret finns kvar i första fliken. Bekräfta sedan
+   uttryckligen att innehållet ska ersättas.
 3. Invänta bekräftad ersättning i den andra fliken och mikrofonstopp
    samt avvecklat formulär i den första. Ladda om den första fliken,
    öppna textvyn och välj **Nytt samtal**. Avböj medgivandet.
@@ -349,6 +351,8 @@ Skapa och spara
 Ingen bild behövs i detta fall. Flytta lampan åt höger och stolen åt vänster
 med **Navigera**. Redigera stolen, skriv **Oberoende privat förslag** i
 beskrivningen och lägg i utkastet utan att spara hela utkastet.
+Låt två vanliga flikar A och B med samma inloggning ladda hushållet innan
+du startar samtalet i flik A. Öppna kartan i flik B och behåll den laddad.
 
 **Integrationstest:**
 [household-work.spec.ts](../../tests/integration/household-work.spec.ts),
@@ -359,10 +363,9 @@ an admitted save before reloading”.
 
 1. I flik A, öppna textvyn och slå på mikrofonen. Skicka en fråga, invänta det
    kontrollerade svaret och skriv **Gammalt oskickat svar** utan att skicka
-   det. Öppna **Visa utkastet** i textvyn. Öppna samma installation i en andra
-   vanlig flik B
-   med samma inloggning. Där öppnar du **Nytt objekt** och skriver
-   **Gammal oskickad cykel** utan att lägga det i utkastet. Behåll
+   det. Öppna **Visa utkastet** i textvyn. I den färdigladdade fliken B,
+   öppna **Nytt objekt** och skriv **Gammal oskickad cykel** utan att lägga
+   det i utkastet. Behåll
    objektdialogen öppen i flik B utan omladdning.
    Ett oskickat objekt spärrar sparandet i sin egen flik; därför används
    separata flikar för formuläret och det väntande sparandet.

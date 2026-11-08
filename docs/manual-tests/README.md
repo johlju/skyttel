@@ -431,7 +431,8 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   faktisk markering, exakt sparåterhämtning och tydlig skillnad mellan
   samtalstext och verifierade resultat, löpande dialog och
   raden Skyttel arbetar. TAL-03 skyddar läsbar beskrivning i korta
-  uppgiftsfönster även efter hela svaret som text. Kontrollerat
+  uppgiftsfönster även efter hela svaret som text och läser sparutfallet i
+  det pausade samtalet efter omstart före ett uttryckligt nytt samtal. Kontrollerat
   familjeunderlag och verkligt tal redovisas separat. TAL-18/19 skiljer mikrofonlägena;
   TAL-20–22 skiljer placeringarna och TAL-17/23–26 kräver verkliga
   mikrofon-, ljud-, system- eller skärmläsarobservationer. TAL-24 behåller
@@ -463,9 +464,10 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   en enda artig uppläsning, fasta mått och minskad rörelse. Kommentarspaket
   och faktiskt hört tal provas separat. Mobilfallen har separata ID för
   varje kvarvarande emulerad konfiguration, fast sidofält på bred pekare,
-  kompakt rad vid kort synlig höjd,
-  bibehållet fokus, 190 px synlig höjd med rösten på, fria kartkontroller
-  och långa rullbara notiser. Datorfallen provar oberoende breddhandtag
+  kompakt rad vid kort synlig höjd, paus och utgångstid vid återkomst,
+  nåbart avslut med fokusåtergång, bibehållet fokus, 190 px synlig höjd med
+  rösten på, fria kartkontroller och långa rullbara notiser. Datorfallen
+  provar oberoende breddhandtag
   med mus och piltangenter, personliga bredder mellan hushåll och enheter,
   visningsbegränsning utan ändrat sparat val samt återställning även utan
   tillgängligt samtal. Mobil enhet och smal skärm behåller sina bredder.
@@ -488,13 +490,17 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   med röst när mikrofonen är på, text när den är av, ordnad överlämning av
   långa svar, kvarvarande samtalstext och artig uppläsning bara av nya
   textlevererade Skyttel-rader. Obekräftad text ger inget sparkvitto.
-- [Samtalets kontext](conversation-context.md): samma tillfälliga samtal
+- [Samtalets kontext](conversation-context.md): samma samtal
   genom utkast, sparande, avbrott, fel, mikrofon av och på samt byte mellan
   röst och text. Äldre sparbesked ger inget nytt sparande. Skrivna och
   talade kommandon börjar om samtalet och kastar hela utkastet.
   Kontextmätaren följer serverns procenttal, röstrutan visar procent från
   85 och ger en enda artig uppläsning, även på smal pekskärm. Nytt samtal
   återställer mätaren och gamla mätningar ignoreras.
+  Omladdning återställer bevarad text och modellval med arbetet pausat;
+  utgångstid visas och uttryckligt avslut lämnar utkastet kvar.
+  Egna talade repliker förnyar tiden från mottagandet; senare modellarbete
+  och kontroller flyttar inte gränsen.
   Full kontext sammanfattas automatiskt med kvarvarande samtalstext,
   aktuellt utkast, mikrofonläge och tidigare inspelat tal. Misslyckad
   sammanfattning blockerar nya uppdrag tills Nytt samtal. Pågående
