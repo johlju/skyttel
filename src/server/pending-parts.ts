@@ -50,18 +50,25 @@ export const partUpdates = z
   )
   .max(12);
 
-/** Conversation-local state. Only verified executor outcomes complete changes. */
-export function pendingParts() {
-  let parts: PendingPart[] = [];
-  const applied = new Set<string>();
-  const collections = ['changes', 'relationships', 'objectTypes', 'relationshipTypes'] as const;
-  type Effect = { collection: (typeof collections)[number]; id: string; value: unknown };
-  const completedOperations: {
+const collections = ['changes', 'relationships', 'objectTypes', 'relationshipTypes'] as const;
+type Effect = { collection: (typeof collections)[number]; id: string; value: unknown };
+export type PendingPartsState = {
+  parts: PendingPart[];
+  applied: Set<string>;
+  completedOperations: {
     parts: string[];
     name: string;
     args: Record<string, unknown>;
     effects: Effect[];
-  }[] = [];
+  }[];
+};
+
+export function pendingPartsState(): PendingPartsState {
+  return { parts: [], applied: new Set(), completedOperations: [] };
+}
+
+/** The controller mutates its owner's ledger; it keeps no competing state. */
+export function pendingParts(state: PendingPartsState = pendingPartsState()) {
   const operationArgs = ({
     version: _version,
     contentVersion: _contentVersion,
@@ -69,7 +76,7 @@ export function pendingParts() {
   }: Record<string, unknown>) => args;
   const active = (part: PendingPart) => part.status === 'waiting' || part.status === 'ready';
   function find(ref: z.infer<typeof partReference>) {
-    const part = parts.find((part) => part.id === ref.id);
+    const part = state.parts.find((part) => part.id === ref.id);
     if (!part || part.revision !== ref.revision || !active(part))
       throw new MapError('assistant_pending_part_changed');
     return part;
@@ -88,11 +95,12 @@ export function pendingParts() {
     /** Iterate without copying the ledger. Each consumer gets a fresh iterator;
      * bounded projections must not mutate entries and admit only known fields. */
     values(): Iterable<Readonly<PendingPart>> {
-      return { [Symbol.iterator]: () => parts.values() };
+      return { [Symbol.iterator]: () => state.parts.values() };
     },
-    read: () => structuredClone(parts),
-    questions: () => parts.filter((part) => part.status === 'waiting').map((part) => part.question),
-    blocked: () => parts.some((part) => part.kind === 'change' && active(part)),
+    read: () => structuredClone(state.parts),
+    questions: () =>
+      state.parts.filter((part) => part.status === 'waiting').map((part) => part.question),
+    blocked: () => state.parts.some((part) => part.kind === 'change' && active(part)),
     validateReply(refs: z.infer<typeof partReference>[]) {
       for (const ref of refs)
         if (find(ref).status !== 'waiting') throw new MapError('assistant_pending_part_changed');
@@ -103,7 +111,7 @@ export function pendingParts() {
       turn: { id: string; text: string; callId: string },
     ) {
       const key = `${turn.id}:${turn.callId}`;
-      if (applied.has(key)) return { questions: [] as string[], answers: [] as string[] };
+      if (state.applied.has(key)) return { questions: [] as string[], answers: [] as string[] };
       const ids = new Set<string>();
       // Validate the entire transition before changing any part.
       for (const update of updates) {
@@ -140,7 +148,7 @@ export function pendingParts() {
           answers.push(`Den väntande delen är återtagen: ${part.request}.`);
         } else if (update.action === 'replace' && update.replacement) {
           part.status = 'superseded';
-          parts.push(create(update.replacement, turn.id));
+          state.parts.push(create(update.replacement, turn.id));
           announced.push(update.replacement.question);
         } else if (update.question) {
           part.question = update.question;
@@ -154,17 +162,17 @@ export function pendingParts() {
       for (const question of questions) {
         if (
           typeof question === 'string' &&
-          parts.some((part) => active(part) && part.question === question)
+          state.parts.some((part) => active(part) && part.question === question)
         )
           continue;
         const value =
           typeof question === 'string'
             ? { kind: 'change' as const, request: question, question, dependsOnDraft: true }
             : question;
-        parts.push(create(value, turn.id));
+        state.parts.push(create(value, turn.id));
         announced.push(value.question);
       }
-      applied.add(key);
+      state.applied.add(key);
       return { questions: announced, answers };
     },
     validateCompletion(refs: z.infer<typeof partReference>[]) {
@@ -182,14 +190,14 @@ export function pendingParts() {
       args: Record<string, unknown>,
       current: TextAssistantReview,
     ) {
-      const completed = completedOperations.find(
+      const completed = state.completedOperations.find(
         (item) =>
           item.name === name &&
           refs.some((ref) => item.parts.includes(ref.id)) &&
           isDeepStrictEqual(item.args, operationArgs(args)),
       );
       if (!completed) return true;
-      const latest = completedOperations
+      const latest = state.completedOperations
         .filter((item) => refs.some((ref) => item.parts.includes(ref.id)))
         .flatMap((item) => item.effects);
       if (
@@ -227,7 +235,7 @@ export function pendingParts() {
             effects.push({ collection, id, value: structuredClone(value) });
         }
       }
-      completedOperations.push({
+      state.completedOperations.push({
         parts: refs.map((ref) => ref.id),
         name,
         args: structuredClone(normalized),
@@ -245,16 +253,16 @@ export function pendingParts() {
       }
     },
     discard() {
-      for (const part of parts)
+      for (const part of state.parts)
         if (active(part) && (part.kind === 'change' || part.dependsOnDraft)) {
           part.status = 'discarded';
           part.revision++;
         }
     },
     clear() {
-      parts = [];
-      applied.clear();
-      completedOperations.length = 0;
+      state.parts = [];
+      state.applied.clear();
+      state.completedOperations.length = 0;
     },
   };
 }
