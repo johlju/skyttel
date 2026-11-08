@@ -64,7 +64,10 @@ export function useConversationNotice({
     selected?.id === 'contextFull' && contextSummaryFailure
       ? {
           ...selected,
-          text: `Skyttel kunde inte sammanfatta samtalet. ${contextSummaryFailure.message} Samtalstexten och utkastet ligger kvar. Ett nytt samtal tömmer samtalstexten och kontexten och använder ditt senaste personliga modellval. Det löser inte modellfelet och ändrar inte kontots åtkomst.`,
+          text:
+            contextSummaryFailure.code === 'assistant_context_capacity'
+              ? contextSummaryFailure.message
+              : `Skyttel kunde inte sammanfatta samtalet. ${contextSummaryFailure.message} Samtalstexten och utkastet ligger kvar. Ett nytt samtal tömmer samtalstexten och kontexten och använder ditt senaste personliga modellval. Det löser inte modellfelet och ändrar inte kontots åtkomst.`,
         }
       : selected;
   const reference =

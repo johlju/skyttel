@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { access } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { request } from '@playwright/test';
 import { expect, test, vi } from 'vitest';
@@ -251,3 +251,151 @@ test('manual voice family setup refuses reuse and resolves the seeded conflict a
     await browser.dispose();
   }
 }, 30_000);
+
+test.each([false, true])(
+  'published queued correction preparation compares admitted and current targets with manual rename %s',
+  async (renamed) => {
+    const document = await readFile('docs/manual-tests/conversation-preparation.md', 'utf8');
+    const holdCheck = document.match(/^hold-check on$/mu)?.[0];
+    const allow = document.match(/^reply CHECK \{"decision":"allow","complete":true\}$/mu)?.[0];
+    const clarify = document.match(/^reply CHECK \{"decision":"clarify"\}$/mu)?.[0];
+    if (!holdCheck || !allow || !clarify) throw new Error('Missing public queued-check recipe');
+    const { child, lines, exit, next, command } = launch();
+    const browser = await request.newContext();
+    try {
+      const { origin } = await next('ready');
+      await command(holdCheck, 'check-hold');
+      await signIn(browser, origin);
+      const { household } = await (await createHousehold(browser, origin)).json();
+      const base = `${origin}/api/households/${household.id}`;
+      const post = (path: string, data: object) =>
+        browser.post(`${base}${path}`, { headers: { origin }, data });
+      const readMap = async () => (await browser.get(`${base}/map`)).json();
+      let map = await readMap();
+      const value = {
+        typeId: map.types.find((type: { name: string }) => type.name === 'Person').id,
+        name: 'Lo Exempel',
+        properties: [
+          { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Påhittad uppgift' },
+        ],
+      };
+      expect(
+        (
+          await post('/map/draft', {
+            version: map.draft.version,
+            contentVersion: map.contentVersion,
+            id: 'lo',
+            baseRevision: null,
+            value,
+          })
+        ).status(),
+      ).toBe(200);
+      const session = await (await post('/text-assistant', approvedForVisit)).json();
+      const path = `/text-assistant/${session.id}`;
+      const read = async () => (await browser.get(`${base}${path}`)).json();
+      async function send(text: string) {
+        const current = await read();
+        expect(
+          (
+            await post(`${path}/messages`, {
+              revision: current.revision,
+              draftVersion: current.review.version,
+              contentVersion: current.review.contentVersion,
+              requestId: crypto.randomUUID(),
+              text,
+            })
+          ).status(),
+        ).toBe(202);
+      }
+      await command('scope-read', 'scope');
+      await command('text-context 99');
+      await send('Fyll kontexten.');
+      const first = await next('held');
+      const exact = 'Rätta Lo Exempel till Lo Klar. Spara inte.';
+      await send(exact);
+      await command(`reply ${first.id} Den första läsningen är klar.`);
+      const summary = await next('held');
+      expect(summary.kind).toBe('context-summary');
+      map = await readMap();
+      const manual = {
+        ...value,
+        name: renamed ? 'Lo Manuell' : value.name,
+        properties: [
+          {
+            ...value.properties[0],
+            value: renamed ? 'Påhittad uppgift' : 'Manuell aktuell uppgift',
+          },
+        ],
+      };
+      expect(
+        (
+          await post('/map/draft', {
+            version: map.draft.version,
+            contentVersion: map.contentVersion,
+            id: 'lo',
+            baseRevision: null,
+            value: manual,
+          })
+        ).status(),
+      ).toBe(200);
+      await command('scope-work', 'scope');
+      await command('text-context 0');
+      await command(`reply ${summary.id} Avslutad historisk läsning.`);
+      const queued = await next('held');
+      expect(queued.message).toBe(exact);
+      expect(queued.draft.changes[0].after.name).toBe(manual.name);
+      await command(
+        `tool ${queued.id} submit_changes ${JSON.stringify({
+          version: queued.draft.version,
+          contentVersion: queued.draft.contentVersion,
+          completion: 'draft',
+          operations: [
+            {
+              name: 'propose_object',
+              arguments: {
+                id: 'lo',
+                baseRevision: null,
+                value: { ...manual, name: 'Lo Klar' },
+              },
+            },
+          ],
+        })}`,
+      );
+      const check = await next('held');
+      expect(check.kind).toBe('action-check');
+      expect(check.comparison.authority).toMatchObject({
+        current: exact,
+        scope: { mode: 'work', request: exact },
+      });
+      expect(check.comparison.untrusted.data.queuedReference.draft.changes[0].after.name).toBe(
+        'Lo Exempel',
+      );
+      expect(check.comparison.untrusted.data.draft.changes[0].after.name).toBe(manual.name);
+      // The terminal controls the independent provider response. The app must
+      // preserve the real admitted authority and enforce the returned decision.
+      await command((renamed ? clarify : allow).replace('CHECK', check.id));
+      await expect.poll(async () => (await read()).phase).not.toBe('working');
+      const final = await read();
+      const result = await readMap();
+      if (renamed)
+        expect(final).toMatchObject({ phase: 'error', error: 'assistant_scope_unclear' });
+      else expect(final.phase).toBe('ready');
+      expect(result.draft.changes[0].after).toMatchObject({
+        name: renamed ? 'Lo Manuell' : 'Lo Klar',
+        properties: manual.properties,
+      });
+      expect(result.objects).toEqual([]);
+      expect((await (await browser.get(`${base}/map/history`)).json()).history).toEqual([]);
+      await command('hold-check off', 'check-hold');
+      await command('quit', 'closed');
+      await exit;
+      expect(child.exitCode).toBe(0);
+    } finally {
+      child.kill('SIGTERM');
+      await exit;
+      lines.close();
+      await browser.dispose();
+    }
+  },
+  30_000,
+);

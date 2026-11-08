@@ -296,7 +296,19 @@ test.each(['ordinary', 'held-status', 'held-stop'] as const)(
       say('Vad kostar den?');
       delegate();
       await expect.poll(() => model.requests.length, { timeout: 5000 }).toBe(2);
-      expect(model.requests[1].input).toHaveLength(1);
+      const nextInput = model.requests[1].input;
+      const currentRequests = nextInput.filter((item) => item.role === 'user');
+      expect(currentRequests).toHaveLength(1);
+      expect(JSON.parse(String(currentRequests[0].content))).toMatchObject({
+        message: 'Vad kostar den?',
+        unfinishedRequests: [{ text: 'Vad kostar den?' }],
+      });
+      const dialogue = nextInput
+        .filter((item) => item.role === 'assistant')
+        .flatMap((item) => JSON.parse(String(item.content)).recentConversation ?? []);
+      expect(dialogue).toContainEqual(
+        expect.objectContaining({ role: 'user', text: 'Vad kostar den?', partial: true }),
+      );
       const sentToModel = JSON.stringify(model.requests[1].input);
       expect(sentToModel).toContain('Vad kostar den?');
       expect(sentToModel).not.toContain('Vem betalar musiken?');

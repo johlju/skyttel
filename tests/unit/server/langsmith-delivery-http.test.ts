@@ -1596,11 +1596,20 @@ test('voice context preparation owns its summary once in an explicitly linked ba
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
-  const model = textModel(async (body) => {
-    if (body.tools.length) return [modelMessage('Påhittat historiskt sammanhang. '.repeat(110))];
-    await held;
-    return [modelMessage('Kort historiskt sammanhang.')];
-  });
+  const model = textModel(
+    async (body) => {
+      if (body.tools.length) return [modelMessage('Påhittat historiskt sammanhang. '.repeat(110))];
+      await held;
+      return [modelMessage('Kort historiskt sammanhang.')];
+    },
+    // Completed read-only discussion can be summarized. A work scope with
+    // narrative alone must preserve its unfinished requests verbatim.
+    () => [
+      modelMessage(
+        JSON.stringify({ mode: 'read', request: 'Besvara den aktuella frågan utan ändringar.' }),
+      ),
+    ],
+  );
   const { path, session } = await setup({
     modelFetch: model.provider,
     liveFetch: live.provider,

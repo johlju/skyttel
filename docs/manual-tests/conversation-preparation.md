@@ -81,12 +81,68 @@ reply REQUEST Historisk sammanfattning: Lo är det senaste förslaget. Spara hel
 <!-- markdownlint-enable MD013 -->
 
 För fel, kör `fail REQUEST` på just sammanfattningsanropet.
+För ett kontrollerat kapacitetsstopp, skicka det manuella fallets begäran
+och kör `fail REQUEST capacity` på dess hållna arbetsanrop. Leverantörens
+kapacitetsfel är kontrollerat; det mäter inte en verklig modells gräns.
+Efter stoppet skrivs ett fullständigt avgränsat uppdrag i textfältet och
+skickas med **Avgränsa uppdraget**. Släpp det nya hållna anropet med
+`reply REQUEST Det avgränsade svaret.`. Ursprunglig begäran ligger kvar
+pausad; den nya texten ska ange alla mål och begränsningar som gäller.
 `context 89` utlöser motsvarande röstbyte från den aktuella anslutningen.
 `capture-context-source` före bytet och `context-old 99` efter det
 släpper en gammal mätning som inte ska påverka det nya samtalet.
 `context-invalid` provar fel format. För det separata tekniska underlaget
 provar automationen även negativt, saknat och null-värde samt en
 klientförfalskad mätning; de hör inte till vanliga UI-steg.
+
+## Köad rättelse och oberoende kontroll
+
+För KONTEXT-21 och KONTEXT-22 håller terminalen även svaret från den
+oberoende ändringskontrollen. Aktivera kontrollen före första läsningen:
+
+```text
+hold-check on
+scope-read
+text-context 99
+```
+
+Skicka och köa de två texterna enligt fallet. Släpp läsningens `held` med
+`reply REQUEST Den första läsningen är klar.`. Håll nästa `held`, vars
+`kind` är `context-summary`, medan den manuella ändringen görs. Kör
+`scope-work` och `text-context 0` innan sammanfattningen släpps med
+`reply REQUEST Avslutad historisk läsning.`.
+
+Nästa arbetsanrop innehåller den köade rättelsen och aktuellt utkast.
+Släpp en batch enligt **Utkastbatch och sparande**: behåll hela det
+aktuella Lo-förslaget och ändra endast namnet till Lo Klar. Den oberoende
+kontrollen ger nu ett separat `held` med `kind:"action-check"` och
+`comparison`. Kontrollera att `authority.current` och `authority.scope`
+återger rättelsen med förbudet att spara. Under
+`untrusted.data.queuedReference.draft` finns det ursprungliga målet Lo Exempel;
+`untrusted.data.draft` visar det aktuella utkastet. Under
+`untrusted.operations` finns förslaget som kontrollen ska jämföra.
+Ersätt CHECK med detta kontrollanrops eget `id`.
+
+I KONTEXT-21 har bara beskrivningen ändrats manuellt. Släpp kontrollens
+svar som tillåter samma tydliga mål och åtgärd:
+
+```text
+reply CHECK {"decision":"allow","complete":true}
+```
+
+I KONTEXT-22 har målets namn ändrats till Lo Manuell. Släpp i stället
+kontrollens svar som kräver förtydligande:
+
+```text
+reply CHECK {"decision":"clarify"}
+```
+
+Detta styr den kontrollerade leverantörens verkliga kontrollsvar;
+det verifierar inte en verklig modells bedömningsförmåga. Serverns egna
+behörighets-, versions- och sparregler gäller fortfarande. Utan
+`hold-check on` tillåter provleverantören ändringskontroller automatiskt.
+Kör `hold-check off` efter fallet, eller avsluta med `quit` och börja med
+en ny installation före nästa fall.
 
 ## Sparande som redan är registrerat
 

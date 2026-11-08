@@ -494,9 +494,15 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   Mikrofonval, felingång och emulerade pekbredder har skilda identiteter;
   KONTEXT-16/17 avser verklig uppläsning, mikrofon och beröring;
   KONTEXT-18 bevarar hört hinderbesked vid textens och röstens
-  sammanfattningsfel.
+  sammanfattningsfel. KONTEXT-19 bevarar exakta väntande instruktioner
+  genom sammanfattning, modellbyte och ny röstanslutning.
+  KONTEXT-20 bevarar originalet vid kapacitetsstopp och låter användaren
+  ange en fullständig ny avgränsning medan tidigare arbete och kö väntar.
+  KONTEXT-21/22 skiljer aktuell oberoende uppgift från ett manuellt ändrat
+  mål vid köstart, med fortsatt rättelse eller förtydligande.
   [Separat samtalsförberedelse](conversation-preparation.md) beskriver
-  versionsvärden, paket, registrerat sparande och PCM genom hållen start.
+  versionsvärden, paket, oberoende kontroll av köade mål, registrerat
+  sparande och PCM genom hållen start.
   PCM-receptets tekniska referens är fylld installation med oförändrad
   karta, utkast och historik; separat körning från tomt hushåll ingår inte.
   Båda huvudreceptproven finns kvar, inklusive fylld konfliktlösning.

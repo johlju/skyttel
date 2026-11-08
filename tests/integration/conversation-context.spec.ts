@@ -302,6 +302,7 @@ test('KONTEXT-02: röst och text delar kontext över avstängning och ny röstan
     await turnMicrophoneOn(page);
     expect(live.requests).toHaveLength(2);
     expect(JSON.stringify(live.requests[1].session.input)).toContain('Rätta Lo till Lo Lind.');
+    expect(JSON.stringify(live.requests[1].session.input)).toContain('bytte namn till Lo Senaste');
     speak(live, 'Ändra den sista.');
     await expect.poll(() => model.requests.length).toBe(4);
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true');

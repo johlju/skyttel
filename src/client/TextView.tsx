@@ -280,6 +280,12 @@ export function TextView({
               announce={!hidden}
               announceWorking={false}
             />
+            {session?.capacityPaused && (
+              <p id={`${id}-scope-help`}>
+                Skriv ett nytt avgränsat uppdrag som står för sig självt. Ange mål och alla
+                begränsningar som gäller. Tidigare oavslutat arbete och kön ligger kvar pausade.
+              </p>
+            )}
           </div>
           <p className="text-view-canceled" aria-live="polite" aria-atomic="true">
             {session?.canceled ? 'Avbrutet. Föreslagna ändringar ligger kvar i utkastet.' : ''}
@@ -301,6 +307,7 @@ export function TextView({
               id={`${id}-message`}
               rows={short ? 1 : 2}
               maxLength={4000}
+              aria-describedby={session?.capacityPaused ? `${id}-scope-help` : undefined}
               placeholder="Berätta vad du vill göra…"
               value={text}
               onChange={(event) => conversation.setText(event.target.value)}
@@ -332,7 +339,7 @@ export function TextView({
               </button>
             ) : (
               <button type="submit" className="primary" disabled={blocked}>
-                Skicka
+                {session?.capacityPaused ? 'Avgränsa uppdraget' : 'Skicka'}
               </button>
             )}
           </form>

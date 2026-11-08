@@ -107,6 +107,13 @@ export function textModel(
       tools,
       ...(outputLimit === undefined ? {} : { max_output_tokens: outputLimit }),
     };
+    // Match the occupancy estimate used by the conversation. Keep exact work
+    // intact when even this local input plus the selected output budget cannot fit.
+    if (
+      selected &&
+      Buffer.byteLength(JSON.stringify(request)) / 3 + (outputLimit ?? 0) >= selected.tokens
+    )
+      throw new MapError('assistant_context_capacity', 409);
     const evidence = (content: { input?: unknown; output?: unknown }) => {
       try {
         observe?.({ ...attempt }, content);
@@ -161,11 +168,13 @@ export function textModel(
         const code =
           error instanceof MapError
             ? error.code
-            : status === 401 || status === 403 || status === 404
-              ? 'assistant_model_access'
-              : status === 400 || status === 422
-                ? 'assistant_model_unsupported'
-                : 'assistant_model_temporary';
+            : error instanceof OpenAI.APIError && error.code === 'context_length_exceeded'
+              ? 'assistant_context_capacity'
+              : status === 401 || status === 403 || status === 404
+                ? 'assistant_model_access'
+                : status === 400 || status === 422
+                  ? 'assistant_model_unsupported'
+                  : 'assistant_model_temporary';
         console.error(
           JSON.stringify({
             event: 'assistant_model_failed',

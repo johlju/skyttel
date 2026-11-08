@@ -238,6 +238,13 @@ Skyttel återanvänder hämtade uppgifter mellan meddelanden i samma samtal.
 När underlaget ändras, även från en annan klient, hämtas berörda uppgifter
 på nytt vid behov. **Nytt samtal** börjar med ny samtalskontext.
 
+En köad begäran läser aktuellt underlag när den börjar. En oberoende
+manuell uppgift kan bevaras medan samma entydiga rättelse fortsätter.
+Om det avsedda målet ändras, blir tvetydigt eller inte kan fastställas
+ber Skyttel dig förtydliga begäran. Ett gammalt modellresultat ska inte
+ersätta din manuella ändring. Om det ändrade utkastet ska sparas behöver
+du lämna en ny sparbegäran.
+
 Under rubriken i textvyn visar **Kontext** hur många procent av samtalets
 kontext som är fylld. Beskrivningen är **Så mycket av samtalets kontext
 som är fylld. Nytt samtal tömmer den.** Procenttalet bygger på
@@ -254,11 +261,25 @@ inte upp automatiskt; du kan läsa det aktuella talet i röstrutan.
 När kontexten behöver mer plats sammanfattar Skyttel samtalet automatiskt,
 för både text och röst. Raden **Skyttel har sammanfattat samtalet för att
 få plats i kontexten.** visas och procenttalet sjunker. Samtalstexten och
-ditt utkast ligger kvar. Skyttel behåller en sammanfattning och de senaste
-replikerna för fortsatt arbete, och läser ditt aktuella utkast på nytt.
-Äldre detaljer kan saknas i sammanfattningen; skriv dem igen om de behövs.
+ditt utkast ligger kvar. Skyttel behåller oavslutade begäranden och dina
+begränsningar ordagrant, separat från sammanfattningen av avslutad diskussion.
+Det gäller också när du byter modell eller växlar mellan text och röst.
+Aktuellt utkast och tidigare sparresultat kontrolleras på nytt inför arbete.
+Äldre detaljer från avslutad diskussion kan saknas i sammanfattningen;
+skriv dem igen om de behövs.
 Rösten pausar inspelningen under bytet och behåller mikrofonens läge.
 Tal som redan spelades in före släpp kan fortfarande skickas efteråt.
+
+Om nödvändiga instruktioner ändå inte får plats stannar arbetet.
+Samtalstexten, utkastet och de exakta oavslutade instruktionerna finns kvar.
+Skriv ett nytt avgränsat uppdrag och välj **Avgränsa uppdraget**.
+Det nya uppdraget måste stå för sig självt: ange mål och alla begränsningar
+som gäller. ”Gör första delen” räcker inte när den kräver det för stora
+underlaget. Den ursprungliga begäran och tidigare kö ligger kvar pausade.
+En tidigare sparbegäran gäller inte för det nya uppdraget.
+Medan tidigare arbete ligger pausat ska varje ny avgränsad begäran vara
+fullständig. **Nytt samtal** tömmer samtalstexten och kontexten enligt
+de vanliga reglerna; gör det bara när du vill lämna det gamla samtalet.
 
 Om sammanfattningen misslyckas visas ett hinderbesked. Vid modellfel
 förklarar notisen om modellen är tillfälligt otillgänglig, om kontot

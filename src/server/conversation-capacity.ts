@@ -89,8 +89,13 @@ export class ConversationCapacity {
   }
 
   reset() {
-    this.measuredText = undefined;
+    this.resetText();
     this.measuredVoice = undefined;
     this.voiceSource = undefined;
+  }
+
+  /** A local reconstruction replaces the text input without retiring Live usage. */
+  resetText() {
+    this.measuredText = undefined;
   }
 }

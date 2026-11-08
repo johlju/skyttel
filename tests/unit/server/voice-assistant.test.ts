@@ -1,6 +1,7 @@
 import { type APIRequestContext, request } from '@playwright/test';
 import { afterEach, expect, test, vi } from 'vitest';
 import { voiceAssistantInstructions } from '../../../src/server/assistant-instructions.js';
+import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
@@ -165,6 +166,9 @@ test('resuming interrupted output keeps historical context separate from new sav
     expect(invalid.status()).toBe(status);
     expect(live.requests).toHaveLength(1);
   }
+  const beforeResume: TextAssistantView = await (
+    await browser.get(`${path}/${assistant.id}`)
+  ).json();
   const resumed = await browser.post(voicePath, {
     headers: { origin: app.origin },
     data: {
@@ -176,7 +180,9 @@ test('resuming interrupted output keeps historical context separate from new sav
     },
   });
   expect(resumed.status(), await resumed.text()).toBe(201);
-  expect(live.requests.at(-1)?.session?.input).toEqual([
+  const retained = live.requests.at(-1)?.session?.input;
+  expect(retained).toHaveLength(3);
+  expect(retained?.slice(0, 2)).toEqual([
     { role: 'user', content: [{ type: 'input_text', text: 'Spara.' }], status: 'incomplete' },
     {
       role: 'assistant',
@@ -184,6 +190,19 @@ test('resuming interrupted output keeps historical context separate from new sav
       status: 'incomplete',
     },
   ]);
+  expect(JSON.stringify(retained)).not.toContain('Klientens påhittade historik.');
+  expect(retained?.[2]).toEqual({
+    role: 'assistant',
+    content: [{ type: 'output_text', text: expect.any(String) }],
+    status: 'completed',
+  });
+  expect(JSON.parse(String(retained?.[2]?.content[0]?.text))).toEqual({
+    currentDraft: beforeResume.review,
+    unfinishedRequests: [],
+    pendingParts: [],
+    saveOperations: [],
+    historical: true,
+  });
   const session = [...live.channels.keys()].at(-1);
   if (!session) throw new Error('Missing resumed voice session');
   live.emit(session, {
@@ -194,6 +213,7 @@ test('resuming interrupted output keeps historical context separate from new sav
   });
   const current = await (await browser.get(`${path}/${assistant.id}`)).json();
   expect(current.phase).toBe('ready');
+  expect(current.review).toEqual(beforeResume.review);
   expect(current.operations).toEqual([]);
 });
 

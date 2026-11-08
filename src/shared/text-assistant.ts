@@ -72,6 +72,8 @@ export interface TextAssistantView {
   contextPercentage?: number;
   /** A provider handoff is separate from clearing the visible conversation. */
   contextSummaryState?: 'needed' | 'summarizing' | 'failed';
+  /** Only a new standalone scope may run; earlier work and its queue stay paused. */
+  capacityPaused?: boolean;
   /** A summary failure does not change the verified outcome of completed work. */
   contextSummaryFailure?: { code: string; message: string };
   contextGeneration?: number;

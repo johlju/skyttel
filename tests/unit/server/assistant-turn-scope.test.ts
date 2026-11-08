@@ -601,7 +601,7 @@ test('a later violation stops the turn while retaining its earlier confirmed dra
       const name = step++ === 0 ? 'Requested' : 'Unrelated';
       return [
         modelTool('propose_object', {
-          version: current.draft.version + step - 1,
+          version: current.draft.version,
           contentVersion: current.draft.contentVersion,
           id: name,
           baseRevision: null,

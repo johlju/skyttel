@@ -243,15 +243,25 @@ test.each([true, false])(
   'voice startup reduces overflowing canonical history before provider creation, success=%s',
   async (success) => {
     const live = liveProvider();
-    const model = textModel((request) =>
-      request.tools.length
-        ? [modelMessage('Äldre historiskt provord. '.repeat(20_000))]
-        : [modelMessage(success ? 'Lo är det senaste förslaget.' : '')],
+    const model = textModel(
+      (request) =>
+        request.tools.length
+          ? [modelMessage('Äldre historiskt provord. '.repeat(20_000))]
+          : [modelMessage(success ? 'Lo är det senaste förslaget.' : '')],
+      () => [
+        modelMessage(
+          JSON.stringify({
+            mode: 'read',
+            request: 'Beskriv den historiska bakgrunden om Lo Exempel.',
+          }),
+        ),
+      ],
     );
     const started = await setup(model.provider, live);
-    await send(started, 'Lång historisk bakgrund.');
+    await send(started, 'Lång historisk bakgrund. Beskriv Lo Exempel.');
     const previous = await ready(started.id);
     expect(previous.contextSummaries).toBeUndefined();
+    expect(previous.modelReply?.length).toBeGreaterThan(400_000);
     const response = await browser.post(`${path}/${started.id}/voice`, {
       headers: { origin: app.origin },
       data: {

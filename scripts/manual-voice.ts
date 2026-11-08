@@ -25,6 +25,8 @@ async function main() {
     throw new Error('Run without arguments in the development environment.');
   process.umask(0o077);
   const pending = new Map<string, Pending>();
+  let holdCheck = false;
+  let scopeMode: 'read' | 'work' | undefined;
   let holdSave = false;
   let releaseSave: (() => void) | undefined;
   let sequence = 0;
@@ -40,7 +42,14 @@ async function main() {
     const current = user && typeof user.content === 'string' ? JSON.parse(user.content) : {};
     return {
       id,
-      kind: item.request.tools.length ? 'work' : 'context-summary',
+      kind: item.request.instructions.startsWith('SKYTTEL_TURN_ACTIONS')
+        ? 'action-check'
+        : item.request.tools.length
+          ? 'work'
+          : 'context-summary',
+      comparison: item.request.instructions.startsWith('SKYTTEL_TURN_ACTIONS')
+        ? current
+        : undefined,
       message: current.message,
       messageId: current.messageId,
       pendingParts: lastToolResult(item.request)?.pendingParts ?? current.pendingParts,
@@ -50,20 +59,46 @@ async function main() {
       tools: item.request.tools.map((tool) => tool.name),
     };
   }
-  const model = textModel(
-    (request) =>
-      new Promise<unknown[]>((resolve, reject) => {
-        const id = String(++sequence);
-        const item = { request, resolve, reject };
-        pending.set(id, item);
-        emit('held', describe(id, item));
-        // Delayed external results remain releasable after cancellation. The real
-        // application's task/version checks, not this fixture, must reject them.
-      }),
-  );
+  const holdRequest = (request: ModelRequest) =>
+    new Promise<unknown[]>((resolve, reject) => {
+      const id = String(++sequence);
+      const item = { request, resolve, reject };
+      pending.set(id, item);
+      emit('held', describe(id, item));
+      // Delayed external results remain releasable after cancellation. The real
+      // application's task/version checks, not this fixture, must reject them.
+    });
+  const model = textModel(holdRequest, (request) => {
+    if (request.instructions.startsWith('SKYTTEL_TURN_ACTIONS') && holdCheck)
+      return holdRequest(request);
+    return [
+      modelMessage(
+        JSON.stringify(
+          request.instructions.startsWith('SKYTTEL_TURN_SCOPE')
+            ? {
+                mode: scopeMode ?? 'work',
+                request: scopeMode
+                  ? JSON.parse(String(request.input[0].content)).current
+                  : 'Perform the controlled test request.',
+              }
+            : { decision: 'allow', complete: true },
+        ),
+      ),
+    ];
+  });
   const app = await createInstallation(undefined, {
     modelFetch: async (input, init) => {
-      const response = await model.provider(input, init);
+      let response: Response;
+      try {
+        response = await model.provider(input, init);
+      } catch (error) {
+        if (!(error instanceof Error) || error.message !== 'controlled_context_capacity')
+          throw error;
+        return Response.json(
+          { error: { code: 'context_length_exceeded', message: error.message } },
+          { status: 400 },
+        );
+      }
       if (textContextPercent === undefined) return response;
       const body = await response.json();
       body.usage.output_tokens = textContextPercent === 0 ? 0 : 30;
@@ -151,16 +186,29 @@ async function main() {
               'finalize on|off',
               'drop',
               'hold-save on|off',
+              'hold-check on|off',
+              'scope-read | scope-work',
               'release-save',
               'pending',
               'tool REQUEST TOOL JSON',
               'reply REQUEST TEXT',
-              'fail REQUEST',
+              'fail REQUEST [capacity]',
               'available on|off',
               'restart',
               'quit',
             ],
           });
+          continue;
+        }
+        if (command === 'hold-check') {
+          if (id !== 'on' && id !== 'off') throw new Error('Use hold-check on or off.');
+          holdCheck = id === 'on';
+          emit('check-hold', { enabled: holdCheck });
+          continue;
+        }
+        if (command === 'scope-read' || command === 'scope-work') {
+          scopeMode = command === 'scope-read' ? 'read' : 'work';
+          emit('scope', { mode: scopeMode });
           continue;
         }
         if (command === 'hold-save') {
@@ -297,7 +345,13 @@ async function main() {
           if (!item) throw new Error('Use a held request ID from this terminal.');
           if (command === 'fail') {
             pending.delete(id);
-            item.reject(new Error('controlled_provider_failure'));
+            item.reject(
+              new Error(
+                line.split(/\s+/)[2] === 'capacity'
+                  ? 'controlled_context_capacity'
+                  : 'controlled_provider_failure',
+              ),
+            );
           } else if (command === 'reply') {
             const text = line.replace(/^reply\s+\S+\s*/, '');
             if (!text) throw new Error('Supply a synthetic reply.');

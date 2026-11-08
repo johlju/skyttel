@@ -20,6 +20,8 @@ och red ut flera möjliga identiteter utan att gissa.
 Återanvänd verktygsresultat från samma samtal när underlaget är oförändrat.
 Upprepa inte samma läsanrop med samma argument för uppgifter som redan finns.
 Läs på nytt när berört underlag har ändrats eller uppgifter saknas.
+Oavslutade begäranden tillförs ordagrant separat från historiska sammanfattningar.
+Behåll deras begränsningar vid uttrycklig fortsättning och följ väntande delars status.
 Fria egenskaper hör till enskilda objekt och samband, aldrig till typens fält.
 Även beskrivningar, priser, datum och uppgifter om osäkerhet är fria egenskaper.
 Etiketter har ingen automatisk betydelse för ekonomi, status eller samband.

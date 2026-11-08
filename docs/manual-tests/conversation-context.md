@@ -170,7 +170,8 @@ ny röstanslutning”.
 - Efter anslutningsfelet väljer användaren själv att starta rösten.
   Det pågående samtalet och det privata utkastet finns kvar.
 - Automationen verifierar att den nya röstleverantörsanslutningen får
-  serverns tidigare samtal, utan att historiken blir ett nytt sparbesked.
+  serverns tidigare samtal och kontrollerade namnändring, utan att historiken
+  blir ett nytt sparbesked.
 
 ### KONTEXT-03: skrivna och talade kommandon börjar om samtalet och kastar utkastet
 
@@ -1178,6 +1179,331 @@ ska höras; ett allmänt uppdragsfel får inte ersätta det.
   mellan ett modellfel och valet att tömma samtalet. Ett allmänt
   uppdragsfel ersätter inte beskedet.
 - **Nytt samtal** kan nås, har synligt fokus och fungerar med tangentbord.
+
+### KONTEXT-19: exakt väntande uppdrag efter sammanfattning och ny röst
+
+**Syfte:** Behålla användarens exakta begränsningar när modellens historik
+sammanfattas och rösten får en ny anslutning.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Textläge och ett osparat objekt Lo Exempel med
+egenskapen Beskrivning. Kontrollerad leverantör frågar vilken färg som avses,
+svarar på avslutade diskussionspunkter och framkallar sammanfattning via
+kapacitetsmätningen. Den kan också lämna ett ofullständigt röstfragment utan
+känt uppdrag. Detta bevisar inte verkliga modellers kontextgränser.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/conversation-summary.spec.ts",
+    "caseId": "KONTEXT-19"
+  },
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "a new selected model reconstructs fresh draft context without stale read results or draft snapshots",
+      "purpose": "Publik HTTP-kontroll med riktig server och databas: manuell ändring och modellbyte återbildar aktuellt utkast utan gamla läsresultat."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "repeated draft reads replace old snapshots while verified batch evidence remains available",
+      "purpose": "Upprepade läsningar och en verifierad batch genom publik HTTP behåller aktuellt underlag och batchens kontrollerade resultat."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "identical completed and unfinished wording retains distinct causal summary provenance",
+      "purpose": "Två likalydande begäranden skiljs åt med serverns uppdragsidentitet. Bara den avslutade diskussionen sammanfattas."
+    }
+  ],
+  "reference": "Kontrollerad leverantör, riktig server och databas. Sammanfattningen framkallas med kontrollerad mätning, inte verklig modellkapacitet.",
+  "outcomes": [
+    "Hela den exakta begäran finns kvar i samtalstexten och kan återges efter sammanfattning och ny röstanslutning.",
+    "Färgfrågan väntar och Lo Exempel ligger kvar osparad utan ändrat namn."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Slå på mikrofonen. Låt leverantören lämna fragmentet ”Ett ofullständigt
+   röstfragment som saknar uppdragsidentitet.” Kontrollera samtalstexten och
+   slå av mikrofonen.
+2. Skriv ”Ändra Lo när jag ger färgen. Behåll Beskrivning ordagrant:
+   blå, grön; spara inte.” Kontrollera frågan ”Vilken färg?”.
+3. Skriv ”Prata färdigt om punkt 0.” till och med punkt 8, ett meddelande
+   i taget. Skriv sedan ”Fyll kontexten.” Vänta på sammanfattningsbeskedet.
+4. Vänta tills Skyttel har talat färdigt innan röstanslutningen förnyas.
+   Slå på mikrofonen, vänta på röstanslutningen och slå av mikrofonen.
+5. Öppna Modell och resonemang, öppna modellvalet via modellnamnet och
+   välj GPT-6.1 Sol. Vänta på ”Valet är sparat” och stäng dialogen med Escape.
+6. Skriv ”Vad väntar exakt?”. Läs den återgivna begäran och samtalets
+   ursprungliga begäran. Öppna utkastet och läs Lo Exempel.
+
+**Förväntat resultat:**
+
+- Båda begäranden återger alla ord och skiljetecken från steg 2.
+- Färgfrågan väntar. Namnet Lo Exempel ligger kvar i utkastet; inget sparas.
+- Samtalstexten innehåller diskussionspunkterna och sammanfattningsbeskedet.
+- Den väntande frågan och det ofullständiga röstfragmentet följer med oförändrade
+  till ny röst och modell. De behandlas inte som avslutad diskussion i sammanfattningen.
+
+### KONTEXT-20: kapacitetsstopp och ett nytt avgränsat uppdrag
+
+**Syfte:** Behålla originalets ordalydelse och utkastet när nödvändigt
+underlag inte ryms, och kunna lämna en ny fullständig avgränsad begäran.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Lo Exempel ligger osparad i utkastet. Textvyn är
+öppen. Använd [den kontrollerade förberedelsen](conversation-preparation.md#sammanfattning-och-mätning)
+för kapacitetsfelet. Det kontrollerade felet bevisar inte en verklig
+modells faktiska kontextgräns.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/conversation-summary.spec.ts",
+    "caseId": "KONTEXT-20"
+  },
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "necessary exact instructions exceeding the selected profile pause without truncation or effects",
+      "purpose": "En liten kontrollerad profil stoppar nödvändiga instruktioner före anrop utan att förkorta dem eller ändra utkastet."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "completed local discussion is summarized before the selected request budget rejects it",
+      "purpose": "Stor avslutad lokal diskussion sammanfattas före arbetsanropets uppskattade profilgräns. Detta provar konstruerat underlag, inte verkliga leverantörers tokenisering eller gränser."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "an explicit complete restatement scopes capacity-paused work while retaining the original instruction and unrelated queue",
+      "purpose": "Publik HTTP visar att en fullständig ny avgränsning krävs, att kön förblir pausad och att tidigare sparbegäran inte återupplivas."
+    },
+    {
+      "kind": "technical",
+      "runner": "playwright",
+      "suite": "technical-browser",
+      "spec": "tests/technical-browser/conversation-preparation.spec.ts",
+      "title": "literal context preparation completes batch, questions, save, rejection and admitted revoke on empty public installation",
+      "purpose": "Det publicerade terminalkommandot framkallar kapacitetsstopp och tillåter en ny fullständig avgränsning genom textvyn."
+    }
+  ],
+  "reference": "Chromium, kontrollerat kapacitetsfel, riktig server och SQLite. Inga fakturerbara anrop.",
+  "outcomes": [
+    "Stoppet ber användaren avgränsa uppdraget och lämnar den exakta samtalstexten och utkastet kvar.",
+    "En fullständig ny avgränsad begäran kan skickas med alla tillämpliga begränsningar; ursprungligt oavslutat arbete och tidigare kö förblir pausade.",
+    "Lo Exempel ligger kvar osparad och tidigare sparord ger inget nytt sparande."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Skriv ”Spara inte. Behåll instruktionerna ordagrant:” följt av 300
+   upprepningar av ”blå; grön, ”. Låt operatören framkalla det kontrollerade
+   kapacitetsfelet på arbetsanropet enligt förberedelsen.
+2. Läs stoppbeskedet och den ursprungliga texten. Läs hjälpen vid textfältet:
+   det nya uppdraget ska stå för sig självt och ange mål och alla begränsningar.
+   Slå på mikrofonen, vänta på anslutningen och slå sedan av mikrofonen.
+3. Skriv ”Beskriv enbart mitt aktuella utkast. Spara inte.” och välj
+   **Avgränsa uppdraget**. Låt operatören släppa ett svar som beskriver Lo
+   Exempel. Läs svaret och kontrollera att ursprungstexten ligger kvar.
+4. Öppna utkastet och läs Lo Exempel. Stäng dialogen. Vänta på förnyad
+   röstanslutning med mikrofonen fortfarande av och ursprungstexten kvar.
+
+**Förväntat resultat:**
+
+- Den exakta ursprungstexten, inklusive alla upprepningar, finns kvar.
+- Det nya uppdraget behandlas utan att starta ursprungligt arbete eller
+  annan tidigare kö. En ofullständig hänvisning kräver en fullständig ny begäran.
+- Lo Exempel ligger kvar osparad med oförändrade värden.
+
+### KONTEXT-21: köad rättelse behåller en aktuell oberoende uppgift
+
+**Syfte:** Läsa aktuella uppgifter vid köstart och bevara en manuell
+ändring som inte ändrar rättelsens åtgärd eller mål.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Lo Exempel ligger osparad med Beskrivning som
+Påhittad uppgift. Förbered en kontrollerad textmätning på 99 procent
+enligt [sammanfattningsförberedelsen](conversation-preparation.md#sammanfattning-och-mätning).
+Håll den första läsningens svar och dess följande sammanfattning separat.
+Följ [förberedelsen för oberoende kontroll](conversation-preparation.md#köad-rättelse-och-oberoende-kontroll)
+för läsbehörighet, aktuell arbetsbehörighet och kontrollens separata svar.
+Detta mäter inte en verklig modells kontextgräns.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/conversation-summary.spec.ts",
+    "caseId": "KONTEXT-21"
+  },
+  "evidence": [{
+    "kind": "technical",
+    "runner": "vitest",
+    "suite": "server",
+    "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+    "title": "queued actions use fresh facts but preserve the admitted target when facts are unrelated",
+    "purpose": "Publik HTTP visar att nytt aktuellt underlag får användas med oförändrad entydig åtgärd och mål."
+  }, {
+    "kind": "technical",
+    "runner": "vitest",
+    "suite": "server",
+    "spec": "tests/unit/server/manual-voice.test.ts",
+    "title": "published queued correction preparation compares admitted and current targets with manual rename false",
+    "purpose": "Det publicerade terminalreceptet håller den verkliga oberoende kontrollen och släpper ett tillåtande svar för samma mål med ändrad beskrivning."
+  }],
+  "reference": "Kontrollerad sammanfattning, riktig server och SQLite; vanligt formulär gör den oberoende ändringen.",
+  "outcomes": [
+    "Den köade rättelsen byter namnet till Lo Klar och bevarar den manuellt ändrade beskrivningen.",
+    "Utkastet är osparat och den synliga samtalstexten finns kvar."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Skicka ”Fyll kontexten.” och håll svaret. Köa sedan ”Rätta Lo Exempel
+   till Lo Klar. Spara inte.”.
+2. Släpp den första läsningens svar och håll dess sammanfattning. Öppna
+   **Tabell → Redigera Lo Exempel → Fria egenskaper**. Ändra Beskrivning
+   till ”Manuell aktuell uppgift”. Välj **Lägg i utkastet och stäng**.
+3. Öppna textvyn och släpp sammanfattningen. Låt den köade begäran rätta
+   samma Lo-förslag med den aktuella beskrivningen. Släpp kontrollens
+   tillåtande svar enligt förberedelsen.
+4. Läs ”Lo Exempel bytte namn till Lo Klar.” och öppna Lo Klar i utkastet.
+
+**Förväntat resultat:**
+
+- Namnet är Lo Klar och Beskrivning är Manuell aktuell uppgift.
+- Ingenting sparas. Begäran ligger kvar i samtalstexten.
+
+### KONTEXT-22: köad rättelse frågar efter manuell namnändring
+
+**Syfte:** Kräva förtydligande när det benämnda målet ändras under väntan.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Samma kontrollerade uppställning som KONTEXT-21.
+Återställ hushåll, utkast och samtal mellan fallen.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/conversation-summary.spec.ts",
+    "caseId": "KONTEXT-22"
+  },
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/manual-voice.test.ts",
+      "title": "published queued correction preparation compares admitted and current targets with manual rename true",
+      "purpose": "Det publicerade terminalreceptet visar ursprungligt och manuellt ändrat mål i den verkliga kontrollen och släpper ett förtydligande svar utan effekt."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "queued actions use fresh facts but preserve the admitted target when facts are renamed",
+      "purpose": "En manuell namnändring kräver förtydligande före effekt."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "queued actions use fresh facts but preserve the admitted target when facts are retargeted",
+      "purpose": "Ett annat objekt som får det efterfrågade namnet får inte bli ett nytt mål."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "queued actions use fresh facts but preserve the admitted target when facts are ambiguous",
+      "purpose": "Två aktuella kandidater kräver förtydligande i stället för ett gissat mål."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "queued actions use fresh facts but preserve the admitted target when facts are overbudget",
+      "purpose": "Ett underlag som överskrider den lokala storleksgränsen behandlas som ofullständigt och kräver förtydligande; det kortas inte till ett falskt fullständigt underlag."
+    }
+  ],
+  "reference": "Namnbyte genom vanligt formulär i UI; byte av referent och tvetydighet har separat tekniskt HTTP-underlag.",
+  "outcomes": [
+    "Skyttel ber användaren förtydliga rättelsen och bevarar det manuella namnet Lo Manuell.",
+    "Utkast, beskrivning och synlig begäran finns kvar utan nytt sparande."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Köa samma rättelse som KONTEXT-21 bakom den hållna läsningen. Släpp
+   läsningen och håll sammanfattningen.
+2. Öppna **Tabell → Redigera Lo Exempel**. Byt Namn till ”Lo Manuell”
+   och välj **Lägg i utkastet och stäng**.
+3. Öppna textvyn och släpp sammanfattningen. Låt operatören föreslå den
+   tidigare rättelsen och släppa kontrollens förtydligande svar enligt
+   förberedelsen. Läs förtydligandet och öppna Lo Manuell i utkastet.
+
+**Förväntat resultat:**
+
+- Skyttel säger ”Förtydliga vilka ändringar du vill göra.”.
+- Namnet är Lo Manuell och Beskrivning är Påhittad uppgift. Ingenting sparas.
+- Den ursprungliga köade begäran finns kvar i samtalstexten.
 
 ### KONTEXT-16: kontextens verkliga uppläsning
 

@@ -31,6 +31,8 @@ for (const seeded of [false, true]) {
       .match(/^\s*tool REQUEST ask_questions [^\n]*"updates"[^\n]+$/mu)?.[0]
       .trim();
     const summaryReply = document.match(/^reply REQUEST Historisk sammanfattning:.+$/mu)?.[0];
+    const capacityFailure = document.match(/`(fail REQUEST capacity)`/u)?.[1];
+    const narrowedReply = document.match(/`(reply REQUEST Det avgränsade svaret\.)`/u)?.[1];
     const clientTranscript = [...document.matchAll(/```javascript\n([\s\S]*?)\n```/gu)]
       .map((match) => match[1])
       .find((source) => source.includes("delta: 'Sparat.'"));
@@ -43,6 +45,8 @@ for (const seeded of [false, true]) {
       !question ||
       !answeredQuestion ||
       !summaryReply ||
+      !capacityFailure ||
+      !narrowedReply ||
       !clientTranscript ||
       !stopVoice
     )
@@ -417,6 +421,19 @@ for (const seeded of [false, true]) {
         '0',
       );
       expect(await (await page.request.get(path)).json()).toEqual(savedState);
+      await page.getByRole('button', { name: 'Nytt samtal', exact: true }).click();
+      await giveConversationConsent(page);
+      item = await send('Behåll den ursprungliga begäran vid kapacitetsstopp.');
+      command(render(capacityFailure, item));
+      await expect(log).toContainText('Avgränsa uppdraget');
+      at = events.length;
+      await field.fill('Beskriv enbart mitt aktuella utkast. Spara inte.');
+      await page.getByRole('button', { name: 'Avgränsa uppdraget', exact: true }).click();
+      item = await held(at);
+      command(render(narrowedReply, item));
+      await expect(log).toContainText('Det avgränsade svaret.');
+      await expect(log).toContainText('Behåll den ursprungliga begäran vid kapacitetsstopp.');
+      expect(await (await page.request.get(path)).json()).toEqual(savedState);
       // This independent save case owns a newly edited browser draft. Editing
       // through the native form also updates the browser's current version.
       // Its distinct visible name avoids the seed's unrelated Lo Lind.
@@ -457,7 +474,9 @@ for (const seeded of [false, true]) {
       // Prepare before starting, exactly as each independent manual case does.
       // The new text session therefore owns this prepared current draft.
       await page.getByRole('button', { name: 'Nytt samtal', exact: true }).click();
-      await giveConversationConsent(page);
+      // This combined proof still has an active visit consent. Resetting that
+      // conversation completes directly, without another consent dialog.
+      await expect(log).toContainText('Nytt samtal. 1 osparad ändring ligger kvar i ditt utkast.');
       await expect(page.getByRole('region', { name: 'Arbetsyta', exact: true })).toHaveAttribute(
         'data-session-active',
         'true',
@@ -510,7 +529,36 @@ for (const seeded of [false, true]) {
       await expect.poll(() => child.exitCode).toBe(0);
       await expect(stat(ready.directory)).rejects.toMatchObject({ code: 'ENOENT' });
       expect(events.filter((item) => item.event === 'error')).toEqual([]);
-      expect(unexpectedPreparationDiagnostics(diagnostics)).toBe('');
+      const diagnosticLines = diagnostics.split('\n');
+      const capacityDiagnostics = diagnosticLines.flatMap((line) => {
+        try {
+          const value = JSON.parse(line);
+          return value.event === 'assistant_model_failed' &&
+            value.category === 'assistant_context_capacity'
+            ? [value]
+            : [];
+        } catch {
+          return [];
+        }
+      });
+      expect(capacityDiagnostics).toHaveLength(1);
+      expect(capacityDiagnostics[0]).toEqual({
+        event: 'assistant_model_failed',
+        reference: expect.stringMatching(
+          /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/u,
+        ),
+        at: expect.any(String),
+        model: 'gpt-6.1-terra',
+        effort: 'high',
+        category: 'assistant_context_capacity',
+      });
+      expect(Number.isFinite(Date.parse(capacityDiagnostics[0].at))).toBe(true);
+      const expectedDiagnostic = JSON.stringify(capacityDiagnostics[0]);
+      expect(
+        unexpectedPreparationDiagnostics(
+          diagnosticLines.filter((line) => line !== expectedDiagnostic).join('\n'),
+        ),
+      ).toBe('');
     } finally {
       if (child.exitCode === null) command('quit');
       await expect.poll(() => child.exitCode).toBe(0);

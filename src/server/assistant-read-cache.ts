@@ -12,6 +12,11 @@ function canonical(value: unknown): unknown {
   return value;
 }
 
+/** A read has the same identity in cached results and provider context. */
+export function assistantReadKey(name: string, args: unknown) {
+  return JSON.stringify([name, canonical(args)]);
+}
+
 /**
  * Conversation-local successful reads. Only revision metadata is read directly;
  * all content comes through the authorized MCP connection. Check dependencies
@@ -89,7 +94,7 @@ export function assistantReadCache(
       if (before === undefined) return load();
       track(name, before);
       const epoch = generation;
-      const key = JSON.stringify([name, canonical(args)]);
+      const key = assistantReadKey(name, args);
       const cached = entries.get(key);
       if (cached?.stamp === before) return structuredClone(cached.value) as T;
       // Errors and reads that straddle a content change never become cached facts.

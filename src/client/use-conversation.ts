@@ -668,7 +668,7 @@ export function useConversation({
     disconnected ||
     available === false ||
     saveChecking ||
-    session?.contextSummaryState === 'failed';
+    (session?.contextSummaryState === 'failed' && !session.capacityPaused);
   useEffect(() => {
     if (disconnected || available === false) pauseCapture.current();
   }, [disconnected, available]);
@@ -1043,6 +1043,7 @@ export function useConversation({
         contentVersion: current.review.contentVersion,
         requestId: messageId,
         text: sent,
+        restate: current.capacityPaused === true,
         queue,
         deliveryConnectionId: deliveryConnection?.id,
         deliveryAudio: voiceConnected.current,

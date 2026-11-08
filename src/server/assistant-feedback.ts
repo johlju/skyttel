@@ -7,6 +7,8 @@ export function blockedActionMessage(reference: string) {
 /** Only server-owned wording may describe failures to the model or the person. */
 export function assistantFailureMessage(code: string): string {
   switch (code) {
+    case 'assistant_context_capacity':
+      return 'Det nödvändiga underlaget ryms inte i samtalets modellkontext. Avgränsa uppdraget innan du fortsätter. Samtalstexten, utkastet och oavslutade begäranden finns kvar.';
     case 'assistant_model_access':
       return 'Installationens konto saknar åtkomst till den valda modellen. Valet är kvar. Välj en annan modell eller kontakta installationsansvarig.';
     case 'assistant_model_unsupported':
