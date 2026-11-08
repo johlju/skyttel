@@ -348,110 +348,132 @@
       {
         "source": "spotify-ab",
         "type": "Erbjuder",
-        "target": "spotify"
+        "target": "spotify",
+        "verb": "erbjuder"
       },
       {
         "source": "microsoft-ab",
         "type": "Erbjuder",
-        "target": "m365"
+        "target": "m365",
+        "verb": "erbjuder"
       },
       {
         "source": "cloud-ab",
         "type": "Erbjuder",
-        "target": "cloud"
+        "target": "cloud",
+        "verb": "erbjuder"
       },
       {
         "source": "spotify-sub",
         "type": "Gäller",
-        "target": "spotify"
+        "target": "spotify",
+        "verb": "gäller"
       },
       {
         "source": "cloud-sub",
         "type": "Gäller",
-        "target": "cloud"
+        "target": "cloud",
+        "verb": "gäller"
       },
       {
         "source": "alex-work",
         "type": "Hör till",
-        "target": "m365"
+        "target": "m365",
+        "verb": "hör till"
       },
       {
         "source": "lo-work",
         "type": "Hör till",
-        "target": "m365"
+        "target": "m365",
+        "verb": "hör till"
       },
       {
         "source": "mira",
         "type": "Använder",
-        "target": "spotify"
+        "target": "spotify",
+        "verb": "använder"
       },
       {
         "source": "lo",
         "type": "Använder",
-        "target": "m365"
+        "target": "m365",
+        "verb": "använder"
       },
       {
         "source": "spotify-sub",
         "type": "Står på avtalet",
-        "target": "alex"
+        "target": "alex",
+        "verb": "står på avtalet"
       },
       {
         "source": "mira",
         "type": "Betalar",
-        "target": "spotify-sub"
+        "target": "spotify-sub",
+        "verb": "betalar"
       },
       {
         "source": "spotify-sub",
         "type": "Betalas med",
-        "target": "reserve"
+        "target": "reserve",
+        "verb": "betalas med"
       },
       {
         "source": "cloud-sub",
         "type": "Står på avtalet",
-        "target": "mira"
+        "target": "mira",
+        "verb": "står på avtalet"
       },
       {
         "source": "alex",
         "type": "Betalar",
-        "target": "cloud-sub"
+        "target": "cloud-sub",
+        "verb": "betalar"
       },
       {
         "source": "cloud-sub",
         "type": "Betalas med",
-        "target": "card"
+        "target": "card",
+        "verb": "betalas med"
       },
       {
         "source": "alex-work",
         "type": "Inloggningsadress",
-        "target": "shared-email"
+        "target": "shared-email",
+        "verb": "inloggningsadress"
       },
       {
         "source": "alex-work",
         "type": "Kontaktadress",
-        "target": "shared-email"
+        "target": "shared-email",
+        "verb": "kontaktadress"
       },
       {
         "source": "lo-work",
         "type": "Inloggningsadress",
-        "target": "shared-email"
+        "target": "shared-email",
+        "verb": "inloggningsadress"
       },
       {
         "source": "lo-work",
         "type": "Kontaktadress",
-        "target": "shared-email"
+        "target": "shared-email",
+        "verb": "kontaktadress"
       },
       {
         "source": "card",
         "type": "Kontokoppling",
-        "target": "bank"
+        "target": "bank",
+        "verb": "kontokoppling"
       }
     ],
     "relationshipTypes": [
       {
         "name": "Levererar till",
-        "description": "",
-        "forwardLabel": "levererar till",
-        "reverseLabel": "får leverans från"
+        "description": ""
+      },
+      {
+        "name": "Hör till",
+        "description": ""
       }
     ],
     "draft": {
@@ -518,24 +540,28 @@
         {
           "source": "spotify-sub",
           "type": "Står på avtalet",
-          "target": "lo"
+          "target": "lo",
+          "verb": "står på avtalet"
         },
         {
           "source": "spotify-sub",
           "type": "Betalas med",
-          "target": "card"
+          "target": "card",
+          "verb": "betalas med"
         }
       ],
       "removeRelationships": [
         {
           "source": "spotify-sub",
           "type": "Står på avtalet",
-          "target": "alex"
+          "target": "alex",
+          "verb": "står på avtalet"
         },
         {
           "source": "spotify-sub",
           "type": "Betalas med",
-          "target": "reserve"
+          "target": "reserve",
+          "verb": "betalas med"
         }
       ]
     },
@@ -544,7 +570,8 @@
         {
           "source": "cloud",
           "type": "Används av",
-          "target": "alex"
+          "target": "alex",
+          "verb": "används av"
         }
       ]
     },
@@ -645,15 +672,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -687,7 +710,8 @@
                   {
                     "source": "disney-sub",
                     "type": "Tillhör tjänsten",
-                    "target": "disney"
+                    "target": "disney",
+                    "verb": "har samband med"
                   }
                 ],
                 "semanticObjects": {
@@ -719,44 +743,6 @@
                 },
                 "semanticObjects": {
                   "disney": {
-                    "name": true,
-                    "properties": {
-                      "preserve": [],
-                      "additions": [],
-                      "meaning": "Bekräfta endast verifierade ändringar i utkastet. Påstå inte att något är sparat, hitta inte på fakta och ställ ingen obegärd sparfråga. Bedöm hela observerade kartan och utkastet, inte bara svarstexten. Bevara alla andra objekt, egenskaper och samband. Inga nya fakta utöver begäran får läggas till. Disney+ är tillagt som tjänst, som abonnemang eller som en tjänst med ett tillhörande abonnemang. Inga andra nya objekt eller påhittade egenskaper är tillåtna."
-                    }
-                  }
-                }
-              },
-              {
-                "requirements": [],
-                "objects": {
-                  "disney": {
-                    "type": "Tjänst",
-                    "name": "Disney+"
-                  },
-                  "disney-sub": {
-                    "type": "Abonnemang",
-                    "name": "Disney+-abonnemang"
-                  }
-                },
-                "addRelationships": [
-                  {
-                    "source": "disney-sub",
-                    "type": "Gäller",
-                    "target": "disney"
-                  }
-                ],
-                "semanticObjects": {
-                  "disney": {
-                    "name": true,
-                    "properties": {
-                      "preserve": [],
-                      "additions": [],
-                      "meaning": "Bekräfta endast verifierade ändringar i utkastet. Påstå inte att något är sparat, hitta inte på fakta och ställ ingen obegärd sparfråga. Bedöm hela observerade kartan och utkastet, inte bara svarstexten. Bevara alla andra objekt, egenskaper och samband. Inga nya fakta utöver begäran får läggas till. Disney+ är tillagt som tjänst, som abonnemang eller som en tjänst med ett tillhörande abonnemang. Inga andra nya objekt eller påhittade egenskaper är tillåtna."
-                    }
-                  },
-                  "disney-sub": {
                     "name": true,
                     "properties": {
                       "preserve": [],
@@ -830,15 +816,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -865,7 +847,9 @@
               {
                 "source": "savings",
                 "type": "Finns hos",
-                "target": "nordea"
+                "target": "nordea",
+                "verbMeaning": "Sparkontot savings tillhandahålls av banken nordea. Ordval och riktning får variera men bankens roll ska framgå.",
+                "direction": "either"
               }
             ],
             "semanticObjects": {
@@ -917,15 +901,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -997,15 +977,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -1082,15 +1058,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -1156,21 +1128,18 @@
           {
             "source": "dropbox-account",
             "type": "Tillhör tjänsten",
-            "target": "dropbox"
+            "target": "dropbox",
+            "verb": "tillhör tjänsten"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -1190,6 +1159,7 @@
               {
                 "source": "dropbox-account",
                 "type": "Tillhör tjänsten",
+                "verb": "tillhör tjänsten",
                 "target": "dropbox"
               }
             ],
@@ -1263,21 +1233,18 @@
           {
             "source": "netflix-sub",
             "type": "Gäller",
-            "target": "netflix"
+            "target": "netflix",
+            "verb": "gäller"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -1356,21 +1323,18 @@
           {
             "source": "lo",
             "type": "Använder",
-            "target": "spotify"
+            "target": "spotify",
+            "verb": "använder"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -1391,6 +1355,7 @@
               {
                 "source": "lo",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "spotify"
               }
             ],
@@ -1404,6 +1369,7 @@
                   {
                     "source": "lo",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "spotify",
                     "id": "initial-edge-0",
                     "lifecycle": "ended"
@@ -1460,15 +1426,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -1488,6 +1450,7 @@
               {
                 "source": "alex",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "spotify"
               }
             ]
@@ -1545,21 +1508,18 @@
           {
             "source": "alex",
             "type": "Använder",
-            "target": "netflix"
+            "target": "netflix",
+            "verb": "använder"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -1579,6 +1539,7 @@
               {
                 "source": "mira",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "netflix"
               }
             ]
@@ -1631,15 +1592,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -1659,7 +1616,8 @@
               {
                 "source": "spotify-account",
                 "type": "Tillhör tjänsten",
-                "target": "spotify"
+                "target": "spotify",
+                "verb": "har samband med"
               }
             ]
           },
@@ -1731,15 +1689,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -1762,17 +1716,8 @@
                   {
                     "source": "netflix-sub",
                     "type": "Gäller",
-                    "target": "netflix"
-                  }
-                ]
-              },
-              {
-                "requirements": [],
-                "addRelationships": [
-                  {
-                    "source": "netflix-sub",
-                    "type": "Tillhör tjänsten",
-                    "target": "netflix"
+                    "target": "netflix",
+                    "verb": "har samband med"
                   }
                 ]
               }
@@ -1851,21 +1796,18 @@
           {
             "source": "disney-sub",
             "type": "Gäller",
-            "target": "disney"
+            "target": "disney",
+            "verb": "gäller"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -1885,6 +1827,7 @@
               {
                 "source": "mira",
                 "type": "Betalar",
+                "verb": "betalar",
                 "target": "disney-sub"
               }
             ]
@@ -1962,21 +1905,18 @@
           {
             "source": "netflix-sub",
             "type": "Gäller",
-            "target": "netflix"
+            "target": "netflix",
+            "verb": "gäller"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -1996,6 +1936,7 @@
               {
                 "source": "netflix-sub",
                 "type": "Betalas med",
+                "verb": "betalas med",
                 "target": "card"
               }
             ]
@@ -2048,15 +1989,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -2076,7 +2013,8 @@
               {
                 "source": "card",
                 "type": "Kontokoppling",
-                "target": "bank"
+                "target": "bank",
+                "verb": "har samband med"
               }
             ]
           },
@@ -2148,15 +2086,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -2176,6 +2110,7 @@
               {
                 "source": "telia",
                 "type": "Hör till",
+                "verb": "hör till",
                 "target": "home"
               }
             ]
@@ -2236,15 +2171,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -2262,9 +2193,10 @@
             ],
             "addRelationships": [
               {
-                "source": "car",
+                "source": "alex",
                 "type": "Äger",
-                "target": "alex"
+                "target": "car",
+                "verb": "äger"
               }
             ]
           },
@@ -2329,21 +2261,18 @@
           {
             "source": "insurance",
             "type": "Står på avtalet",
-            "target": "folksam"
+            "target": "folksam",
+            "verb": "står på avtalet"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -2363,7 +2292,8 @@
               {
                 "source": "insurance",
                 "type": "Försäkrar",
-                "target": "car"
+                "target": "car",
+                "verb": "gäller"
               }
             ]
           },
@@ -2435,21 +2365,18 @@
           {
             "source": "netflix-sub",
             "type": "Gäller",
-            "target": "netflix"
+            "target": "netflix",
+            "verb": "gäller"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -2558,21 +2485,18 @@
           {
             "source": "disney-sub",
             "type": "Gäller",
-            "target": "disney"
+            "target": "disney",
+            "verb": "gäller"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -2647,15 +2571,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -2728,15 +2648,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -2843,15 +2759,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -2933,15 +2845,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -2965,6 +2873,7 @@
                   {
                     "source": "mira",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "dropbox"
                   }
                 ],
@@ -2972,6 +2881,7 @@
                   {
                     "source": "mira",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "dropbox",
                     "properties": {
                       "preserve": [],
@@ -3074,21 +2984,18 @@
           {
             "source": "spotify-sub",
             "type": "Gäller",
-            "target": "spotify"
+            "target": "spotify",
+            "verb": "gäller"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -3162,26 +3069,24 @@
           {
             "source": "alex",
             "type": "Använder",
-            "target": "spotify"
+            "target": "spotify",
+            "verb": "använder"
           },
           {
             "source": "alex",
             "type": "Använder",
-            "target": "m365"
+            "target": "m365",
+            "verb": "använder"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -3295,26 +3200,24 @@
           {
             "source": "netflix-sub",
             "type": "Betalas med",
-            "target": "card"
+            "target": "card",
+            "verb": "betalas med"
           },
           {
             "source": "spotify-sub",
             "type": "Betalas med",
-            "target": "bank"
+            "target": "bank",
+            "verb": "betalas med"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -3398,21 +3301,18 @@
           {
             "source": "netflix-sub",
             "type": "Gäller",
-            "target": "netflix"
+            "target": "netflix",
+            "verb": "gäller"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -3531,15 +3431,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -3654,15 +3550,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -3744,15 +3636,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -3779,16 +3667,19 @@
               {
                 "source": "johan",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "spotify"
               },
               {
                 "source": "lo",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "spotify"
               },
               {
                 "source": "sonja",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "spotify"
               }
             ],
@@ -3853,15 +3744,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -3888,6 +3775,7 @@
               {
                 "source": "sonja",
                 "type": "Betalar",
+                "verb": "betalar",
                 "target": "disney-sub"
               }
             ],
@@ -3898,17 +3786,8 @@
                   {
                     "source": "disney-sub",
                     "type": "Gäller",
-                    "target": "disney"
-                  }
-                ]
-              },
-              {
-                "requirements": [],
-                "addRelationships": [
-                  {
-                    "source": "disney-sub",
-                    "type": "Tillhör tjänsten",
-                    "target": "disney"
+                    "target": "disney",
+                    "verb": "har samband med"
                   }
                 ]
               }
@@ -4027,21 +3906,18 @@
           {
             "source": "lo",
             "type": "Använder",
-            "target": "spotify"
+            "target": "spotify",
+            "verb": "använder"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -4062,11 +3938,13 @@
               {
                 "source": "johan",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "spotify"
               },
               {
                 "source": "sonja",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "spotify"
               }
             ],
@@ -4074,6 +3952,7 @@
               {
                 "source": "lo",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "spotify"
               }
             ],
@@ -4087,6 +3966,7 @@
                   {
                     "source": "lo",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "spotify",
                     "id": "initial-edge-0",
                     "lifecycle": "ended"
@@ -4145,15 +4025,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -4180,12 +4056,14 @@
               {
                 "source": "johan",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "johan-account"
               },
               {
                 "source": "johan-account",
                 "type": "Tillhör tjänsten",
-                "target": "spotify"
+                "target": "spotify",
+                "verb": "hör till"
               }
             ],
             "semanticObjects": {
@@ -4254,15 +4132,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -4282,12 +4156,16 @@
               {
                 "source": "johan-account",
                 "type": "Inloggningsadress",
-                "target": "johan-email"
+                "target": "johan-email",
+                "verbMeaning": "johan-email är inloggningsadress för johan-account. Ordval och riktning får variera men den rollen och de två objekten ska framgå.",
+                "direction": "either"
               },
               {
                 "source": "johan-account",
                 "type": "Kontaktadress",
-                "target": "sonja-email"
+                "target": "sonja-email",
+                "verbMeaning": "sonja-email är kontaktadress för johan-account. Ordval och riktning får variera men den rollen och de två objekten ska framgå.",
+                "direction": "either"
               }
             ]
           },
@@ -4336,15 +4214,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -4371,7 +4245,8 @@
               {
                 "source": "visa",
                 "type": "Kontokoppling",
-                "target": "nordea-bank"
+                "target": "nordea-bank",
+                "verb": "har samband med"
               }
             ],
             "semanticObjects": {
@@ -4465,26 +4340,24 @@
           {
             "source": "netflix-sub",
             "type": "Gäller",
-            "target": "netflix"
+            "target": "netflix",
+            "verb": "gäller"
           },
           {
             "source": "netflix-sub",
             "type": "Betalas med",
-            "target": "card"
+            "target": "card",
+            "verb": "betalas med"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -4504,6 +4377,7 @@
               {
                 "source": "netflix-sub",
                 "type": "Betalas med",
+                "verb": "betalas med",
                 "target": "visa"
               }
             ],
@@ -4511,6 +4385,7 @@
               {
                 "source": "netflix-sub",
                 "type": "Betalas med",
+                "verb": "betalas med",
                 "target": "card"
               }
             ]
@@ -4570,21 +4445,18 @@
           {
             "source": "insurance",
             "type": "Står på avtalet",
-            "target": "folksam"
+            "target": "folksam",
+            "verb": "står på avtalet"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -4599,7 +4471,7 @@
             "requirements": [
               "Bekräfta endast verifierade ändringar i utkastet. Påstå inte att något är sparat, hitta inte på fakta och ställ ingen obegärd sparfråga.",
               "Bedöm hela observerade kartan och utkastet, inte bara svarstexten. Bevara alla andra objekt, egenskaper och samband. Inga nya fakta utöver begäran får läggas till.",
-              "Det nya fordonet är Volvo V60. Johan äger det och den befintliga bilförsäkringen hos Folksam försäkrar det."
+              "Det nya fordonet är Volvo V60. Johan äger det och bilen är försäkrad hos Folksam. Den befintliga bilförsäkringen lämnas oförändrad."
             ],
             "objects": {
               "car": {
@@ -4609,14 +4481,16 @@
             },
             "addRelationships": [
               {
-                "source": "car",
+                "source": "johan",
                 "type": "Äger",
-                "target": "johan"
+                "target": "car",
+                "verb": "äger"
               },
               {
-                "source": "insurance",
+                "source": "car",
                 "type": "Försäkrar",
-                "target": "car"
+                "target": "folksam",
+                "verb": "är försäkrad hos"
               }
             ],
             "semanticObjects": {
@@ -4625,7 +4499,7 @@
                 "properties": {
                   "preserve": [],
                   "additions": [],
-                  "meaning": "Bekräfta endast verifierade ändringar i utkastet. Påstå inte att något är sparat, hitta inte på fakta och ställ ingen obegärd sparfråga. Bedöm hela observerade kartan och utkastet, inte bara svarstexten. Bevara alla andra objekt, egenskaper och samband. Inga nya fakta utöver begäran får läggas till. Det nya fordonet är Volvo V60. Johan äger det och den befintliga bilförsäkringen hos Folksam försäkrar det."
+                  "meaning": "Bekräfta endast verifierade ändringar i utkastet. Påstå inte att något är sparat, hitta inte på fakta och ställ ingen obegärd sparfråga. Bedöm hela observerade kartan och utkastet, inte bara svarstexten. Bevara alla andra objekt, egenskaper och samband. Inga nya fakta utöver begäran får läggas till. Det nya fordonet är Volvo V60. Johan äger det och bilen är försäkrad hos Folksam. Den befintliga bilförsäkringen lämnas oförändrad."
                 }
               }
             }
@@ -4695,15 +4569,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -4718,7 +4588,7 @@
             "requirements": [
               "Bekräfta endast verifierade ändringar i utkastet. Påstå inte att något är sparat, hitta inte på fakta och ställ ingen obegärd sparfråga.",
               "Bedöm hela observerade kartan och utkastet, inte bara svarstexten. Bevara alla andra objekt, egenskaper och samband. Inga nya fakta utöver begäran får läggas till.",
-              "Den nya bostaden är Storgatan 12 och det befintliga Telia-bredbandet hör till den."
+              "Den nya bostaden är Storgatan 12 och det befintliga Telia-bredbandet kopplas till den med det neutrala verbet har samband med."
             ],
             "objects": {
               "home": {
@@ -4730,7 +4600,8 @@
               {
                 "source": "telia",
                 "type": "Hör till",
-                "target": "home"
+                "target": "home",
+                "verb": "har samband med"
               }
             ],
             "semanticObjects": {
@@ -4814,21 +4685,18 @@
           {
             "source": "gym",
             "type": "Står på avtalet",
-            "target": "johan"
+            "target": "johan",
+            "verb": "står på avtalet"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -4901,21 +4769,18 @@
           {
             "source": "nordvpn-account",
             "type": "Tillhör tjänsten",
-            "target": "nordvpn"
+            "target": "nordvpn",
+            "verb": "tillhör tjänsten"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -4935,6 +4800,7 @@
               {
                 "source": "nordvpn-account",
                 "type": "Tillhör tjänsten",
+                "verb": "tillhör tjänsten",
                 "target": "nordvpn"
               }
             ],
@@ -5020,21 +4886,18 @@
           {
             "source": "spotify-sub",
             "type": "Gäller",
-            "target": "spotify"
+            "target": "spotify",
+            "verb": "gäller"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -5064,11 +4927,13 @@
               {
                 "source": "johan",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "apple"
               },
               {
                 "source": "sonja",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "apple"
               }
             ],
@@ -5153,21 +5018,18 @@
           {
             "source": "netflix-sub",
             "type": "Gäller",
-            "target": "netflix"
+            "target": "netflix",
+            "verb": "gäller"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -5278,21 +5140,18 @@
           {
             "source": "netflix-sub",
             "type": "Gäller",
-            "target": "netflix"
+            "target": "netflix",
+            "verb": "gäller"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -5387,15 +5246,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -5478,15 +5333,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -5513,7 +5364,8 @@
               {
                 "source": "bahnhof-sub",
                 "type": "Hör till",
-                "target": "home"
+                "target": "home",
+                "verb": "har samband med"
               }
             ],
             "anyOf": [
@@ -5523,17 +5375,8 @@
                   {
                     "source": "bahnhof-sub",
                     "type": "Gäller",
-                    "target": "bahnhof"
-                  }
-                ]
-              },
-              {
-                "requirements": [],
-                "addRelationships": [
-                  {
-                    "source": "bahnhof-sub",
-                    "type": "Tillhör tjänsten",
-                    "target": "bahnhof"
+                    "target": "bahnhof",
+                    "verb": "har samband med"
                   }
                 ]
               }
@@ -5616,21 +5459,18 @@
           {
             "source": "alex",
             "type": "Använder",
-            "target": "dropbox"
+            "target": "dropbox",
+            "verb": "använder"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -5652,6 +5492,7 @@
               {
                 "source": "alex",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "dropbox"
               }
             ],
@@ -5662,6 +5503,7 @@
                   {
                     "source": "mira",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "dropbox"
                   }
                 ],
@@ -5669,6 +5511,7 @@
                   {
                     "source": "mira",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "dropbox",
                     "properties": {
                       "preserve": [],
@@ -5707,11 +5550,13 @@
                   {
                     "source": "mira",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "dropbox"
                   },
                   {
                     "source": "alex",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "dropbox",
                     "id": "initial-edge-0",
                     "lifecycle": "ended"
@@ -5721,6 +5566,7 @@
                   {
                     "source": "mira",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "dropbox",
                     "properties": {
                       "preserve": [],
@@ -5756,6 +5602,7 @@
                   {
                     "source": "alex",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "dropbox",
                     "id": "initial-edge-0",
                     "lifecycle": "ended"
@@ -5781,6 +5628,7 @@
                   {
                     "source": "alex",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "dropbox"
                   }
                 ]
@@ -5791,6 +5639,7 @@
                   {
                     "source": "alex",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "dropbox",
                     "id": "initial-edge-0",
                     "lifecycle": "ended"
@@ -5800,6 +5649,7 @@
                   {
                     "source": "alex",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "dropbox"
                   }
                 ]
@@ -5853,15 +5703,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -5880,7 +5726,8 @@
               {
                 "source": "alex",
                 "type": "Använder",
-                "target": "m365"
+                "target": "m365",
+                "verb": "använder"
               }
             ]
           },
@@ -5943,15 +5790,11 @@
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -6004,6 +5847,7 @@
               {
                 "source": "sonja",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "disney"
               }
             ]
@@ -6085,7 +5929,8 @@
                   {
                     "source": "disney-sub",
                     "type": "Gäller",
-                    "target": "disney"
+                    "target": "disney",
+                    "verb": "har samband med"
                   }
                 ],
                 "semanticObjects": {
@@ -6234,26 +6079,24 @@
           {
             "source": "netflix-sub",
             "type": "Gäller",
-            "target": "netflix"
+            "target": "netflix",
+            "verb": "gäller"
           },
           {
             "source": "disney-sub",
             "type": "Gäller",
-            "target": "disney"
+            "target": "disney",
+            "verb": "gäller"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -6439,21 +6282,18 @@
           {
             "source": "netflix-sub",
             "type": "Gäller",
-            "target": "netflix"
+            "target": "netflix",
+            "verb": "gäller"
           }
         ],
         "relationshipTypes": [
           {
             "name": "Hör till",
-            "description": "Från abonnemang till bostad som anslutningen gäller.",
-            "forwardLabel": "hör till",
-            "reverseLabel": "har anslutning"
+            "description": "Från abonnemang till bostad som anslutningen gäller."
           },
           {
             "name": "Finns hos",
-            "description": "Från bankkonto till banken som tillhandahåller kontot.",
-            "forwardLabel": "finns hos",
-            "reverseLabel": "tillhandahåller bankkonto"
+            "description": "Från bankkonto till banken som tillhandahåller kontot."
           }
         ],
         "draft": {
@@ -6514,13 +6354,25 @@
               "Ställ en nödvändig relevant följdfråga om något som varken begäran eller kartans fakta avgör. Bevara den exakta oavslutade begäran. Hitta inte på ett svar, ändra inga andra uppgifter och påstå inte att uppdraget är slutfört eller sparat."
             ],
             "anyOf": [
-              { "requirements": [] },
+              {
+                "requirements": []
+              },
               {
                 "objects": {
                   "netflix-sub": {
                     "properties": [
-                      { "id": "price", "label": "Pris", "kind": "number", "value": 189 },
-                      { "id": "currency", "label": "Valuta", "kind": "text", "value": "SEK" },
+                      {
+                        "id": "price",
+                        "label": "Pris",
+                        "kind": "number",
+                        "value": 189
+                      },
+                      {
+                        "id": "currency",
+                        "label": "Valuta",
+                        "kind": "text",
+                        "value": "SEK"
+                      },
                       {
                         "id": "interval",
                         "label": "Betalningsintervall",
@@ -6693,6 +6545,7 @@
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
+                "verb": "betalas med",
                 "target": "card"
               }
             ],
@@ -6700,6 +6553,7 @@
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
+                "verb": "betalas med",
                 "target": "reserve"
               }
             ],
@@ -6721,6 +6575,7 @@
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
+                    "verb": "betalas med",
                     "target": "card"
                   }
                 ],
@@ -6728,6 +6583,7 @@
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
+                    "verb": "betalas med",
                     "target": "reserve"
                   }
                 ],
@@ -6770,6 +6626,7 @@
                   {
                     "source": "lo",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "spotify"
                   }
                 ],
@@ -6818,6 +6675,7 @@
               {
                 "source": "lo",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "spotify"
               }
             ],
@@ -6841,18 +6699,21 @@
               {
                 "source": "alex",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "m365"
               },
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
-                "target": "reserve"
+                "target": "reserve",
+                "verb": "betalas från"
               }
             ],
             "removeRelationships": [
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
+                "verb": "betalas med",
                 "target": "card"
               }
             ],
@@ -7083,6 +6944,7 @@
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
+                    "verb": "betalas med",
                     "target": "card"
                   }
                 ],
@@ -7090,6 +6952,7 @@
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
+                    "verb": "betalas med",
                     "target": "reserve"
                   }
                 ]
@@ -7129,6 +6992,7 @@
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
+                    "verb": "betalas med",
                     "target": "card"
                   }
                 ],
@@ -7136,6 +7000,7 @@
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
+                    "verb": "betalas med",
                     "target": "reserve"
                   }
                 ],
@@ -7197,46 +7062,57 @@
               {
                 "source": "alex",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "spotify"
               },
               {
                 "source": "lo",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "spotify"
               },
               {
                 "source": "alex",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "m365"
               },
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
+                "verb": "betalas med",
                 "target": "card"
               },
               {
                 "source": "alex-work",
                 "type": "Inloggningsadress",
-                "target": "alex-email"
+                "target": "alex-email",
+                "verbMeaning": "alex-email är inloggningsadress för alex-work. Ordval och riktning får variera men den rollen och de två objekten ska framgå.",
+                "direction": "either"
               },
               {
                 "source": "alex-work",
                 "type": "Kontaktadress",
-                "target": "house-email"
+                "target": "house-email",
+                "verbMeaning": "house-email är kontaktadress för alex-work. Ordval och riktning får variera men den rollen och de två objekten ska framgå.",
+                "direction": "either"
               },
               {
                 "source": "cloud-sub",
                 "type": "Betalas med",
-                "target": "bank"
+                "target": "bank",
+                "verb": "betalas från"
               },
               {
                 "source": "lo",
                 "type": "Betalar",
+                "verb": "betalar",
                 "target": "cloud-sub"
               },
               {
                 "source": "mira",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "cloud"
               }
             ],
@@ -7244,31 +7120,37 @@
               {
                 "source": "mira",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "spotify"
               },
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
+                "verb": "betalas med",
                 "target": "reserve"
               },
               {
                 "source": "alex-work",
                 "type": "Inloggningsadress",
+                "verb": "inloggningsadress",
                 "target": "shared-email"
               },
               {
                 "source": "alex-work",
                 "type": "Kontaktadress",
+                "verb": "kontaktadress",
                 "target": "shared-email"
               },
               {
                 "source": "cloud-sub",
                 "type": "Betalas med",
+                "verb": "betalas med",
                 "target": "card"
               },
               {
                 "source": "alex",
                 "type": "Betalar",
+                "verb": "betalar",
                 "target": "cloud-sub"
               }
             ],
@@ -7319,31 +7201,37 @@
                   {
                     "source": "alex",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "spotify"
                   },
                   {
                     "source": "lo",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "spotify"
                   },
                   {
                     "source": "alex",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "m365"
                   },
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
+                    "verb": "betalas med",
                     "target": "card"
                   },
                   {
                     "source": "cloud-sub",
                     "type": "Betalas med",
+                    "verb": "betalas med",
                     "target": "bank"
                   },
                   {
                     "source": "lo",
                     "type": "Betalar",
+                    "verb": "betalar",
                     "target": "cloud-sub"
                   }
                 ],
@@ -7351,16 +7239,19 @@
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
+                    "verb": "betalas med",
                     "target": "reserve"
                   },
                   {
                     "source": "cloud-sub",
                     "type": "Betalas med",
+                    "verb": "betalas med",
                     "target": "card"
                   },
                   {
                     "source": "alex",
                     "type": "Betalar",
+                    "verb": "betalar",
                     "target": "cloud-sub"
                   }
                 ],
@@ -7432,46 +7323,57 @@
               {
                 "source": "alex",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "spotify"
               },
               {
                 "source": "lo",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "spotify"
               },
               {
                 "source": "alex",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "m365"
               },
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
+                "verb": "betalas med",
                 "target": "card"
               },
               {
                 "source": "alex-work",
                 "type": "Inloggningsadress",
-                "target": "alex-email"
+                "target": "alex-email",
+                "verbMeaning": "alex-email är inloggningsadress för alex-work. Ordval och riktning får variera men den rollen och de två objekten ska framgå.",
+                "direction": "either"
               },
               {
                 "source": "alex-work",
                 "type": "Kontaktadress",
-                "target": "house-email"
+                "target": "house-email",
+                "verbMeaning": "house-email är kontaktadress för alex-work. Ordval och riktning får variera men den rollen och de två objekten ska framgå.",
+                "direction": "either"
               },
               {
                 "source": "cloud-sub",
                 "type": "Betalas med",
-                "target": "bank"
+                "target": "bank",
+                "verb": "betalas från"
               },
               {
                 "source": "lo",
                 "type": "Betalar",
+                "verb": "betalar",
                 "target": "cloud-sub"
               },
               {
                 "source": "mira",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "cloud"
               }
             ],
@@ -7479,31 +7381,37 @@
               {
                 "source": "mira",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "spotify"
               },
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
+                "verb": "betalas med",
                 "target": "reserve"
               },
               {
                 "source": "alex-work",
                 "type": "Inloggningsadress",
+                "verb": "inloggningsadress",
                 "target": "shared-email"
               },
               {
                 "source": "alex-work",
                 "type": "Kontaktadress",
+                "verb": "kontaktadress",
                 "target": "shared-email"
               },
               {
                 "source": "cloud-sub",
                 "type": "Betalas med",
+                "verb": "betalas med",
                 "target": "card"
               },
               {
                 "source": "alex",
                 "type": "Betalar",
+                "verb": "betalar",
                 "target": "cloud-sub"
               }
             ],
@@ -7554,26 +7462,31 @@
                   {
                     "source": "alex",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "spotify"
                   },
                   {
                     "source": "lo",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "spotify"
                   },
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
+                    "verb": "betalas med",
                     "target": "card"
                   },
                   {
                     "source": "cloud-sub",
                     "type": "Betalas med",
+                    "verb": "betalas med",
                     "target": "bank"
                   },
                   {
                     "source": "lo",
                     "type": "Betalar",
+                    "verb": "betalar",
                     "target": "cloud-sub"
                   }
                 ],
@@ -7581,21 +7494,25 @@
                   {
                     "source": "mira",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "spotify"
                   },
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
+                    "verb": "betalas med",
                     "target": "reserve"
                   },
                   {
                     "source": "cloud-sub",
                     "type": "Betalas med",
+                    "verb": "betalas med",
                     "target": "card"
                   },
                   {
                     "source": "alex",
                     "type": "Betalar",
+                    "verb": "betalar",
                     "target": "cloud-sub"
                   }
                 ],
@@ -7654,7 +7571,9 @@
               {
                 "source": "m365",
                 "type": "Levererar till",
-                "target": "tenant"
+                "target": "tenant",
+                "verb": "levererar till",
+                "category": "Levererar till"
               }
             ],
             "removeRelationships": [],
@@ -7737,46 +7656,57 @@
               {
                 "source": "alex",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "spotify"
               },
               {
                 "source": "lo",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "spotify"
               },
               {
                 "source": "alex",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "m365"
               },
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
+                "verb": "betalas med",
                 "target": "card"
               },
               {
                 "source": "alex-work",
                 "type": "Inloggningsadress",
-                "target": "alex-email"
+                "target": "alex-email",
+                "verbMeaning": "alex-email är inloggningsadress för alex-work. Ordval och riktning får variera men den rollen och de två objekten ska framgå.",
+                "direction": "either"
               },
               {
                 "source": "alex-work",
                 "type": "Kontaktadress",
-                "target": "house-email"
+                "target": "house-email",
+                "verbMeaning": "house-email är kontaktadress för alex-work. Ordval och riktning får variera men den rollen och de två objekten ska framgå.",
+                "direction": "either"
               },
               {
                 "source": "cloud-sub",
                 "type": "Betalas med",
-                "target": "bank"
+                "target": "bank",
+                "verb": "betalas från"
               },
               {
                 "source": "lo",
                 "type": "Betalar",
+                "verb": "betalar",
                 "target": "cloud-sub"
               },
               {
                 "source": "mira",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "cloud"
               }
             ],
@@ -7784,31 +7714,37 @@
               {
                 "source": "mira",
                 "type": "Använder",
+                "verb": "använder",
                 "target": "spotify"
               },
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
+                "verb": "betalas med",
                 "target": "reserve"
               },
               {
                 "source": "alex-work",
                 "type": "Inloggningsadress",
+                "verb": "inloggningsadress",
                 "target": "shared-email"
               },
               {
                 "source": "alex-work",
                 "type": "Kontaktadress",
+                "verb": "kontaktadress",
                 "target": "shared-email"
               },
               {
                 "source": "cloud-sub",
                 "type": "Betalas med",
+                "verb": "betalas med",
                 "target": "card"
               },
               {
                 "source": "alex",
                 "type": "Betalar",
+                "verb": "betalar",
                 "target": "cloud-sub"
               }
             ],
@@ -7863,31 +7799,39 @@
                   {
                     "source": "lo",
                     "type": "Använder",
+                    "verb": "använder",
                     "target": "spotify"
                   },
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
+                    "verb": "betalas med",
                     "target": "card"
                   },
                   {
                     "source": "alex-work",
                     "type": "Inloggningsadress",
-                    "target": "alex-email"
+                    "target": "alex-email",
+                    "verbMeaning": "alex-email är inloggningsadress för alex-work. Ordval och riktning får variera men den rollen och de två objekten ska framgå.",
+                    "direction": "either"
                   },
                   {
                     "source": "alex-work",
                     "type": "Kontaktadress",
-                    "target": "house-email"
+                    "target": "house-email",
+                    "verbMeaning": "house-email är kontaktadress för alex-work. Ordval och riktning får variera men den rollen och de två objekten ska framgå.",
+                    "direction": "either"
                   },
                   {
                     "source": "cloud-sub",
                     "type": "Betalas med",
+                    "verb": "betalas med",
                     "target": "bank"
                   },
                   {
                     "source": "lo",
                     "type": "Betalar",
+                    "verb": "betalar",
                     "target": "cloud-sub"
                   }
                 ],
@@ -7895,26 +7839,31 @@
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
+                    "verb": "betalas med",
                     "target": "reserve"
                   },
                   {
                     "source": "alex-work",
                     "type": "Inloggningsadress",
+                    "verb": "inloggningsadress",
                     "target": "shared-email"
                   },
                   {
                     "source": "alex-work",
                     "type": "Kontaktadress",
+                    "verb": "kontaktadress",
                     "target": "shared-email"
                   },
                   {
                     "source": "cloud-sub",
                     "type": "Betalas med",
+                    "verb": "betalas med",
                     "target": "card"
                   },
                   {
                     "source": "alex",
                     "type": "Betalar",
+                    "verb": "betalar",
                     "target": "cloud-sub"
                   }
                 ],
@@ -8085,6 +8034,7 @@
               {
                 "source": "cloud",
                 "type": "Används av",
+                "verb": "används av",
                 "target": "mira",
                 "properties": [
                   {
@@ -8099,6 +8049,7 @@
               {
                 "source": "cloud",
                 "type": "Används av",
+                "verb": "används av",
                 "target": "alex"
               }
             ],

@@ -83,6 +83,9 @@ test('relationship type changes preserve property values and stage the whole rep
     typeId: 'uses',
     sourceId: 'bike',
     targetId: 'garage',
+    verb: before.draft.relationships?.find((change) => change.id === 'bike-garage')?.after?.verb,
+    reverseVerb: before.draft.relationships?.find((change) => change.id === 'bike-garage')?.after
+      ?.reverseVerb,
 
     lifecycle: 'active',
     properties: before.draft.relationships?.find((change) => change.id === 'bike-garage')?.after
@@ -99,9 +102,10 @@ test('new relationship validates all missing endpoints and keeps direction, free
   await userEvent.click(dialog.getByRole('button', { name: 'Lägg i utkastet' }));
   const summary = await dialog.findByRole('alert', { name: 'Formuläret innehåller fel' });
   expect(document.activeElement).toBe(summary);
-  await userEvent.click(within(summary).getByRole('link', { name: /^Sambandstyp:/ }));
-  expect(document.activeElement).toBe(dialog.getByLabelText('Sambandstyp'));
+  await userEvent.click(within(summary).getByRole('link', { name: /^Till objekt:/ }));
+  expect(document.activeElement).toBe(dialog.getByLabelText('Till objekt'));
   await userEvent.selectOptions(dialog.getByLabelText('Sambandstyp'), 'uses');
+  await userEvent.type(dialog.getByLabelText('Verb', { exact: true }), 'använder');
   await userEvent.selectOptions(dialog.getByLabelText('Till objekt'), 'alex');
   await userEvent.click(dialog.getByRole('button', { name: 'Byt riktning' }));
   await userEvent.selectOptions(await propertyInput(dialog, 'Osäkert uppgivet', 'boolean'), 'true');
@@ -133,6 +137,7 @@ test('a lost duplicate reply checks current data and never edits a relationship 
   const dialog = await openObjectRelationships('Alex');
   await userEvent.click(dialog.getByRole('button', { name: 'Nytt samband' }));
   await userEvent.selectOptions(dialog.getByLabelText('Sambandstyp'), 'uses');
+  await userEvent.type(dialog.getByLabelText('Verb', { exact: true }), 'använder');
   await userEvent.selectOptions(dialog.getByLabelText('Till objekt'), 'bike');
   const transport = loseNextFormReply('/relationship-form');
   await userEvent.click(dialog.getByRole('button', { name: 'Lägg i utkastet' }));

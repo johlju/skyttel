@@ -16,7 +16,7 @@ type ArchiveFixture = {
   content: Record<string, Record<string, unknown>[]> & { household: { id: string } };
   imagesBase64: string;
 };
-// Synthetic v2/schema37 export: two merged identities, three retained image
+// Synthetic v2/schema40 export: two merged identities, three retained image
 // versions, a private proposal, immutable receipts and personal positions.
 const golden = JSON.parse(
   readFileSync(new URL('../../fixtures/household-import-v2.json', import.meta.url), 'utf8'),

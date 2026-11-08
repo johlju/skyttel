@@ -81,6 +81,7 @@ for (const kind of ['missing-endpoint', 'edited-missing-endpoint'] as const) {
         id: 'mine',
         after: {
           typeId: before.relationshipTypes[0].id,
+          verb: 'har samband med',
           sourceId: 'lo',
           targetId: 'lo',
           properties: [

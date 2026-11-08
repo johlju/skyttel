@@ -5,6 +5,7 @@ import { proposedObjectTypes, proposedRelationships, proposedRelationshipTypes }
 import { objectIconLabel } from './object-icons.js';
 import { type Property, propertiesSchema, propertyValueText } from './properties.js';
 import { mergedPropertyOrder, propertyMergeSide, propertyOrderSide } from './property-merge.js';
+import { equivalentRelationships } from './relationship-identity.js';
 import { relationshipLabel } from './relationship-label.js';
 
 export type ConflictSide = 'saved' | 'proposed';
@@ -97,13 +98,13 @@ export function conflictProperties(state: MapState, conflict: DraftConflict): Co
             ['typeId', 'Sambandstyp'],
             ['sourceId', 'Från objekt'],
             ['targetId', 'Till objekt'],
+            ['verb', 'Verb'],
+            ['reverseVerb', 'Omvänd benämning'],
             ['lifecycle', 'Giltighet'],
           ]
         : [
             ['name', 'Namn'],
             ['description', 'Beskrivning'],
-            ['forwardLabel', 'Framåtriktad benämning'],
-            ['reverseLabel', 'Omvänd benämning'],
           ];
   const labels = new Map<string, Record<ConflictSide, string>>();
   const propertyFields: ConflictProperty[] = [];
@@ -283,11 +284,7 @@ export function conflictCombinationError(
       return 'Ett valt objekt finns inte i kartan eller ditt utkast.';
     if (
       [...proposedRelationships(state.relationships, state.draft.relationships).values()].some(
-        (edge) =>
-          edge.id !== conflict.id &&
-          edge.typeId === relationship.typeId &&
-          edge.sourceId === relationship.sourceId &&
-          edge.targetId === relationship.targetId,
+        (edge) => edge.id !== conflict.id && equivalentRelationships(edge, relationship),
       )
     )
       return 'Det valda sambandet finns redan i kartan.';

@@ -188,7 +188,7 @@ for (const mobile of [false, true])
       await expect(button).toBeFocused();
       for (const [name, detail] of [
         ['Utkastfordon', 'Föreslagen typbeskrivning'],
-        ['Granskar', 'kontrolleras av'],
+        ['Granskar', 'Föreslagen sambandsbeskrivning'],
       ]) {
         await draft.getByRole('button', { name: `Visa förslaget: ${name}`, exact: true }).click();
         const dialog = page.getByRole('dialog', { name, exact: true });

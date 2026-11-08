@@ -703,7 +703,9 @@ bevarat oskickat formulär vid `displayed:false`.
 
 TEXT-09 använder textinstallationen. Börja med Lo, Tonrum med status
 **Gäller fortfarande** och **Lo Exempel → Använder → Tonrum**, samlat
-sparade genom gränssnittet. Kör `scope-read` före den första
+sparade genom gränssnittet. Ange **Använder** i fältet **Verb** och välj
+**Använder** under **Sambandstyp** när sambandet skapas; orden och
+grupperingen väljs separat. Kör `scope-read` före den första
 informationsfrågan. Efter användarens båda native rättelser släpps
 `report_result` med `{"source":"draft"}`. Textinstallationen lämnar
 inget uttryckligt besked om att rapporten räcker som hela svaret; släpp

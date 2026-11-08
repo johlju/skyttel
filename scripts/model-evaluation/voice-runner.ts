@@ -897,6 +897,7 @@ export async function runVoiceScenario(
           sources,
           requirements,
           (entry.target ?? step).expected,
+          environment.stateEvidence(),
         );
         if (!declared.length) return [];
         const input: JudgeInput = {

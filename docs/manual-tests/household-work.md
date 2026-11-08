@@ -3,6 +3,11 @@
 Fallen gäller tillfälliga besök i befintliga vyer under samma användning.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 
+När förberedelsen anger ett samband som **A → verb → B**, skriv den
+angivna mittdelen i **Verb** på det enskilda sambandet. Välj den angivna
+sambandstypen separat. När ett steg ändrar både typen och formuleringen,
+ändra också **Verb** uttryckligen.
+
 ## Konfigurerade användare
 
 Alex är administratör i ett separat provhushåll. Robin är medlem och

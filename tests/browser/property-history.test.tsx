@@ -55,6 +55,8 @@ test('historical merge review preserves object and relationship properties and t
               typeId: 'supports',
               sourceId: 'lo',
               targetId: 'rose',
+              verb: 'stödjer',
+              reverseVerb: 'stöds av',
 
               properties,
             },
@@ -66,8 +68,6 @@ test('historical merge review preserves object and relationship properties and t
               revision: 1,
               name: 'Stödjer',
               description: 'Hjälp vid odling',
-              forwardLabel: 'stödjer',
-              reverseLabel: 'stöds av',
             },
           ],
           objectNames: { lo: 'Lo', rose: 'Rosen' },
@@ -134,8 +134,6 @@ test('UTKAST-157: read ordered historical property identities and meanings with 
     revision: 1,
     name: 'Stödjer',
     description: 'Hjälp vid odling',
-    forwardLabel: 'stödjer',
-    reverseLabel: 'stöds av',
   };
   const receipt: SaveReceipt = {
     operationId: 'properties-changed',
@@ -161,8 +159,6 @@ test('UTKAST-157: read ordered historical property identities and meanings with 
           ...edgeType,
           revision: 2,
           description: 'Dagens omvårdnad',
-          forwardLabel: 'vårdar',
-          reverseLabel: 'vårdas av',
         },
         objectNames: { lo: 'Lo', rose: 'Rosen' },
         before: {
@@ -172,6 +168,8 @@ test('UTKAST-157: read ordered historical property identities and meanings with 
           typeId: 'supports',
           sourceId: 'lo',
           targetId: 'rose',
+          verb: 'stödjer',
+          reverseVerb: 'stöds av',
 
           properties,
         },
@@ -182,6 +180,8 @@ test('UTKAST-157: read ordered historical property identities and meanings with 
           typeId: 'supports',
           sourceId: 'lo',
           targetId: 'rose',
+          verb: 'vårdar',
+          reverseVerb: 'vårdas av',
 
           properties: after,
         },

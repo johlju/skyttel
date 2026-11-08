@@ -7,6 +7,11 @@ verktygen deterministiskt; de bevisar inte modellens svenska tolkning.
 De länkade integrationstesterna verifierar verktygsreglerna. Stegen här
 är stöd för frivillig felsökning och behöver inte upprepas manuellt.
 
+När förberedelsen anger ett samband som **A → verb → B**, skriv den
+angivna mittdelen i **Verb** på det enskilda sambandet. Välj den angivna
+sambandstypen separat. När ett steg ändrar både typen och formuleringen,
+ändra också **Verb** uttryckligen.
+
 ## Konfigurerade användare
 
 - Alex är installationens konfigurerade administratör. Använd ditt vanliga
@@ -210,10 +215,12 @@ klientsteg.
 1. Skapa typerna Cykel och Motorfordon med namn och tom typbeskrivning.
    Föreslå Alex blå cykel av typen Cykel med Ramnummer (Text, SYNTH-42), och
    Garaget som separat verkligt objekt.
-2. Skapa Förvaring med benämningarna förvaras i och innehåller. Koppla cykeln
-   till Garaget. Föreslå samma samband igen och kontrollera att befintligt
-   samband återanvänds. Föreslå en annan befintlig sambandstyp mellan samma
-   objekt och spara hela utkastet.
+2. Skapa Förvaring och koppla cykeln till Garaget med **förvaras i** som
+   verb och **innehåller** som omvänd benämning på sambandet. Föreslå samma
+   samband igen och kontrollera att befintligt samband återanvänds. Föreslå
+   ett separat samband mellan samma objekt med en annan befintlig typ,
+   **Använder** som verb och **Används av** som omvänd benämning. Spara hela
+   utkastet.
 3. Föreslå cykeln med typen Motorfordon och rätta uttryckligen samma
    Ramnummer-egenskap till datatyp Tal och värde 42. Granska gammal typ och
    SYNTH-42 samt ny typ och 42 i förslagets båda sidor. Spara och kontrollera

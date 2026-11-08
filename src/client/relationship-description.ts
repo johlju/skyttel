@@ -1,4 +1,5 @@
 import type { RelationshipValue } from '../shared/map.js';
+import { relationshipVerb } from '../shared/relationship-verb.js';
 
 export function relationshipTarget(
   value: RelationshipValue,
@@ -9,10 +10,9 @@ export function relationshipTarget(
 
 export function relationshipDetails(
   value: RelationshipValue,
-  forwardLabel = 'Samband',
   objectNames: Record<string, string> = {},
 ) {
   const source = objectNames[value.sourceId] ?? value.sourceId;
   const target = relationshipTarget(value, objectNames);
-  return `${source} → ${forwardLabel} → ${target}`;
+  return `${source} → ${relationshipVerb(value)} → ${target}`;
 }

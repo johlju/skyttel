@@ -227,8 +227,6 @@ test('all map operations enforce current household membership and request bounda
         value: {
           name: 'Förvaring',
           description: 'Förvaringsplats',
-          forwardLabel: 'förvaras i',
-          reverseLabel: 'innehåller',
         },
       },
     },

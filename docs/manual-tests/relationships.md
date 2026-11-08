@@ -25,6 +25,11 @@ annat arbete. Typdefinitioner finns under **Inställningar → Typer**;
 **Objekttyper** och **Sambandstyper och riktning** visar respektive lista.
 Välj **Tillbaka till kartan** före objekt- och sambandsarbete.
 
+Varje samband har ett eget fritt **Verb**. När ett äldre fall anger ett
+ordval som Använder, fyll det även i **Verb**; ett typval väljer bara
+gruppering. Ett tomt verb ger **har samband med**. Saknas ett särskilt
+typval används neutral gruppering. Olika verb mellan samma objekt går bra.
+
 Granska utkastet genom **Skriv till Skyttel → Visa utkastet → Visa förslaget:
 [namn]**.
 Stäng läsningen med krysset. Spara hela utkastet separat och invänta
@@ -857,13 +862,10 @@ typbenämning.
 **Steg:**
 
 1. Förbered Alex och ett fordonsobjekt med ett namn på 180 C. Skapa
-   sambandstypen Långa
-   provuppgifter med en benämning från startobjektet på 180 L och omvänd
-benämning
-   gäller för.
+   sambandstypen Långa provuppgifter.
 2. Vid 320 CSS-pixlar, öppna Samband för Alex, Nytt samband och välj den nya
-   typen och
-   fordonsobjektet.
+   typen och fordonsobjektet. Skriv 180 L i **Verb** och **gäller för**
+   i **Omvänd benämning (valfri)**.
 3. Lägg till en fri textegenskap med etiketten 180 F och värdet Bevara
    uppgiften. Läs
    meningen och hela formuläret utan att skicka.
@@ -1320,3 +1322,108 @@ provar gränssnittet; exakta lagringsgränser provas i serversviten.
 - Avslaget förklarar den tillfälliga begränsningen och behåller hela
   formuläret redigerbart. Ingen automatisk inskickning sker.
 - Det uttryckliga nya försöket lyckas. Sambandets status är aktivt.
+
+### SAMBAND-22: Fria verb mellan andra objekt än personer
+
+**Syfte:** Välja verb oberoende av gruppering och objekttyper, bevara flera
+verb mellan samma objekt och läsa dem efter omstart.
+
+**Användare:** Alex enligt områdets förberedelse.
+
+**Förutsättningar:** Familjens webbplats finns som Tjänst och Driftplattformen
+som Företag. Inga samband finns mellan dem. Använd ett nytt provhushåll.
+
+**Automatiskt motsvarande test:**
+[relationship-verbs.spec.ts](../../tests/integration/relationship-verbs.spec.ts),
+SAMBAND-22. HTTP-, MCP-, arkiv- och migreringsprov ger separat tekniskt stöd.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/relationship-verbs.spec.ts",
+    "caseId": "SAMBAND-22"
+  },
+  "reference": "Nytt hushåll, ordinarie webbläsare, verkligt sparande och omstart på samma provdatabas.",
+  "outcomes": [
+    "Två egna verb mellan samma objekt sparas och återkommer efter omstart.",
+    "Typbyte ändrar inte sambandsverbet och ingen omvänd benämning krävs."
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/relationships.test.ts",
+      "title": "chosen relationship verbs survive saving independently of endpoint kinds and category labels",
+      "purpose": "Sparat ordval, kategoribyte och dubblettkontroll genom HTTP."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/household-import.test.ts",
+      "title": "free relationship verbs round-trip saved values, draft proposals and history without category binding",
+      "purpose": "Sparade värden, eget utkast och historik bevaras vid arkivöverföring."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-work.test.ts",
+      "title": "MCP stores a chosen verb between non-person objects without category or inverse wording",
+      "purpose": "Fritt ordval och atomisk återställning av ett avvisat ändringspaket."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/text-assistant.test.ts",
+      "title": "a checked first-party batch keeps a free verb without requiring a relationship category",
+      "purpose": "Den inbyggda assistentens oberoende kontroll godkänner verb utan vald gruppering."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/relationship-format-migration.test.ts",
+      "title": "upgrade preserves installation and household data with existing objects: true",
+      "purpose": "Engångsmigreringen bevarar installationens och hushållets data samt ordval i sparade samband, utkast och historik när objekt finns."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/relationship-format-migration.test.ts",
+      "title": "upgrade preserves installation and household data with existing objects: false",
+      "purpose": "Engångsmigreringen bevarar installationens och hushållets data även utan objekt och lämnar samband och utkast tomma."
+    }
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna Samband för Familjens webbplats. Välj Nytt samband, skriv **körs
+   hos** i Verb och välj Driftplattformen som Till objekt. Behåll Ingen
+   särskild gruppering. Läs meningen och lägg sambandet i utkastet.
+2. Skapa på samma sätt ett samband med verbet **använder** mellan samma
+   objekt. Stäng sambandsdialogen och granska båda förslagen.
+3. Spara hela utkastet. Starta om provinstallationen och ladda om sidan.
+   Öppna webbplatsens samband och läs båda ordvalen.
+4. Redigera sambandet **körs hos**, välj Betalar som gruppering och läs
+   att Verb fortfarande är körs hos. Lägg i utkastet och spara.
+5. Ladda om sidan och öppna Samband för Driftplattformen. Läs båda
+   sambanden i deras ursprungliga riktning.
+
+**Förväntat resultat:**
+
+- Sambanden **körs hos** och **använder** Driftplattformen har separata
+  identiteter som finns kvar efter omstart.
+- Grupperingen Betalar begränsar inte verbet **körs hos** och skriver
+  inte om det andra sambandet. Ingen omvänd benämning behövs.

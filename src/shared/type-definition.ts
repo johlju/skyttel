@@ -2,7 +2,7 @@ import type { ObjectType, RelationshipType } from './map.js';
 
 export const definitionScalarFields = {
   objectType: ['name', 'description'],
-  relationshipType: ['name', 'description', 'forwardLabel', 'reverseLabel'],
+  relationshipType: ['name', 'description'],
 };
 type DefinitionKind = keyof typeof definitionScalarFields;
 type Facts = Map<string, unknown>;

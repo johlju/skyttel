@@ -15,13 +15,11 @@ test('independent type meaning changes merge without losing identity', () => {
     resolveTypeDefinition('objectType', before, { ...before, name: 'Cykel' }, current),
   ).toEqual({ ...current, revision: 3, name: 'Cykel' });
 });
-test('relationship directions retain independent saved and proposed explanations', () => {
+test('relationship categories retain independently saved explanations', () => {
   const value: RelationshipType = {
     ...before,
-    forwardLabel: 'förvaras i',
-    reverseLabel: 'förvarar',
   };
-  const current = { ...value, revision: 2, reverseLabel: 'innehåller' };
+  const current = { ...value, revision: 2, description: 'Delad förklaring' };
   expect(resolveTypeDefinition('relationshipType', value, { ...value }, current)).toEqual({
     ...current,
     revision: 3,

@@ -127,7 +127,7 @@ test('the catalog ordinary two-ambiguities exchange reaches its answer and reque
                 arguments: {
                   id: 'lo-spotify',
                   baseRevision: null,
-                  value: { typeId: uses.id, sourceId: 'lo', targetId: 'spotify' },
+                  value: { typeId: uses.id, sourceId: 'lo', targetId: 'spotify', verb: 'använder' },
                 },
               },
             ],
@@ -165,7 +165,7 @@ test('the catalog ordinary two-ambiguities exchange reaches its answer and reque
                 arguments: {
                   id: 'alex-m365',
                   baseRevision: null,
-                  value: { typeId: uses.id, sourceId: 'alex', targetId: 'm365' },
+                  value: { typeId: uses.id, sourceId: 'alex', targetId: 'm365', verb: 'använder' },
                 },
               },
               {
@@ -181,7 +181,12 @@ test('the catalog ordinary two-ambiguities exchange reaches its answer and reque
                 arguments: {
                   id: 'spotify-reserve',
                   baseRevision: null,
-                  value: { typeId: pays.id, sourceId: 'spotify-sub', targetId: 'reserve' },
+                  value: {
+                    typeId: pays.id,
+                    sourceId: 'spotify-sub',
+                    targetId: 'reserve',
+                    verb: 'betalas från',
+                  },
                 },
               },
             ],
@@ -1376,6 +1381,7 @@ test.each([0, 12000])(
         return current === 'price' && !waiting ? ['effective_objects'] : [];
       },
       judgeContext: () => 'Fixture',
+      stateEvidence: () => ({ expected: { relationships: [] } }),
       read: async () => ({}),
       close: vi.fn(async () => {}),
     };

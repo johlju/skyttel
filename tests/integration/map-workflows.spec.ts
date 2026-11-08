@@ -40,10 +40,17 @@ async function addObject(page: Page, name: string, type: string, description?: s
   await page.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
 }
 
-async function addRelationship(page: Page, source: string, type: string, target: string) {
+async function addRelationship(
+  page: Page,
+  source: string,
+  type: string,
+  target: string,
+  verb: string,
+) {
   const dialog = await openObjectRelationships(page, source.split(' (')[0]);
   await dialog.getByRole('button', { name: 'Nytt samband', exact: true }).click();
   await page.getByLabel('Sambandstyp', { exact: true }).selectOption({ label: type });
+  await page.getByLabel('Verb', { exact: true }).fill(verb);
   const id = target.includes('[')
     ? target.match(/\[([^\]]+)\]$/)?.[1]
     : await page
@@ -174,6 +181,7 @@ test('KARTA-02: an unresolved object can become unspecified and later identified
       'Familjemusik (Abonnemang)',
       'Betalas med',
       'Betalkonto (Bankkonto)',
+      'Betalas med',
     );
     await save(page);
     const before = await read();
@@ -243,6 +251,7 @@ for (const width of [1280, 390, 320]) {
           'Familjemusik (Abonnemang)',
           'Betalas med',
           'Betalkonto (Bankkonto)',
+          'Betalas med',
         );
         const proposed = await read();
         const relationship = proposed.draft.relationships?.[0];
@@ -349,8 +358,20 @@ test('KARTA-03: equal object names stay distinct when correcting and deleting a 
     expect(second).toBeTruthy();
     const firstLabel = `familj@example.test (E-postadress) — Första adressobjektet [${first}]`;
     const secondLabel = `familj@example.test (E-postadress) — Andra adressobjektet [${second}]`;
-    await addRelationship(page, 'Musikkonto (Tjänstekonto)', 'Inloggningsadress', firstLabel);
-    await addRelationship(page, 'Musikkonto (Tjänstekonto)', 'Kontaktadress', secondLabel);
+    await addRelationship(
+      page,
+      'Musikkonto (Tjänstekonto)',
+      'Inloggningsadress',
+      firstLabel,
+      'Inloggningsadress',
+    );
+    await addRelationship(
+      page,
+      'Musikkonto (Tjänstekonto)',
+      'Kontaktadress',
+      secondLabel,
+      'Kontaktadress',
+    );
     await save(page);
     const saved = await read();
     const loginType = saved.relationshipTypes.find((type) => type.name === 'Inloggningsadress');
@@ -363,6 +384,7 @@ test('KARTA-03: equal object names stay distinct when correcting and deleting a 
     await duplicate
       .getByLabel('Sambandstyp', { exact: true })
       .selectOption({ label: 'Inloggningsadress' });
+    await duplicate.getByLabel('Verb', { exact: true }).fill('Inloggningsadress');
     await duplicate.getByLabel('Till objekt', { exact: true }).selectOption(first ?? '');
     await duplicate.getByRole('button', { name: 'Lägg i utkastet', exact: true }).click();
     await expect(duplicate.getByRole('alert')).toContainText('Sambandet finns redan');
@@ -450,18 +472,20 @@ test('KARTA-04: object deletion reviews incoming and outgoing links and can be d
     await addObject(page, 'Molnmusik', 'Tjänst');
     await addObject(page, 'Musikkonto', 'Tjänstekonto');
     await addObject(page, 'Familjemusik', 'Abonnemang');
-    await addRelationship(page, 'Kim (Person)', 'Använder', 'Molnmusik (Tjänst)');
+    await addRelationship(page, 'Kim (Person)', 'Använder', 'Molnmusik (Tjänst)', 'Använder');
     await addRelationship(
       page,
       'Musikkonto (Tjänstekonto)',
       'Tillhör tjänsten',
       'Molnmusik (Tjänst)',
+      'Tillhör tjänsten',
     );
     await addRelationship(
       page,
       'Familjemusik (Abonnemang)',
       'Gäller tjänstekontot',
       'Musikkonto (Tjänstekonto)',
+      'Gäller tjänstekontot',
     );
     await save(page);
     const saved = await read();

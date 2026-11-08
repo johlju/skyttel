@@ -857,7 +857,10 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   aktiva val, återställa endast deras historiska identitet med fortsatt
   revisionsföljd, avvisa inaktuellt sparande atomiskt, ompröva privat
   återställning efter import och kontrollera dess fullständiga privata
-  utfall utan dubblerad mutation; behålla ändrade fakta när nya samband
+  utfall utan dubblerad mutation; läsa äldre riktningsuppgifter i
+  återställningsförslaget och namn och beskrivning i typens aktuella
+  formulär, med separat teknisk kontroll av bevarad historik efter omstart;
+  behålla ändrade fakta när nya samband
   försvinner, visa samtidiga typ- och ändpunktshinder, läsa historiska
   egenskapsnamn även när den historiska typen saknas, kasta ägda
   definitionsförslag utan faktisk borttagningsrevision och kontrollera
@@ -906,7 +909,9 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   TYP-08/09/13/14 är avvecklade typavsnittsfall och får inte återanvändas.
 - [Sambandsarbete](relationships.md): skapa objekt separat, koppla dem i den
   gemensamma dialogen och rätta objekt och samband oberoende. Fullständiga
-  egna värden, typbyte och riktning behåller sin betydelse. Osäkerhet kan
+  egna värden, typbyte och riktning behåller sin betydelse. Fria verb hör
+  till varje enskilt samband oavsett gruppering och slags objekt;
+  SAMBAND-22 bevarar två ordval efter omstart. Osäkerhet kan
   anges som en vanlig egenskap utan särskild sparverkan.
   Validering, dubbletter, borttagning, oklara utfall och förlustvarning
   bevarar tidigare förslag. Ett gammalt obekräftat försök efter en senare
@@ -918,7 +923,9 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   separata mänskliga observationsfall. Exakta dekorativa värden i
   SAMBAND-12 ingår inte i skyddet.
 - [Sambandstyper och riktning](relationship-types.md): redigerbara
-  namn, förklaringar och benämningar från båda verkliga ändpunkterna.
+  grupperingsnamn och förklaringar, med verb och valfria omvända benämningar
+  på varje enskilt samband. STY-04 granskar separat förberedda äldre
+  riktningsuppgifter i en definitionskonflikt.
   Sambandens fria egenskaper behåller etiketter, identiteter, datatyper
   och ordning genom typbyte, omstart och samtidig granskning.
   Dubbletter och samtidiga sparanden ger inget delsparande.

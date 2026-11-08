@@ -21,7 +21,9 @@ function householdScenario(): Scenario {
         text: 'Lägg till Spotify för Lo.',
         expected: {
           objects: { spotify: { type: 'Tjänst', name: 'Spotify' } },
-          addRelationships: [{ source: 'lo', type: 'Använder', target: 'spotify' }],
+          addRelationships: [
+            { source: 'lo', type: 'Använder', verb: 'använder', target: 'spotify' },
+          ],
           requirements: [],
         },
       },
@@ -61,6 +63,7 @@ async function checkHouseholdFacts(
         typeId: map.relationshipTypes.find((type) => type.name === 'Använder')?.id,
         sourceId: 'lo',
         targetId: 'spotify',
+        verb: 'använder',
         ...relationship,
       },
     });
@@ -91,7 +94,14 @@ test.each(['strict', 'semantic'])(
       spotify: { type: 'Tjänst', name: 'Spotify', lifecycle: 'active', properties: [] },
     };
     scenario.steps[0].expected.addRelationships = [
-      { source: 'lo', type: 'Använder', target: 'spotify', lifecycle: 'active', properties: [] },
+      {
+        source: 'lo',
+        type: 'Använder',
+        verb: 'använder',
+        target: 'spotify',
+        lifecycle: 'active',
+        properties: [],
+      },
     ];
     if (mode === 'semantic') {
       scenario.steps[0].expected.requirements = ['Only Spotify and its current user are added.'];
@@ -102,6 +112,7 @@ test.each(['strict', 'semantic'])(
         {
           source: 'lo',
           type: 'Använder',
+          verb: 'använder',
           target: 'spotify',
           properties: { preserve: [], additions: [] },
         },
@@ -151,7 +162,7 @@ test('an explicit ended expectation does not match omitted active status', {
     spotify: { type: 'Tjänst', name: 'Spotify', lifecycle: 'ended' },
   };
   scenario.steps[0].expected.addRelationships = [
-    { source: 'lo', type: 'Använder', target: 'spotify', lifecycle: 'ended' },
+    { source: 'lo', type: 'Använder', verb: 'använder', target: 'spotify', lifecycle: 'ended' },
   ];
   expect(await checkHouseholdFacts(scenario)).toEqual([
     'effective_objects',
@@ -165,11 +176,20 @@ test('relationship removal matches equivalent explicit defaults in the request c
   const scenario = householdScenario();
   if (!scenario.fixture) throw new Error('Missing independent household fixture.');
   scenario.fixture.objects.push({ id: 'spotify', type: 'Tjänst', name: 'Spotify' });
-  scenario.fixture.relationships = [{ source: 'lo', type: 'Använder', target: 'spotify' }];
+  scenario.fixture.relationships = [
+    { source: 'lo', type: 'Använder', verb: 'använder', target: 'spotify' },
+  ];
   scenario.steps[0].expected = {
     requirements: [],
     removeRelationships: [
-      { source: 'lo', type: 'Använder', target: 'spotify', lifecycle: 'active', properties: [] },
+      {
+        source: 'lo',
+        type: 'Använder',
+        verb: 'använder',
+        target: 'spotify',
+        lifecycle: 'active',
+        properties: [],
+      },
     ],
   };
   const model = textModel(() => {

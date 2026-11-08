@@ -204,9 +204,9 @@ Använd `sokning.zip`. Kontrollera före export och efter kopplingen:
   Élan
   har **Åker äpple** som beskrivning och **Hemlig anteckning** i det
   fria textegenskapen.
-- Utkastet har också sambandstypen **Endast i sambandet**, tom beskrivning,
-  **går till** från startobjektet, **kommer från** från målobjektet, inga
-  fria egenskaper, samt det privata sambandet
+- Utkastet har också sambandstypen **Endast i sambandet** med tom
+  beskrivning. Det privata sambandet har **går till** i **Verb**,
+  **kommer från** i **Omvänd benämning (valfri)** och inga fria egenskaper:
   **A 2 → går till → Övrigt Élan**. Inga nya gemensamma fakta har sparats.
 
 Alla tre sökfall använder hela förberedelsen. På målenheten kontrollerar

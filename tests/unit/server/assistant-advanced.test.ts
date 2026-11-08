@@ -182,8 +182,6 @@ test('advanced tools use actual SDK contracts, preserve old read grants and curr
             value: {
               name: 'Fel',
               description: '',
-              forwardLabel: 'framåt',
-              reverseLabel: 'bakåt',
               fields: [],
             },
           },
@@ -291,8 +289,6 @@ test('MCP uses fresh content versions to read imported historical authorship and
           value: {
             name: 'Gammal typ',
             description: '',
-            forwardLabel: 'framåt',
-            reverseLabel: 'bakåt',
           },
         },
       ],
@@ -367,8 +363,6 @@ test('MCP type changes preserve independent object and relationship properties a
     value: {
       name: 'Förvaras',
       description: 'Plats',
-      forwardLabel: 'förvaras i',
-      reverseLabel: 'förvarar',
     },
   });
   const properties = [
@@ -392,8 +386,6 @@ test('MCP type changes preserve independent object and relationship properties a
     catalog.relationshipTypes.find((type: { id: string }) => type.id === 'parking'),
   ).toMatchObject({
     description: 'Plats',
-    forwardLabel: 'förvaras i',
-    reverseLabel: 'förvarar',
   });
   review = await object('bike', { typeId: 'vehicle' });
   expect(review.changes[0]).toMatchObject({

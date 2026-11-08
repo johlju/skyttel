@@ -293,7 +293,7 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
     'propose_relationship_type',
     {
       description:
-        'Föreslå en ny eller ändrad sambandstyp med namn, gemensam beskrivning och benämning i båda riktningarna. Behåll stabila typ-ID. Fria egenskaper hör till enskilda samband och bevaras vid typbyte. value null föreslår borttagning av typen och dess samband, även upphörda, i en samlad granskning. Ändpunkternas objekt behålls. Andras utkast hindrar inte borttagning. Hela ditt utkast returneras.',
+        'Föreslå en ny eller ändrad gruppering av samband med namn och gemensam beskrivning. Verb hör till varje enskilt samband, aldrig till en bestämd typ eller objekttyp. Behåll stabila typ-ID. Fria egenskaper hör till enskilda samband och bevaras vid typbyte. value null föreslår borttagning av typen och dess samband, även upphörda, i en samlad granskning. Ändpunkternas objekt behålls. Andras utkast hindrar inte borttagning. Hela ditt utkast returneras.',
       inputSchema: z
         .object({
           ...versionFields,
@@ -303,8 +303,6 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
             .object({
               name: z.string().min(1).max(200),
               description: z.string().max(2000),
-              forwardLabel: z.string().min(1).max(200),
-              reverseLabel: z.string().min(1).max(200),
             })
             .strict()
             .nullable(),
@@ -321,13 +319,16 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
     'propose_relationship',
     {
       description:
+        'verb är användarens fria ordval för just sambandet, oberoende av objekttyper och gruppering. Ifrågasätt aldrig verbet utifrån typbeskrivningar. typeId är valfri gruppering: utelämnat på ett nytt samband använder eller föreslår neutral Samband i samma utkast. reverseVerb är valfri uttrycklig omvänd benämning, aldrig ett krav. Utelämnade verb vid rättelse behåller tidigare ordval. ' +
         'Föreslå eller rätta ett riktat samband med aktuell typ, stabila ändpunkter och typrevision. value null föreslår vanlig borttagning. Både sourceId och targetId kräver verkliga objekt i samma hushåll eller det egna giltiga utkastet. Saknad ändpunkt måste rättas före skapande; hitta inte på någon motpart. Hela privata utkastet returneras. properties är hela den ordnade listan fria egenskaper: behåll returnerade egenskaps-ID vid rättelser, utelämna id på nya poster, töm genom att utelämna value, ta bort genom att utesluta posten och ordna genom listans ordning. Etiketter får upprepas och har ingen särskild verkan på datum, ekonomi eller status. Utelämnad properties behåller listan, [] tar bort alla. kind är text, number, date eller boolean; utelämnat kind tillåts bara utan value. 0, false och tom text är värden. Respektera uttrycklig datatyp; fråga före tillägg vid oklar datatyp och före rättelse eller borttagning vid flera möjliga egenskapsidentiteter. Typbyte kräver giltigt eller tomt värde och bevarar fria egenskaper. Ett upprepat tillägg anger befintligt samband i existingId.',
       inputSchema: z
         .object({
           ...proposalFields,
           value: z
             .object({
-              typeId: z.string(),
+              typeId: z.string().optional(),
+              verb: z.string().min(1).max(200).optional(),
+              reverseVerb: z.string().min(1).max(200).optional(),
               properties: z.array(propertyInputSchema).optional(),
               sourceId: id,
               targetId: id,

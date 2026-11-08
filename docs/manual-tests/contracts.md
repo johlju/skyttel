@@ -227,6 +227,9 @@ identities through a blocked save and correction”.
 
 **Steg:**
 
+För varje samband nedan väljer du typen separat och skriver den angivna
+formuleringen, exempelvis **Gäller** eller **Använder**, i **Verb**.
+
 1. Lägg samband från Bostadshyra till Björkbacken och från Garagehyra
    till Garaget med typen Gäller. Koppla också Elavtalet till Björkbacken
    med Gäller. Välj Björkhem AB som Hyresvärd för båda hyresavtalen.

@@ -46,7 +46,7 @@ export function validateImportReferences(
       );
   unique(
     content.relationships.filter((row) => !row.deleted),
-    (row) => JSON.stringify([row.typeId, row.sourceId, row.targetId]),
+    (row) => JSON.stringify([row.typeId, row.sourceId, row.targetId, row.verb]),
   );
   const objectTypes = new Map(content.objectTypes.map((row) => [row.id, row]));
   const relationshipTypes = new Map(content.relationshipTypes.map((row) => [row.id, row]));
@@ -61,8 +61,6 @@ export function validateImportReferences(
     'history',
   ] as const)
     unique(content[name] as { id: string | number }[], (row) => String(row.id));
-  for (const rows of [content.relationshipTypeLabels])
-    unique<{ typeId: string }>(rows, (row) => row.typeId);
   for (const rows of [content.drafts, content.viewSettings])
     unique<{ userId: string }>(rows, (row) => row.userId);
   for (const rows of [content.saves, content.operations, content.history])
@@ -72,8 +70,6 @@ export function validateImportReferences(
     );
   unique(content.positions, (row) => `${row.userId}:${row.objectId}`);
   unique(content.removedTypes, (row) => `${row.kind}:${row.typeId}`);
-  for (const row of content.relationshipTypeLabels)
-    requireReference(relationshipTypes.has(row.typeId));
   for (const row of content.removedTypes)
     requireReference((row.kind === 'objectType' ? objectTypes : relationshipTypes).has(row.typeId));
   for (const name of [

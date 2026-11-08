@@ -15,7 +15,12 @@ for (const [id, kind, width] of [
     browser,
   }) => {
     const other = await createPreparedContext(browser);
-    const app = await prepareRelationshipSpecialConflict(page.request, other.request, kind);
+    const app = await prepareRelationshipSpecialConflict(
+      page.request,
+      other.request,
+      kind,
+      'Använder',
+    );
     try {
       await page.setViewportSize({ width, height: 900 });
       await page.goto(app.installation.origin);

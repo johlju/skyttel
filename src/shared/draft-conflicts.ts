@@ -13,6 +13,7 @@ import type {
 } from './map.js';
 import { proposedObjectTypes, proposedRelationships, proposedRelationshipTypes } from './map.js';
 import { resolvedProperties } from './property-merge.js';
+import { equivalentRelationships } from './relationship-identity.js';
 import { resolveTypeDefinition } from './type-definition.js';
 
 export type DraftConflict = {
@@ -73,6 +74,9 @@ export function resolvedRelationshipValue(
   const meaning = ['typeId', 'sourceId', 'targetId'] as const;
   const value = meaning.every((key) => after[key] === before[key]) ? current : after;
   const lifecycle = after.lifecycle === before.lifecycle ? current.lifecycle : after.lifecycle;
+  const verb = after.verb === before.verb ? current.verb : after.verb;
+  const reverseVerb =
+    after.reverseVerb === before.reverseVerb ? current.reverseVerb : after.reverseVerb;
   const properties =
     before.properties || current.properties || after.properties
       ? resolvedProperties(before.properties, current.properties, after.properties)
@@ -82,6 +86,8 @@ export function resolvedRelationshipValue(
     typeId: value.typeId,
     sourceId: value.sourceId,
     targetId: value.targetId,
+    ...(verb !== undefined ? { verb } : {}),
+    ...(reverseVerb !== undefined ? { reverseVerb } : {}),
     ...(lifecycle ? { lifecycle } : {}),
   };
 }
@@ -159,11 +165,7 @@ export function draftConflicts(state: MapState): DraftConflict[] {
     const changedType = type?.id !== change.type.id || type?.revision !== change.type.revision;
     const duplicates = after
       ? [...proposedRelationships(state.relationships, state.draft.relationships).values()].filter(
-          (edge) =>
-            edge.id !== change.id &&
-            edge.typeId === after.typeId &&
-            edge.sourceId === after.sourceId &&
-            edge.targetId === after.targetId,
+          (edge) => edge.id !== change.id && equivalentRelationships(edge, after),
         )
       : [];
     const missingEndpoints = after

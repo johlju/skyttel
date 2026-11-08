@@ -407,7 +407,7 @@ test('changing type preserves ordered property identities and values through rev
   });
 });
 
-test('relationship type forms review both labels and show one edge from either object', async () => {
+test('relationship forms keep both chosen labels independently of category edits', async () => {
   const deadline = performance.now() + 30_000;
   const initial = await (await client.request(path)).json();
   for (const [version, id, name] of [
@@ -425,8 +425,6 @@ test('relationship type forms review both labels and show one edge from either o
   await userEvent.click(screen.getByRole('button', { name: 'Ny sambandstyp' }));
   await userEvent.type(screen.getByLabelText('Sambandstypens namn'), 'Förvaring');
   await userEvent.type(screen.getByLabelText('Sambandstypens beskrivning'), 'Hushållets platser');
-  await userEvent.type(screen.getByLabelText('Benämning från startobjektet'), 'förvaras i');
-  await userEvent.type(screen.getByLabelText('Benämning från målobjektet'), 'innehåller');
   await userEvent.click(screen.getByRole('button', { name: 'Lägg sambandstypen i mitt utkast' }));
   await waitFor(() =>
     expect(screen.getByRole('status', { name: 'Hushållsarbetets status' }).textContent).toContain(
@@ -440,6 +438,8 @@ test('relationship type forms review both labels and show one edge from either o
     screen.getByLabelText('Sambandstyp'),
     screen.getByRole('option', { name: 'Förvaring' }),
   );
+  await userEvent.type(screen.getByLabelText('Verb', { exact: true }), 'förvaras i');
+  await userEvent.type(screen.getByLabelText('Omvänd benämning (valfri)'), 'innehåller');
   await stageRelationship();
   const proposal = await readDraftProposal('Cykeln → förvaras i → Garaget');
   expect(proposal.getByText('Förvaring', { exact: true })).toBeTruthy();
@@ -485,11 +485,8 @@ test('relationship type forms review both labels and show one edge from either o
     release();
     await openTypeEditor('Ändra sambandstyp: Plats', deadline);
     expect((screen.getByLabelText('Sambandstypens namn') as HTMLInputElement).value).toBe('Plats');
-    expect((screen.getByLabelText('Benämning från startobjektet') as HTMLInputElement).value).toBe(
-      'förvaras i',
-    );
-    expect((screen.getByLabelText('Benämning från målobjektet') as HTMLInputElement).value).toBe(
-      'innehåller',
+    expect((screen.getByLabelText('Sambandstypens beskrivning') as HTMLTextAreaElement).value).toBe(
+      'Hushållets platser',
     );
   } finally {
     release();
@@ -502,6 +499,8 @@ test('relationship type forms review both labels and show one edge from either o
   expect(saved.relationships[0]).toMatchObject({
     sourceId: 'bike',
     targetId: 'garage',
+    verb: 'förvaras i',
+    reverseVerb: 'innehåller',
     revision: 1,
   });
 });
@@ -510,8 +509,6 @@ test('relationship type conflict review offers merged independent corrections an
   const definition = {
     name: 'Förvaring',
     description: 'Förvaringsplats',
-    forwardLabel: 'förvaras i',
-    reverseLabel: 'innehåller',
   };
   await client.json(`${path}/relationship-type`, {
     version: 0,
@@ -538,14 +535,13 @@ test('relationship type conflict review offers merged independent corrections an
     version: 0,
     id: 'storage',
     baseRevision: 1,
-    value: { ...definition, description: 'Ny förklaring', reverseLabel: 'rymmer' },
+    value: { ...definition, description: 'Ny förklaring' },
   });
   await other.json(`${path}/save`, { version: 1, operationId: 'other' });
   await open();
   await resolveProperties([
     ['Namn', 'Ditt förslag', 'Plats'],
     ['Beskrivning', 'Sparat i kartan nu', 'Ny förklaring'],
-    ['Omvänd benämning', 'Sparat i kartan nu', 'rymmer'],
   ]);
   const proposal = await readDraftProposal('Plats');
   expect(
@@ -1229,6 +1225,7 @@ test.each(['changed', 'duplicate', 'endpoint', 'deletion'] as const)(
     const { other, read, propose, commit, state } = await concurrentEditors();
     const value: RelationshipValue = {
       typeId: state.relationshipTypes[0].id,
+      verb: 'har samband med',
       sourceId: 'lo',
       targetId: 'kim',
     };
@@ -1656,7 +1653,7 @@ test('relationship lifecycle corrections preserve ordinary date properties throu
           sourceId: 'person',
           targetId: 'subscription',
           typeId: initial.relationshipTypes.find((item) => item.name === 'Använder')?.id,
-
+          verb: 'Använder',
           lifecycle: 'ended',
           properties: [{ id: 'date', label: 'Slutdatum', kind: 'date', value: '2000-01-01' }],
         },

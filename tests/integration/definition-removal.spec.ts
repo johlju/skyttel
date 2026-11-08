@@ -65,6 +65,7 @@ test('KATALOG-04: canceling a type deletion restores inspectable unfinished obje
     await app.propose(page.request, 'draft', 'new-work', { typeId: type.id, name: 'Nytt arbete' });
     await app.propose(page.request, 'relationship', 'new-connection', {
       typeId: initial.relationshipTypes[0].id,
+      verb: 'Använder',
       sourceId: 'new-work',
       targetId: 'service',
       properties: [
@@ -104,7 +105,7 @@ test('KATALOG-04: canceling a type deletion restores inspectable unfinished obje
     await expectConflictDraftValues(page, 'Nytt arbete', { Namn: 'Nytt arbete' });
     const restoredRelationship = await readDraftProposal(
       page,
-      `Nytt arbete → ${initial.relationshipTypes[0].forwardLabel ?? initial.relationshipTypes[0].name} → Molnmusik`,
+      `Nytt arbete → Använder → Molnmusik`,
     );
     await expect(restoredRelationship).toContainText('Bevarat samband');
     await expect(restoredRelationship).toContainText('Läggs till');
@@ -166,6 +167,7 @@ test('KATALOG-01: type cascades and meaning corrections are reviewed, canceled a
       baseRevision: null,
       value: {
         typeId: edgeType.id,
+        verb: 'Använder',
         sourceId: 'solar-object',
         targetId: 'survivor',
         lifecycle: 'ended',
@@ -218,11 +220,10 @@ test('KATALOG-01: type cascades and meaning corrections are reviewed, canceled a
       Beskrivning: edgeType.description || 'Ej uppgivet',
     });
     await readRemovalProposal(page, 'Soltaket', { Namn: 'Soltaket', Typ: 'Solcellsanläggning' });
-    await readRemovalProposal(
-      page,
-      `Soltaket → ${edgeType.forwardLabel ?? edgeType.name} → Huset`,
-      { Från: 'Soltaket', Till: 'Huset' },
-    );
+    await readRemovalProposal(page, `Soltaket → Använder → Huset`, {
+      Från: 'Soltaket',
+      Till: 'Huset',
+    });
     const draft = await openDraftReview(page);
     await draft.getByRole('button', { name: 'Kasta hela utkastet', exact: true }).click();
     await page
@@ -362,6 +363,7 @@ test('KATALOG-02: other drafts survive type deletion and recover through ordinar
             baseRevision: null,
             value: {
               typeId: edgeType.id,
+              verb: 'Använder',
               sourceId: 'private',
               targetId: 'target',
               lifecycle: 'ended',
@@ -381,16 +383,12 @@ test('KATALOG-02: other drafts survive type deletion and recover through ordinar
         Status: 'Manuellt upphört',
         Serienummer: 'PRIVAT-PROVVÄRDE',
       });
-      await expectConflictDraftValues(
-        memberPage,
-        `Privat provnamn → ${edgeType.forwardLabel ?? edgeType.name} → Garaget`,
-        {
-          Från: 'Privat provnamn',
-          Till: 'Garaget',
-          Sambandstyp: edgeType.name,
-          Gäller: 'Upphört',
-        },
-      );
+      await expectConflictDraftValues(memberPage, `Privat provnamn → Använder → Garaget`, {
+        Från: 'Privat provnamn',
+        Till: 'Garaget',
+        Sambandstyp: edgeType.name,
+        Gäller: 'Upphört',
+      });
       await closeTextView(memberPage);
     };
     await readPrivate();
@@ -442,7 +440,7 @@ test('KATALOG-02: other drafts survive type deletion and recover through ordinar
     const relationshipEditor = await editObjectRelationship(
       memberPage,
       'Privat provnamn',
-      `Privat provnamn → ${edgeType.forwardLabel ?? edgeType.name} → Garaget`,
+      `Privat provnamn → Använder → Garaget`,
     );
     await relationshipEditor
       .getByLabel('Sambandstyp', { exact: true })

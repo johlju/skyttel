@@ -146,8 +146,6 @@ test('tint retains values through delayed and failed saves', {
           revision: 1,
           name: 'Använder',
           description: '',
-          forwardLabel: 'använder',
-          reverseLabel: 'används av',
         },
       ],
       relationships: [
@@ -158,6 +156,8 @@ test('tint retains values through delayed and failed saves', {
           typeId: 'uses',
           sourceId: 'lamp',
           targetId: 'bike',
+          verb: 'använder',
+          reverseVerb: 'används av',
           properties: [],
         },
       ],

@@ -14,7 +14,12 @@ import {
 } from '../shared/conversation-consent.js';
 import { sameModelChoice } from '../shared/conversation-model.js';
 import type { DraftBatchRequest } from '../shared/draft-batch.js';
-import { draftChangeCount } from '../shared/map.js';
+import type { MapRelationship, RelationshipType, RelationshipValue } from '../shared/map.js';
+import { draftChangeCount, proposedRelationships } from '../shared/map.js';
+import {
+  equivalentRelationships,
+  ungroupedRelationshipType,
+} from '../shared/relationship-identity.js';
 import { assistantSaveState, completeAssistantText } from '../shared/task-delivery.js';
 import type {
   MapSelection,
@@ -3507,19 +3512,39 @@ export function textAssistantRoutes({
             // Duplicate relationship additions are successful no-ops. Their
             // original tool contract identifies the actual existing edge.
             if (action.name === 'propose_relationship' && batch.version === version) {
-              const edge = args.value as { sourceId: string; targetId: string; typeId: string };
-              const saved = await call(session, 'read_map', { objectId: edge.sourceId }, guard);
-              const candidates = [
-                ...(session.state.review.relationships ?? []).flatMap((change) =>
-                  change.after ? [{ ...change.after, id: change.id }] : [],
-                ),
-                ...saved.relationships,
-              ];
+              const requested = args.value as Partial<RelationshipValue> &
+                Pick<RelationshipValue, 'sourceId' | 'targetId'>;
+              const saved: { relationships: MapRelationship[] } = await call(
+                session,
+                'read_map',
+                { objectId: requested.sourceId },
+                guard,
+              );
+              const catalog: { relationshipTypes: RelationshipType[] } = await call(
+                session,
+                'read_type_catalog',
+                {},
+                guard,
+              );
+              const changes = session.state.review.relationships ?? [];
+              const proposal = changes.find((change) => change.id === args.id);
+              const previous =
+                proposal?.after ??
+                (proposal
+                  ? proposal.before
+                  : saved.relationships.find((edge) => edge.id === args.id));
+              const typeId =
+                (requested.typeId ?? previous?.typeId) ||
+                ungroupedRelationshipType(catalog.relationshipTypes)?.id;
+              if (!typeId) throw new MapError('assistant_batch_committed_changed', 409);
+              const edge = {
+                ...requested,
+                typeId,
+                verb: requested.verb ?? previous?.verb ?? 'har samband med',
+              };
+              const candidates = [...proposedRelationships(saved.relationships, changes).values()];
               const existing = candidates.find(
-                (candidate) =>
-                  candidate.typeId === edge.typeId &&
-                  candidate.sourceId === edge.sourceId &&
-                  candidate.targetId === edge.targetId,
+                (candidate) => candidate.id !== args.id && equivalentRelationships(candidate, edge),
               );
               if (!existing || (value.existingId && value.existingId !== existing.id))
                 throw new MapError('assistant_batch_committed_changed', 409);

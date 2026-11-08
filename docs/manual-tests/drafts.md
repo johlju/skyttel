@@ -4,6 +4,12 @@ Testfallen gäller återupptagning, granskning, sparande, kastande och
 konflikthantering av ditt utkast. Förberedelser och testdata anges nedan.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 
+När ett fall förbereder ett samband med en angiven formulering, skriv den i
+**Verb** på sambandet och välj typen separat. Förberedelsen för
+utkastläsning anger uttryckligen **granskar** och **granskas av** på
+sambanden, samt **Använder** och **Används av** på det separata
+användningssambandet. Typbyte bevarar orden tills du ändrar dem själv.
+
 ## Konfigurerade användare
 
 Logga in med den administratör som anges av
@@ -32,6 +38,11 @@ samband** eller **Nytt samband**. Välj **Lägg i utkastet** och
 **Stäng samband** före fortsatt arbete. Läsande översikter stängs med
 krysset. Definitioner öppnas i **Inställningar → Typer**;
 välj **Tillbaka till kartan** före granskning.
+
+Sambandets **Verb** anger dess eget ordval. När ett fall benämner sambandet
+Använder eller anger ett annat verb, fyll det i Verb när sambandet skapas.
+Typvalet väljer endast gruppering. Bevara ordvalet vid senare typrättning
+om fallet inte uttryckligen ber om ett ändrat verb.
 
 Granska genom **Skriv till Skyttel → Visa utkastet**. Välj radens
 **Visa förslaget: [namn]** för fullständigt tidigare underlag och förslag.
@@ -492,9 +503,11 @@ med Escape. Läs cykelns båda beskrivningar, **SPARAT-17** och
 **FÖRESLAGET-42**, skuld **Uttryckligen inget → Okänt**, osäkert
 kreditutrymme **500 SEK**, uppgiftsdatum **2026-01-01** och identiteterna
 **Ospecificerat objekt** och **Identiteten behöver redas ut**. Läs varje
-sambands riktning, fria säkerhetsuppgift och hela **Hela uppgiften …**. Läs båda
-typförslagens namn, förklaringar och
-**kontrolleras av**. I ett reducerat utkast läser du bara överlevande rader.
+sambands eget **Verb**, **Omvänd benämning**, riktning, fria säkerhetsuppgift
+och hela **Hela uppgiften …** på varje sida. Saknad omvänd benämning
+visas som **Ej uppgivet**. Läs båda typförslagens namn och förklaringar,
+inklusive **Föreslagen sambandsbeskrivning**. I ett reducerat utkast läser du bara
+överlevande rader.
 
 När ett fall anger slutlig gemensam kontroll: stäng textvyn, välj
 **Rapporter → Ändringshistorik → Visa ändringarna**. Det enda sparandet
@@ -754,10 +767,11 @@ server-sviten i Vitest. Formulär och borttagningsbekräftelse provas i UTKAST-4
 
 **Förutsättningar:** Förbered provkommandot ovan och välj `new-base`. Skapa i
 Inställningar → Typer en ny sambandstyp Tillfällig typ,
-beskrivning Hela den tillfälliga typens betydelse, framåt granskar och bakåt
-granskas av. Lägg i utkastet. Gå tillbaka till Tabell och välj Samband för Alex
-blå cykel → Nytt samband. Välj Tillfällig typ och lägg till Uppgiftens
-säkerhet (Text, Okänt) som fri egenskap.
+beskrivning Hela den tillfälliga typens betydelse. Lägg i utkastet.
+Gå tillbaka till Tabell och välj Samband för Alex
+blå cykel → Nytt samband. Välj Tillfällig typ, skriv **granskar** i
+**Verb** och **granskas av** i **Omvänd benämning (valfri)**.
+Lägg till Uppgiftens säkerhet (Text, Okänt) som fri egenskap.
 Välj cykeln som Till objekt.
 Lägg i utkastet med Enter och välj Stäng samband. Spara inte.
 
@@ -2082,7 +2096,7 @@ UTKAST-01.
     "Före konfliktvalet visar fullständig förslagsläsning ursprungsnamnet Lo Exempel och förslaget Lo Lind. Konflikten visar aktuellt sparat Lo Berg. Sparförsöket avvisas utan ändrad karta, utkast eller historik. Konflikten och adressförslaget finns kvar efter omladdning och omstart.",
     "Konfliktvalet ger inget sparkvitto. Dialogens status visar att valen finns i utkastet. Förslaget innehåller Lo Lind och den oberoende sparade beskrivningen “Spelar piano i musikföreningen.” Adressförslaget finns kvar.",
     "Sambandets tidigare underlag visar Familjens musikkonto och `familjen@example.test`. Förslaget visar Familjens rättade konto och `musik@example.test`, med samma ändpunktsidentiteter.",
-    "Det uttryckliga sparandet ger ett lyckat sparkvitto. **Utkastet är tomt** även efter omladdning. Det sparade sambandet visar **Familjens rättade konto → Inloggningsadress** → `musik@example.test`."
+    "Det uttryckliga sparandet ger ett lyckat sparkvitto. **Utkastet är tomt** även efter omladdning. Det sparade sambandet visar **Familjens rättade konto → har inloggningsadressen** → `musik@example.test`."
   ]
 }
 ```
@@ -2122,7 +2136,7 @@ UTKAST-01.
   `musik@example.test`, med samma ändpunktsidentiteter.
 - Det uttryckliga sparandet ger ett lyckat sparkvitto. **Utkastet är tomt**
   även efter omladdning. Det sparade sambandet visar **Familjens rättade
-  konto → Inloggningsadress** → `musik@example.test`.
+  konto → har inloggningsadressen** → `musik@example.test`.
 
 ## Aktuellt underlag och borttagning
 
@@ -2580,8 +2594,9 @@ UTKAST-11.
 2. Som medlemmen: välj **Redigera Lo Exempel**, byt objekttyp till
    **Abonnemang** och lägg ändringen i utkastet.
 3. Öppna **Samband för Lo Exempel** och redigera sambandet. Byt typen
-   från **Använder** till **Används av**, behåll ändpunkterna och spara
-   hela medlemmens utkast separat.
+   från **Använder** till **Används av** och ändra separat **Verb** till
+   **Används av**. Behåll ändpunkterna och spara hela medlemmens utkast
+   separat.
 4. Ladda om administratörens sida och öppna **Granska konflikter**.
    Läs de aktuella typerna. Välj föreslagen borttagning på objektraden
    och **Lägg valen i utkastet**.
@@ -4768,11 +4783,12 @@ Alex gör separat teknisk förberedelse. Behåll databasen vid omstart.
    Exempel, Molnmusik och Installationsår: Våren 2021 i det bevarade
    förslaget. Stäng med Escape.
 2. Öppna Inställningar → Typer → Ny sambandstyp. Ange Förvaras i,
-   beskrivningen Ny faktisk definition och benämningarna förvaras i och
-   förvarar. Lägg typen i utkastet och återgå till kartan. Läs att konflikten
+   beskrivningen Ny faktisk definition. Lägg typen i utkastet och återgå
+   till kartan. Läs att konflikten
    fortfarande finns trots samma typnamn.
 3. Öppna Tabell → Samband för Lo Exempel → Redigera samband och välj den nya
-   typen. Läs samma individuella textegenskap Installationsår med Våren 2021.
+   typen. Ange förvaras i som Verb. Läs samma individuella textegenskap
+   Installationsår med Våren 2021.
    Lägg sambandet i utkastet och stäng.
 4. Läs det rättade hela sambandsförslaget och det oberoende förslaget. Spara
    hela utkastet separat. Starta om och läs det sparade sambandet och det
@@ -4946,15 +4962,17 @@ UTKAST-69.
 **Steg:**
 
 1. Öppna konflikten och bekräfta den föreslagna definitionen. Stäng och läs
-hela förslaget med namn, beskrivning och båda riktningarna samt det oberoende
-förslaget.
+hela förslaget med namn och beskrivning samt det oberoende förslaget.
 2. Invänta förberedarens återimport och tekniska försök till sparande före ny
 granskning. Ladda om och läs samma fullständiga privata förslag och oberoende
 arbete.
 3. Öppna konflikten på nytt. Välj och bekräfta hela den föreslagna
 definitionen på aktuellt underlag. Läs åter hela definitionen i utkastet.
-4. Spara separat och starta om. Läs den sparade sambandstypens namn,
-beskrivning och riktningar samt det oberoende objektet.
+4. Spara separat och starta om. Läs den sparade sambandstypens namn och
+beskrivning i Inställningar → Typer samt det oberoende objektet i Tabell.
+Typen är en gruppering; verb anges på varje enskilt samband. Automationen
+kontrollerar dessutom att namn, beskrivning och typens identitet bevaras i
+sparade uppgifter och sparkvitto efter omstart.
 
 **Förväntat resultat:**
 
@@ -7809,9 +7827,8 @@ UTKAST-139.
 **Steg:**
 
 1. Utför UTKAST-76:s tre steg en gång med denna förberedelse. I steg 1 läser
-du sambandstypens **Min privata typbenämning**, **Min tidigare definition**
-samt riktningarna **förvaras i** och **förvarar**. Typen består av namn,
-beskrivning och riktningar.
+du sambandstypens **Min privata typbenämning** och **Min tidigare definition**.
+Typen består av namn och beskrivning.
 
 **Förväntat resultat:**
 
@@ -7820,9 +7837,9 @@ beskrivning och riktningar.
 - Kastvalet påverkar enbart det egna sambandstypsförslaget; oberoende arbete,
 gemensamma typer och historik består.
 
-### UTKAST-140: återställ en borttagen sambandstyp med läsbara riktningar
+### UTKAST-140: återställ en borttagen sambandstyp med läsbar definition
 
-**Syfte:** Hela sambandstypen med båda riktningarna är läsbar vid 1280 och 320
+**Syfte:** Hela sambandstypen med namn och beskrivning är läsbar vid 1280 och 320
 pixlar i varje granskningsfas.
 
 **Användare:** Robin; Alex utför separat teknisk förberedelse.
@@ -7844,9 +7861,9 @@ UTKAST-140.
     "spec": "tests/integration/conflict-definition-restoration.spec.ts",
     "caseId": "UTKAST-140"
   },
-  "reference": "Sambandstyp; 1280 och 320 × 900. Riktningarnas historiska betydelser har en egen counterpart och kompletterar objekttypens namn och beskrivning.",
+  "reference": "Sambandstyp; 1280 och 320 × 900. Sambandstypens historiska namn och beskrivning har en egen counterpart.",
   "outcomes": [
-    "Hela sambandstypen med båda riktningarna är läsbar vid 1280 och 320 pixlar i varje granskningsfas.",
+    "Hela sambandstypen med namn och beskrivning är läsbar vid 1280 och 320 pixlar i varje granskningsfas.",
     "Privat bekräftelse ändrar inte den gemensamma kartan. Separat sparande och omstart gör den återställda definitionen läsbar för båda användarna."
   ]
 }
@@ -7858,15 +7875,18 @@ UTKAST-140.
 
 1. Utför UTKAST-67:s fyra steg en gång med denna förberedelse. I steg 1–3
 läser du sambandstypen, inte objekttypen: **Min privata typbenämning**, **Min
-tidigare definition**, **Framåtriktning: förvaras i** och
-**Omvänd riktning: förvarar**. Typen består av namn, beskrivning och riktningar.
-2. I steg 4 läser både Robin och Alex dessa namn, beskrivning och riktningar i
-sambandstypens ordinarie formulär samt det sparade oberoende objektet.
+tidigare definition**. Dessa är uppgifterna i den historiska definitionen
+som återställs.
+2. I steg 4 läser både Robin och Alex namn och beskrivning i sambandstypens
+ordinarie formulär samt det sparade oberoende objektet. Typen är en
+gruppering; verb anges på varje enskilt samband. Automationen kontrollerar
+dessutom att namn, beskrivning och typens identitet bevaras i
+sparade uppgifter och sparkvitto efter omstart för båda användarna.
 
 **Förväntat resultat:**
 
-- Hela sambandstypen med båda riktningarna är läsbar vid 1280 och 320 pixlar i
-varje granskningsfas.
+- Hela sambandstypen med namn och beskrivning är läsbar vid 1280 och
+320 pixlar i varje granskningsfas.
 - Privat bekräftelse ändrar inte den gemensamma kartan. Separat sparande och
 omstart gör den återställda definitionen läsbar för båda användarna.
 

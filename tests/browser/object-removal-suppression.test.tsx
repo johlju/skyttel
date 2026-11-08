@@ -23,7 +23,7 @@ test('suppressed new relationship reader names both removal causes and retained 
       typeId: type.id,
       sourceId: 'lo',
       targetId: 'service',
-
+      verb: 'Använder',
       properties: [
         { id: 'one', label: 'Samma', kind: 'boolean', value: false },
         { id: 'two', label: 'Samma', kind: 'number', value: 0 },

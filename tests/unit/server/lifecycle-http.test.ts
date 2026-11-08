@@ -148,7 +148,7 @@ test('direct lifecycle date and current-versus-previous staging preserves origin
         sourceId: 'service',
         targetId: 'subscription',
         typeId: pays?.id,
-
+        verb: 'har samband med',
         lifecycle: 'active',
       },
     );

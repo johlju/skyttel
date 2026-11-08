@@ -3,8 +3,8 @@ import rawCatalog from '../../../scripts/model-evaluation/catalog.json' with { t
 import { evaluationEnvironment } from '../../../scripts/model-evaluation/environment.js';
 import type {
   FixtureObject,
-  NamedRelationship,
   Scenario,
+  ScenarioFixture,
 } from '../../../scripts/model-evaluation/types.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { textModel } from '../../support/text-model.js';
@@ -14,7 +14,7 @@ type SubscriptionCase = {
   subscriptionId: string;
   serviceId: string;
   newSubscription?: FixtureObject;
-  otherRelationships: NamedRelationship[];
+  otherRelationships: ScenarioFixture['relationships'];
 };
 
 const cases: SubscriptionCase[] = [
@@ -36,7 +36,9 @@ const cases: SubscriptionCase[] = [
         { id: 'monthly-price', label: 'Månadskostnad (SEK)', kind: 'number', value: 99 },
       ],
     },
-    otherRelationships: [{ source: 'sonja', type: 'Betalar', target: 'new-disney-subscription' }],
+    otherRelationships: [
+      { source: 'sonja', type: 'Betalar', verb: 'betalar', target: 'new-disney-subscription' },
+    ],
   },
   {
     scenarioId: 'everyday-46',
@@ -48,7 +50,12 @@ const cases: SubscriptionCase[] = [
       name: 'Bredband från Bahnhof',
     },
     otherRelationships: [
-      { source: 'new-broadband-subscription', type: 'Hör till', target: 'home' },
+      {
+        source: 'new-broadband-subscription',
+        type: 'Hör till',
+        verb: 'har samband med',
+        target: 'home',
+      },
     ],
   },
 ];
@@ -86,13 +93,14 @@ async function checkObservedSubscription(
       source: example.subscriptionId,
       type: relationshipType,
       target: example.serviceId,
+      verb: 'har samband med',
     };
     if (variant === 'reversed') {
       serviceLink.source = example.serviceId;
       serviceLink.target = example.subscriptionId;
     }
     if (variant === 'wrong-target') serviceLink.target = 'unrelated';
-    if (variant === 'wrong-type') serviceLink.type = 'Använder';
+    if (variant === 'wrong-verb') serviceLink.verb = 'använder';
     const relationships = [
       ...(variant === 'missing-service' ? [] : [serviceLink]),
       ...example.otherRelationships
@@ -106,7 +114,7 @@ async function checkObservedSubscription(
         })),
       ...(variant === 'both-types' ? [{ ...serviceLink, type: 'Gäller' }] : []),
       ...(variant === 'extra-edge'
-        ? [{ source: 'unrelated', type: 'Använder', target: example.serviceId }]
+        ? [{ source: 'unrelated', type: 'Använder', verb: 'använder', target: example.serviceId }]
         : []),
     ];
     for (const [index, relationship] of relationships.entries()) {
@@ -118,6 +126,7 @@ async function checkObservedSubscription(
         baseRevision: null,
         value: {
           typeId: map.relationshipTypes.find((item) => item.name === relationship.type)?.id,
+          verb: relationship.verb,
           sourceId: relationship.source,
           targetId: relationship.target,
         },
@@ -157,7 +166,10 @@ async function checkObservedSubscription(
 
 test.each(
   cases.flatMap((example) =>
-    ['Gäller', 'Tillhör tjänsten'].map((relationshipType) => ({ ...example, relationshipType })),
+    ['Gäller', 'Tillhör tjänsten', 'Samband'].map((relationshipType) => ({
+      ...example,
+      relationshipType,
+    })),
   ),
 )(
   '$scenarioId accepts $relationshipType from subscription to service',
@@ -172,7 +184,7 @@ test.each(
     [
       ['reversed', 'effective_relationships'],
       ['wrong-target', 'effective_relationships'],
-      ['wrong-type', 'effective_relationships'],
+      ['wrong-verb', 'effective_relationships'],
       ['missing-service', 'effective_relationships'],
       ['both-types', 'effective_relationships'],
       ['extra-edge', 'effective_relationships'],

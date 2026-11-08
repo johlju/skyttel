@@ -721,8 +721,6 @@ for (const kind of ['objectType', 'relationshipType'] as const) {
         name: 'Tillfällig typ',
         description: 'Hela den tillfälliga typens betydelse',
       });
-      if (kind === 'relationshipType')
-        expect(type.after).toMatchObject({ forwardLabel: 'granskar', reverseLabel: 'granskas av' });
       const proposal = (
         kind === 'objectType' ? before.draft.changes : before.draft.relationships
       )?.find(({ after }) => after?.typeId === type.id);
@@ -745,6 +743,8 @@ for (const kind of ['objectType', 'relationshipType'] as const) {
               typeId: type.id,
               sourceId: 'draft-bike',
               targetId: 'draft-bike',
+              verb: 'granskar',
+              reverseVerb: 'granskas av',
               properties: [
                 {
                   id: expect.any(String),

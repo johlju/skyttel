@@ -39,7 +39,6 @@ const referenceDefaults = {
   zeroReferenceAlwaysVisible: false,
   zeroReferenceOnMovement: false,
   zeroReferenceTint: 0,
-  zeroReferenceKeepSize: false,
 };
 let directory: string;
 let path: string;
@@ -143,7 +142,13 @@ test('the deployed preview before backgrounds upgrades directly and preserves ac
       .prepare(`SELECT * FROM ${table}`)
       .all()
       .map((row) =>
-        table === 'session' ? { ...(row as object), loginProvider: null, loginSubject: null } : row,
+        table === 'session'
+          ? { ...(row as object), loginProvider: null, loginSubject: null }
+          : table === 'relationship_type' &&
+              (row as { revision: number }).revision === 1 &&
+              (row as { description: string }).description.startsWith('Från ')
+            ? { ...(row as object), description: expect.stringMatching(/^Gruppering för /) }
+            : row,
       ),
   );
   previous.close();
@@ -227,7 +232,6 @@ test('automatic preview migration keeps the household and its administrator whil
     'browser_binding',
     'object_type',
     'relationship_type',
-    'relationship_type_labels',
     'theme_preferences',
     'conversation_preferences',
     'conversation_consent',
@@ -242,7 +246,13 @@ test('automatic preview migration keeps the household and its administrator whil
       .prepare(`SELECT * FROM ${table}`)
       .all()
       .map((row) =>
-        table === 'session' ? { ...(row as object), loginProvider: null, loginSubject: null } : row,
+        table === 'session'
+          ? { ...(row as object), loginProvider: null, loginSubject: null }
+          : table === 'relationship_type' &&
+              (row as { revision: number }).revision === 1 &&
+              (row as { description: string }).description.startsWith('Från ')
+            ? { ...(row as object), description: expect.stringMatching(/^Gruppering för /) }
+            : row,
       ),
   );
   previous.close();

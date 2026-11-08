@@ -398,6 +398,7 @@ for (const outcome of ['absent', 'committed', 'duplicate', 'changed-duplicate'] 
     await userEvent.click(dialog.getByRole('button', { name: 'Nytt samband' }));
     const form = within(dialog.getByRole('region', { name: 'Nytt samband' }));
     await userEvent.selectOptions(form.getByLabelText('Sambandstyp'), 'uses');
+    await userEvent.type(form.getByLabelText('Verb', { exact: true }), 'använder');
     await userEvent.selectOptions(
       form.getByLabelText('Till objekt'),
       outcome.includes('duplicate') ? 'bike' : 'garage',
@@ -659,15 +660,7 @@ for (const kind of ['object', 'relationship'] as const) {
     await fixture.post(kind === 'object' ? 'object-type' : 'relationship-type', {
       id: definition.id,
       baseRevision: definition.revision,
-      value:
-        kind === 'object'
-          ? { ...definition, name: 'Provets typdefinition' }
-          : {
-              name: 'Provets typdefinition',
-              description: definition.description,
-              forwardLabel: 'forwardLabel' in definition ? definition.forwardLabel : '',
-              reverseLabel: 'reverseLabel' in definition ? definition.reverseLabel : '',
-            },
+      value: { ...definition, name: 'Provets typdefinition' },
     });
     cleanup();
     renderHouseholdWork(fixture.path.split('/households/')[1].split('/')[0]);

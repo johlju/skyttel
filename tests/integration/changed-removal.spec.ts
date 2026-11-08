@@ -10,7 +10,12 @@ test('UTKAST-155: withdraw an object removal after reviewing new consequences an
   browser,
 }) => {
   const other = await createPreparedContext(browser);
-  const app = await prepareOwnRemovalConflict(page.request, other.request, 'connections');
+  const app = await prepareOwnRemovalConflict(
+    page.request,
+    other.request,
+    'connections',
+    'Använder',
+  );
   try {
     await page.setViewportSize({ width: 320, height: 900 });
     await page.goto(app.installation.origin);
@@ -79,7 +84,12 @@ test('UTKAST-156: a second new deletion consequence rejects the reviewed save un
   browser,
 }) => {
   const other = await createPreparedContext(browser);
-  const app = await prepareOwnRemovalConflict(page.request, other.request, 'connections');
+  const app = await prepareOwnRemovalConflict(
+    page.request,
+    other.request,
+    'connections',
+    'Använder',
+  );
   try {
     await page.goto(app.installation.origin);
     const dialog = page.getByRole('dialog', { name: 'Granska konflikter', exact: true });

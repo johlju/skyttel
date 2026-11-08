@@ -8,126 +8,126 @@
         "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
         "revision": 1,
         "name": "Använder",
-        "description": "Från person till det som personen använder."
+        "description": ""
       },
       {
         "id": "b6a8574a7f4890753f19d806787c35bf",
         "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
         "revision": 1,
         "name": "Används av",
-        "description": "Från objekt till person som använder det."
+        "description": ""
       },
       {
         "id": "99125e26f4cbf0def77b24dd37e0c1a8",
         "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
         "revision": 1,
         "name": "Betalar",
-        "description": "Från person till avtal."
+        "description": ""
       },
       {
         "id": "5865cd07db4cdcf7d6c3ed04550e2e13",
         "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
         "revision": 1,
         "name": "Betalas med",
-        "description": "Från avtal till betalningsmedel."
+        "description": ""
       },
       {
         "id": "b5d0388ce41e4ccc59f16ddbf3d24a88",
         "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
         "revision": 1,
         "name": "Erbjuder",
-        "description": "Från tjänsteleverantör till tjänst."
+        "description": ""
       },
       {
         "id": "ad5edb7d83f44b59128a5e12b9acfab7",
         "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
         "revision": 1,
         "name": "Finansierar",
-        "description": "Från finansieringsavtal till det objekt som finansieras."
+        "description": ""
       },
       {
         "id": "52d5daa2c03938554a47c0a8962e3d6d",
         "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
         "revision": 1,
         "name": "Försäkrar",
-        "description": "Från försäkringsavtal till det objekt som försäkras."
+        "description": ""
       },
       {
         "id": "8d88db5cc3bf2cb34b15f21336e0a64c",
         "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
         "revision": 1,
         "name": "Gäller",
-        "description": "Från avtal till det objekt som avtalet gäller."
+        "description": ""
       },
       {
         "id": "c8fcd8ecb7a8345cba3b73dbe8093607",
         "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
         "revision": 1,
         "name": "Gäller tjänstekontot",
-        "description": "Från abonnemang till tjänstekonto."
+        "description": ""
       },
       {
         "id": "19d0d290904d31a77990a0e9bddd6fcd",
         "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
         "revision": 1,
         "name": "Hyresvärd",
-        "description": "Från hyresavtal till den person, det företag eller den förening som hyr ut."
+        "description": ""
       },
       {
         "id": "a2a58cc430f36a3e4815a8112337599b",
         "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
         "revision": 1,
         "name": "Inloggningsadress",
-        "description": "Från tjänstekonto till e-postadress."
+        "description": ""
       },
       {
         "id": "63b5cbc398a30edb016e873b79cdd386",
         "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
         "revision": 1,
         "name": "Kontaktadress",
-        "description": "Från tjänstekonto till e-postadress."
+        "description": ""
       },
       {
         "id": "e9796e09ce76c322efa382c589dc2749",
         "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
         "revision": 1,
         "name": "Kontokoppling",
-        "description": "Från kort till bankkonto."
+        "description": ""
       },
       {
         "id": "ec43376649f85d283ea8d0d343a90de3",
         "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
         "revision": 1,
         "name": "Kortfakturan betalas från",
-        "description": "Från kort till bankkontot som betalar kortfakturan."
+        "description": ""
       },
       {
         "id": "e2a42c76d888a51149996d625808bf8e",
         "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
         "revision": 1,
         "name": "Långivare",
-        "description": "Från låneavtal eller kreditavtal till den person, det företag eller den förening som lämnar lånet eller krediten."
+        "description": ""
       },
       {
         "id": "63e3cbe7a1584775b250f23f48fba0bc",
         "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
         "revision": 1,
         "name": "Står på avtalet",
-        "description": "Från avtal till avtalspart."
+        "description": ""
       },
       {
         "id": "b828412e808cddda06274bacc4e2c599",
         "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
         "revision": 1,
         "name": "Tillhör tjänsten",
-        "description": "Från tjänstekonto eller abonnemang till tjänst."
+        "description": ""
       },
       {
         "id": "0323569c883280f3900b97fa9163ab47",
         "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
         "revision": 1,
         "name": "Äger",
-        "description": "Från objekt till ägare."
+        "description": ""
       }
     ],
     "relationships": [],
@@ -1440,7 +1440,6 @@
       "zeroReferenceAlwaysVisible": false,
       "zeroReferenceOnMovement": false,
       "zeroReferenceTint": 0,
-      "zeroReferenceKeepSize": false,
       "version": 0
     }
   },

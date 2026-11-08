@@ -22,6 +22,7 @@ for (const [caseId, width] of [
       const dialog = await openObjectRelationships(page, 'Alex');
       await dialog.getByRole('button', { name: 'Nytt samband', exact: true }).click();
       await dialog.getByLabel('Sambandstyp', { exact: true }).selectOption({ label: 'Använder' });
+      await dialog.getByLabel('Verb', { exact: true }).fill('Använder');
       await dialog.getByLabel('Till objekt', { exact: true }).selectOption('bicycle');
       await addFreeProperty(dialog, 'Anteckning', 'text', 'Låst skåp');
       await addFreeProperty(dialog, 'Belopp', 'number', '0');
@@ -97,12 +98,19 @@ test('STY-07: changing relationship type preserves every individual property imm
     await post('relationship', {
       id: 'edge',
       baseRevision: null,
-      value: { typeId: original?.id, sourceId: 'alex', targetId: 'bicycle', properties },
+      value: {
+        typeId: original?.id,
+        verb: 'Använder',
+        sourceId: 'alex',
+        targetId: 'bicycle',
+        properties,
+      },
     });
     await post('save', { operationId: 'baseline' });
     await page.goto(installation.origin);
     const form = await editObjectRelationship(page, 'Alex', 'Alex → Använder → Blå cykeln');
     await form.getByLabel('Sambandstyp', { exact: true }).selectOption(next?.id ?? '');
+    await expect(form.getByLabel('Verb', { exact: true })).toHaveValue('Använder');
     await expect(freeProperty(form, 'Anteckning').getByLabel('Värde', { exact: true })).toHaveValue(
       'Behåll uppgiften',
     );
@@ -117,6 +125,7 @@ test('STY-07: changing relationship type preserves every individual property imm
     expect((await read()).relationships[0]).toMatchObject({
       id: 'edge',
       typeId: next?.id,
+      verb: 'Använder',
       properties,
     });
     const dialog = await openObjectRelationships(page, 'Alex');

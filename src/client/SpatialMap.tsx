@@ -14,6 +14,7 @@ import { createPortal } from 'react-dom';
 import type { MapObject, MapRelationship, MapState } from '../shared/map.js';
 import { defaultViewSettings, type Position, type ViewSettings } from '../shared/personal-view.js';
 import { relationshipLabel } from '../shared/relationship-label.js';
+import { relationshipVerb } from '../shared/relationship-verb.js';
 import { BackgroundMotionSlider } from './BackgroundMotionSlider.js';
 import { LifecycleStatus } from './Lifecycle.js';
 import { formatCoordinate, MapNavigation } from './MapNavigation.js';
@@ -929,9 +930,8 @@ export function SpatialMap({
   );
   function placeEdges(candidates: typeof labelEdges) {
     return candidates.flatMap((edge) => {
-      const type = state.relationshipTypes.find((type) => type.id === edge.edge.typeId);
       const size = labelSize(`relationship-${edge.key}`, {
-        width: Math.min(230, (type?.forwardLabel ?? type?.name ?? '').length * 7 + 24),
+        width: Math.min(230, relationshipVerb(edge.edge).length * 7 + 24),
         height: 44,
       });
       const positions = [0, 22, -22, 44, -44, 66, -66, 88, -88, 110, -110, 132, -132].flatMap(
@@ -1727,9 +1727,7 @@ export function SpatialMap({
                           }
                     }
                   />{' '}
-                  →{' '}
-                  {state.relationshipTypes.find((type) => type.id === edge.typeId)?.forwardLabel ??
-                    state.relationshipTypes.find((type) => type.id === edge.typeId)?.name}
+                  → {relationshipVerb(edge)}
                 </span>
                 <LifecycleStatus value={edge} />
               </span>

@@ -120,8 +120,11 @@ fylls inte i.
 
 Be assistenten läsa hushållets aktuella typer, även när kartan är tom.
 Du kan föreslå egna typer och ändra förifyllda typers namn och gemensamma
-beskrivning. Egna sambandstyper har benämningar från båda hållen och en
-tydlig riktning. Egenskaperna hör till enskilda objekt och samband,
+beskrivning. Varje samband får ditt valda verb oavsett objekttyper och
+gruppering. Du behöver inte välja typ eller ange en omvänd benämning för
+en tydlig koppling; Skyttel använder neutral gruppering när du inte väljer.
+Skyttel kan fråga vilka objekt eller vilken riktning du menar när det
+verkligen är oklart. Egenskaperna hör till enskilda objekt och samband,
 oberoende av deras typ. Assistenten använder samma definitioner, värden
 och privata utkast som formulären.
 

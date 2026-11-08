@@ -56,12 +56,6 @@ export function erasureContent(database: Database.Database, householdId: string,
   const relationshipTypes = database
     .prepare('SELECT * FROM relationship_type WHERE householdId = ? ORDER BY id')
     .all(householdId) as RelationshipType[];
-  for (const type of relationshipTypes) {
-    const row = database
-      .prepare('SELECT forwardLabel, reverseLabel FROM relationship_type_labels WHERE typeId = ?')
-      .get(type.id) as { forwardLabel: string; reverseLabel: string } | undefined;
-    if (row) Object.assign(type, row);
-  }
   const ownerId = contentOwner(database, householdId, actorId);
   const drafts = (
     database

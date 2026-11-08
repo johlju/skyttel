@@ -28,14 +28,18 @@ export async function prepareObjectSearch(client: APIRequestContext, origin: str
     value: {
       name: 'Endast i sambandet',
       description: '',
-      forwardLabel: 'går till',
-      reverseLabel: 'kommer från',
     },
   });
   await prepared.post('relationship', {
     id: 'search-relationship',
     baseRevision: null,
-    value: { sourceId: 'table-0', targetId: 'unicode-object', typeId: 'search-relationship-type' },
+    value: {
+      sourceId: 'table-0',
+      targetId: 'unicode-object',
+      typeId: 'search-relationship-type',
+      verb: 'går till',
+      reverseVerb: 'kommer från',
+    },
   });
   return prepared;
 }

@@ -8,6 +8,8 @@ objekt-, sambands- eller typförslag får finnas.
 Fältet Sista fyra kan vara dolt i formuläret när det saknar sektion;
 förberedelsen ger därför dess värden genom det publika HTTP-gränssnittet.
 Försök inte skriva i ett fält som gränssnittet inte visar.
+Förberedelsen anger **Inloggningsadress** och **Betalar** som fria verb på
+de enskilda sambanden, separat från deras typer.
 
 **Före starten av den interaktiva installationen**, när ingen annan
 bygg- eller testprocess äger det gemensamma låset, kör operatören följande

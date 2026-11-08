@@ -42,7 +42,7 @@ export async function prepareMapExploration(
     await post('relationship', {
       id,
       baseRevision: null,
-      value: { typeId: initial.relationshipTypes[0].id, sourceId, targetId },
+      value: { typeId: initial.relationshipTypes[0].id, verb: 'Använder', sourceId, targetId },
     });
   }
   await post('save', { operationId: 'initial' });
@@ -75,7 +75,13 @@ export async function prepareMapExploration(
       await post('relationship', {
         id,
         baseRevision: null,
-        value: { sourceId: 'alex', targetId, typeId: state.relationshipTypes[0].id, lifecycle },
+        value: {
+          sourceId: 'alex',
+          targetId,
+          typeId: state.relationshipTypes[0].id,
+          verb: 'Använder',
+          lifecycle,
+        },
       });
     }
     await post('save', { operationId: 'lifecycle' });

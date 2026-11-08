@@ -1,5 +1,12 @@
 import type { PendingPart } from '../../src/shared/text-assistant.js';
-import type { Attempt, Expected, JudgeInput, JudgeResult } from './types.js';
+import type { Attempt, Expected, JudgeInput, JudgeResult, NamedRelationship } from './types.js';
+
+export const relationshipWordingRequirement =
+  'Assess every observedState.expected.relationships entry with verbMeaning against the complete observed map. ' +
+  'The chosen edge wording, its actual endpoints and direction must express that independently declared role. ' +
+  'A different category or a natural verb phrase is valid; a reversed phrase must still express the same role. ' +
+  'A neutral or unrelated phrase alone does not prove a login, contact, ownership or other specified role. ' +
+  'Fixed endpoint checks do not establish this semantic fact. Judge the recorded state, never a success claim.';
 
 /** Independent semantic obligation; structural pending-state checks alone
  * cannot establish that an unfinished request can safely be continued. */
@@ -27,13 +34,27 @@ export function contentRequirements(
   sources: JudgeInput['sources'],
   requirements: string[],
   expected: Expected,
+  evidence?: Record<string, unknown>,
 ): JudgeInput['requirements'] {
+  const relationships =
+    (evidence?.expected as { relationships?: NamedRelationship[] } | undefined)?.relationships ??
+    [];
+  const semanticWording = relationships.some((edge) => edge.verbMeaning !== undefined);
   return Object.keys(sources).flatMap((source) => [
     ...requirements.map((text, index) => ({
       id: `${source}-${index}`,
       source: source as 'backend' | 'voice',
       text,
     })),
+    ...(semanticWording
+      ? [
+          {
+            id: `${source}-relationship-words`,
+            source: source as 'backend' | 'voice',
+            text: relationshipWordingRequirement,
+          },
+        ]
+      : []),
     ...(expected.preservedRequests?.length
       ? [
           {
@@ -52,7 +73,8 @@ export function checkedContentVerdicts(
   requirements: JudgeInput['requirements'],
   result: JudgeResult,
 ): JudgeResult {
-  if (!requirements.some(({ id }) => id.endsWith('-retention'))) return result;
+  const mandatory = (id: string) => id.endsWith('-retention') || id.endsWith('-relationship-words');
+  if (!requirements.some(({ id }) => mandatory(id))) return result;
   if (
     result.length === requirements.length &&
     requirements.every(({ id }) => result.filter((item) => item.id === id).length === 1)
@@ -60,7 +82,7 @@ export function checkedContentVerdicts(
     return result;
   return requirements.map(({ id }) => {
     const matches = result.filter((item) => item.id === id);
-    return !id.endsWith('-retention') && matches.length === 1
+    return !mandatory(id) && matches.length === 1
       ? matches[0]
       : {
           id,

@@ -378,7 +378,9 @@ test('historical merge reading preserves missing type snapshots, exact object id
   render(<HistoricalMergeDetails merge={merge} />);
   await userEvent.click(screen.getByText('Granskade objekt före sammanslagningen'));
   expect(screen.getByText('Lo · Identitet: lo')).toBeTruthy();
-  expect(screen.getByText(/Lo vid granskningen → missing-edge → Det andra objektet/)).toBeTruthy();
+  expect(
+    screen.getByText(/Lo vid granskningen → har samband med → Det andra objektet/),
+  ).toBeTruthy();
   expect(screen.getAllByText('Typens beskrivning: Ingen beskrivning')).toHaveLength(2);
   expect(
     screen.getByText('Benämning från målobjektet: Visar den ursprungliga riktningen'),

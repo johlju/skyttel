@@ -131,7 +131,7 @@ Separata rader för definitionen i valt och bekräftat resultat bevarar namn,
 beskrivning, riktningar, avsnitt och fält på båda vybredderna.
 [UTKAST-67](drafts.md#utkast-67-återställ-en-borttagen-objekttyp-genom-privat-granskning-och-sparande)
 och
-[UTKAST-140](drafts.md#utkast-140-återställ-en-borttagen-sambandstyp-med-läsbara-riktningar)
+[UTKAST-140](drafts.md#utkast-140-återställ-en-borttagen-sambandstyp-med-läsbar-definition)
 provar definitionstypernas fullständiga värden och verkliga privata
 bekräftelse före separat gemensamt sparande och läsning efter omstart.
 

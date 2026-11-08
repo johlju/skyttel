@@ -869,8 +869,6 @@ test('combined type proposals speak the directed question and retain the verifie
             value: {
               name: 'Delar',
               description: '',
-              forwardLabel: 'delar med',
-              reverseLabel: 'delar med',
             },
           },
         },

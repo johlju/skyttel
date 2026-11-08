@@ -49,10 +49,16 @@ export async function prepareRelationshipSpecialConflict(
   first: APIRequestContext,
   second: APIRequestContext,
   kind: 'removed' | 'duplicate' | 'missing-endpoint' | 'edited-missing-endpoint',
+  verb?: string,
 ) {
   const app = await conflictCollaborators(first, second);
   const state = await app.read();
-  const value = { typeId: state.relationshipTypes[0].id, sourceId: 'lo', targetId: 'service' };
+  const value = {
+    typeId: state.relationshipTypes[0].id,
+    ...(verb === undefined ? {} : { verb }),
+    sourceId: 'lo',
+    targetId: 'service',
+  };
   if (kind === 'removed' || kind === 'edited-missing-endpoint') {
     await app.propose(first, 'relationship', 'mine', value);
     expect((await app.save(first, 'initial-edge')).status()).toBe(200);
@@ -83,6 +89,7 @@ export async function prepareOwnRemovalConflict(
   first: APIRequestContext,
   second: APIRequestContext,
   scenario: 'facts' | 'connections' | 'facts-and-connections' = 'facts',
+  verb?: string,
 ) {
   const app = await conflictCollaborators(first, second);
   const initial = await app.read();
@@ -96,6 +103,7 @@ export async function prepareOwnRemovalConflict(
   if (scenario !== 'facts')
     await app.propose(second, 'relationship', 'new-edge', {
       typeId: initial.relationshipTypes[0].id,
+      ...(verb === undefined ? {} : { verb }),
       sourceId: 'lo',
       targetId: 'service',
     });

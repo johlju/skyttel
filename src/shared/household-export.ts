@@ -22,4 +22,4 @@ export type ReadyExport = {
 export const exportLifetimeMs = 10 * 60 * 1000;
 
 /** Advance when the household archive schema changes, independently of installation migrations. */
-export const householdArchiveSchemaVersion = 38;
+export const householdArchiveSchemaVersion = 40;

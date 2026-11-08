@@ -47,8 +47,8 @@ inloggad. Samma e-postadress kopplar inte ihop dem automatiskt.
 Ett **objekt** är något som hushållet vill hålla reda på, exempelvis en
 person, ett tjänstekonto eller en cykel. **Objekttypen** beskriver vilken
 sorts objekt det är. Ett **samband** kopplar ihop två objekt, till exempel
-att en person använder cykeln. **Sambandstypen** beskriver kopplingens
-betydelse och riktning.
+att en person använder cykeln. Sambandets fria **Verb** beskriver kopplingen
+i dess riktning. **Sambandstypen** är en separat gruppering.
 
 En person i kartan behöver inte använda Skyttel. Att lägga till personen
 ger ingen inloggning. En **Skyttel-användare** är någon som själv loggar in

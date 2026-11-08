@@ -5,6 +5,11 @@ samtidiga detaljer och nypzoom med styrplatta.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 Fysiska enheter och skärmläsare provas och redovisas separat.
 
+När förberedelsen anger ett samband som **A → verb → B**, skriv den
+angivna mittdelen i **Verb** på det enskilda sambandet. Välj den angivna
+sambandstypen separat. När ett steg ändrar både typen och formuleringen,
+ändra också **Verb** uttryckligen.
+
 ## Konfigurerade användare
 
 Alex Exempel är inloggad medlem i ett separat provhushåll. Använd endast

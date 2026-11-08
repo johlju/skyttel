@@ -17,11 +17,9 @@ function openReferenceScene() {
       { id: 'far', x: 100, y: 0, z: 0, version: 1 },
     ],
   );
-  // A saved schema38 preference must no longer opt into camera compensation.
   const choices = {
     ...defaultViewSettings,
     zeroReferenceAlwaysVisible: true,
-    zeroReferenceKeepSize: true,
   };
   scene.configure(choices);
   // The existing jsdom boundary substitutes only WebGL. Observe the scalar

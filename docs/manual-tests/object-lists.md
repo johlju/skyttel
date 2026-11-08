@@ -6,6 +6,11 @@ visa en vald träff i kartan.
 Läsdialogerna låter användaren följa samband och gå tillbaka utan kartgrafik.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 
+När förberedelsen anger ett samband som **A → verb → B**, skriv den
+angivna mittdelen i **Verb** på det enskilda sambandet. Välj den angivna
+sambandstypen separat. När ett steg ändrar både typen och formuleringen,
+ändra också **Verb** uttryckligen.
+
 ## Konfigurerade användare
 
 Använd **Alex Exempel** med tillgång till testhushållet. Provkartan och

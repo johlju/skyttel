@@ -278,8 +278,6 @@ test('a rejected whole-draft check preserves both earlier proposals and the appl
     value: {
       name: 'Förvaras',
       description: '',
-      forwardLabel: 'förvaras i',
-      reverseLabel: 'innehåller',
     },
   });
   await stage('relationship', {

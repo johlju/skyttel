@@ -93,17 +93,17 @@ export async function prepareHouseholdReading(
       value: {
         name,
         description: '',
-        forwardLabel: name.toLocaleLowerCase('sv'),
-        reverseLabel:
-          id === 'uses'
-            ? 'används av'
-            : id === 'storage'
-              ? 'förvarar'
-              : name.toLocaleLowerCase('sv'),
       },
     });
   for (const [id, typeId, sourceId, targetId, certainty, extra] of [
-    ['alex-bike', 'uses', 'alex', 'bike', 'Bekräftat', {}],
+    [
+      'alex-bike',
+      'uses',
+      'alex',
+      'bike',
+      'Bekräftat',
+      { verb: 'använder', reverseVerb: 'används av' },
+    ],
     [
       'bike-garage',
       'storage',
@@ -111,6 +111,8 @@ export async function prepareHouseholdReading(
       'garage',
       'Osäkert uppgivet',
       {
+        verb: 'förvaras i',
+        reverseVerb: 'förvarar',
         lifecycle: 'ended',
         properties: [
           {
@@ -123,8 +125,22 @@ export async function prepareHouseholdReading(
         ],
       },
     ],
-    ['bike-none', 'none', 'bike', 'bike', 'Uttryckligen inget', {}],
-    ['bike-unknown', 'unknown', 'bike', 'bike', 'Okänt', {}],
+    [
+      'bike-none',
+      'none',
+      'bike',
+      'bike',
+      'Uttryckligen inget',
+      { verb: 'har ingen', reverseVerb: 'har ingen' },
+    ],
+    [
+      'bike-unknown',
+      'unknown',
+      'bike',
+      'bike',
+      'Okänt',
+      { verb: 'okänd koppling', reverseVerb: 'okänd koppling' },
+    ],
   ] as const)
     await post('relationship', {
       id,

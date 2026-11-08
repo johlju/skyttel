@@ -1,5 +1,6 @@
 import type { SaveReceipt } from '../shared/map.js';
 import { relationshipLabel } from '../shared/relationship-label.js';
+import { relationshipReverseVerb, relationshipVerb } from '../shared/relationship-verb.js';
 import { HistoricalProperties } from './HistoricalProperties.js';
 import { LifecycleDetails } from './Lifecycle.js';
 import { ProfileImage } from './ProfileImage.js';
@@ -46,10 +47,10 @@ export function HistoricalMergeDetails({
               )}
             </p>
             <p>Typens beskrivning: {type?.description || 'Ingen beskrivning'}</p>
-            <p>Benämning från startobjektet: {type?.forwardLabel || type?.name}</p>
+            <p>Benämning från startobjektet: {relationshipVerb(edge)}</p>
             <p>
               Benämning från målobjektet:{' '}
-              {type?.reverseLabel || 'Visar den ursprungliga riktningen'}
+              {relationshipReverseVerb(edge) || 'Visar den ursprungliga riktningen'}
             </p>
             <p>
               Identitet: {edge.id}. Från {edge.sourceId} till {edge.targetId}.

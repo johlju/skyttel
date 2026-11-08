@@ -136,7 +136,7 @@ Efter UI-fallets nästa text, eller röstfallets kontrollerade `user` och
 <!-- markdownlint-disable MD013 -->
 ```text
 tool REQUEST propose_object {"version":V,"contentVersion":C,"id":"PERSON","baseRevision":null,"typeRevision":PR,"value":{"typeId":"PERSON_TYPE","name":"Kim Exempel"}}
-tool REQUEST propose_relationship {"version":V,"contentVersion":C,"id":"EDGE","baseRevision":null,"typeRevision":RR,"value":{"typeId":"PAYMENT_TYPE","sourceId":"PERSON","targetId":"SUB"}}
+tool REQUEST propose_relationship {"version":V,"contentVersion":C,"id":"EDGE","baseRevision":null,"typeRevision":RR,"value":{"typeId":"PAYMENT_TYPE","verb":"Betalar","sourceId":"PERSON","targetId":"SUB"}}
 reply REQUEST Kim Exempel betalar Familjens Molnmusik. Förslagen är fortfarande privata.
 ```
 <!-- markdownlint-enable MD013 -->

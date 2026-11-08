@@ -8,6 +8,11 @@ emulerad inmatning samt godkänt eller underkänt resultat vid körning.
 Redovisa fysiska enhetsprov och hjälpmedelsprov separat enligt
 [resultatguiden](README.md#ansvar-och-delade-resultat).
 
+När förberedelsen anger ett samband som **A → verb → B**, skriv den
+angivna mittdelen i **Verb** på det enskilda sambandet. Välj den angivna
+sambandstypen separat. När ett steg ändrar både typen och formuleringen,
+ändra också **Verb** uttryckligen.
+
 ## Konfigurerade användare
 
 Alex Exempel är inloggad medlem i ett separat provhushåll. Använd bara

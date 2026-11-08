@@ -8,6 +8,7 @@ import type {
 } from '../shared/map.js';
 import { objectIconLabel } from '../shared/object-icons.js';
 import { propertyDifferences } from '../shared/properties.js';
+import { relationshipVerb } from '../shared/relationship-verb.js';
 import type { TextAssistantResult, TextAssistantReview } from '../shared/text-assistant.js';
 
 function lifecycle(value: RelationshipValue['lifecycle']) {
@@ -40,11 +41,6 @@ function typeDetails(
     ...(before && after ? difference('namn', before.name, after.name) : []),
     ...difference('beskrivning', description(before?.description), description(after?.description)),
   ];
-  for (const [key, label] of [
-    ['forwardLabel', 'Framåtriktning'],
-    ['reverseLabel', 'Omvänd riktning'],
-  ] as const)
-    fields.push(...difference(label, description(before?.[key]), description(after?.[key])));
   return fields;
 }
 
@@ -109,11 +105,7 @@ function details(
       value.relationshipTypes?.find((type) => type.before?.id === change.before?.typeId)?.before ??
       current?.relationshipTypes.find((type) => type.id === change.before?.typeId) ??
       (change.type.id === change.before?.typeId ? change.type : undefined);
-    const describe = (
-      relationship: RelationshipValue,
-      type: RelationshipType | undefined,
-      side: 'before' | 'after',
-    ) => {
+    const describe = (relationship: RelationshipValue, side: 'before' | 'after') => {
       const objectName = (id: string) => {
         const object = value.changes.find(
           (item) => ('id' in item ? item.id : (item.before?.id ?? item.after?.id)) === id,
@@ -122,12 +114,10 @@ function details(
       };
       const source = objectName(relationship.sourceId);
       const target = objectName(relationship.targetId);
-      return `${source} ${type?.forwardLabel ?? type?.name ?? 'okänd sambandstyp'} ${target}`;
+      return `${source} ${relationshipVerb(relationship)} ${target}`;
     };
-    const beforeDescription = change.before ? describe(change.before, beforeType, 'before') : '';
-    const afterDescription = change.after
-      ? describe(change.after, change.type, 'after')
-      : beforeDescription;
+    const beforeDescription = change.before ? describe(change.before, 'before') : '';
+    const afterDescription = change.after ? describe(change.after, 'after') : beforeDescription;
     const description =
       beforeDescription && beforeDescription !== afterDescription
         ? `${beforeDescription} → ${afterDescription}`

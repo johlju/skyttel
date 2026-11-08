@@ -43,8 +43,6 @@ const edgeType: RelationshipType = {
   revision: 1,
   name: 'Använder',
   description: '',
-  forwardLabel: 'använder',
-  reverseLabel: 'används av',
 };
 const alex: MapObject = {
   id: 'alex',
@@ -70,6 +68,7 @@ const edge: MapRelationship = {
   typeId: 'uses',
   sourceId: 'alex',
   targetId: 'bike',
+  verb: 'använder',
 };
 function household(): MapState {
   return {
@@ -168,6 +167,7 @@ test('combined object and relationship choices validate actual types and endpoin
       ...edge,
 
       targetId: 'bike',
+      verb: 'använder',
     }),
   ).toBe('');
   for (const update of [{ targetId: null }, { targetId: null }, { targetId: null }])
@@ -366,13 +366,13 @@ test('own removal explains actual actor or new incident edges and keeps unnamed 
       current: bike,
       connections: [edge],
     })[1].saved,
-  ).toBe('alex har samband med Ej uppgivet');
+  ).toBe('alex använder Ej uppgivet');
   expect(
     conflictRemovalProperties(
-      { ...missingNames, relationshipTypes: [{ ...edgeType, forwardLabel: undefined }] },
+      { ...missingNames, relationshipTypes: [edgeType] },
       { kind: 'object', id: 'bike', current: bike, connections: [edge] },
     )[1].saved,
-  ).toBe('alex Använder Ej uppgivet');
+  ).toBe('alex använder Ej uppgivet');
   expect(
     conflictRemovalProperties(state, {
       kind: 'object',

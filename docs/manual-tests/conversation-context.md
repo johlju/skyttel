@@ -2246,7 +2246,7 @@ batchsvaret efter genomförandet och verifierar samma utfall efter omstart.
       "suite": "server",
       "spec": "tests/unit/server/conversation-resume-http.test.ts",
       "title": "a new request after reopening an active crash image waits for earlier retained work before that conversation is loaded",
-      "purpose": "En aktiv databasavbild från före uppgraderingen återöppnas. Senare arbete på en annan enhet får inte gå före äldre ännu oläst arbete."
+      "purpose": "En aktiv databasavbild med aktuell struktur återöppnas. Senare arbete på en annan enhet får inte gå före äldre ännu oläst arbete."
     },
     {
       "kind": "technical",

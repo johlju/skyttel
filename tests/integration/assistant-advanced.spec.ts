@@ -316,11 +316,15 @@ test('MCP-03: typbyte bevarar riktade samband och äldre typers läsbara histori
       value: {
         name: 'Förvaring',
         description: 'Sakens plats',
-        forwardLabel: 'förvaras i',
-        reverseLabel: 'innehåller',
       },
     });
-    const edge = { typeId: 'stored', sourceId: 'bike', targetId: 'garage' };
+    const edge = {
+      typeId: 'stored',
+      verb: 'förvaras i',
+      reverseVerb: 'innehåller',
+      sourceId: 'bike',
+      targetId: 'garage',
+    };
     await mcp.propose('propose_relationship', { id: 'parking', baseRevision: null, value: edge });
     const repeated = await mcp.propose('propose_relationship', {
       id: 'duplicate',
@@ -332,7 +336,12 @@ test('MCP-03: typbyte bevarar riktade samband och äldre typers läsbara histori
     await mcp.propose('propose_relationship', {
       id: 'second-kind',
       baseRevision: null,
-      value: { ...edge, typeId: catalog.relationshipTypes[0].id },
+      value: {
+        ...edge,
+        typeId: catalog.relationshipTypes[0].id,
+        verb: 'Använder',
+        reverseVerb: 'Används av',
+      },
     });
     await mcp.save('cycle-with-edges');
     const initial = await mcp.tool('read_map', { objectId: 'bike' });

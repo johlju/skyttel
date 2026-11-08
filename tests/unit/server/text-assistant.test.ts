@@ -3,6 +3,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { conversationCompletion } from '../../../src/client/conversation-completion.js';
 import type { TextModelAttempt, TextModelUsage } from '../../../src/server/text-assistant-model.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
+import { controlledBatchDelivery } from '../../support/batch-response-delivery.js';
 import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation, robin } from '../../support/installation.js';
@@ -967,6 +968,84 @@ test('a requested description replaces its current draft value while existing un
   );
 });
 
+test('a checked first-party batch keeps a free verb without requiring a relationship category', async () => {
+  const phrase = 'Familjens webbplats använder Driftplattformen. Spara inte.';
+  const model = textModel(
+    (request) => {
+      const current = JSON.parse(
+        String(request.input.findLast((item) => item.role === 'user')?.content),
+      );
+      return [
+        modelTool('submit_changes', {
+          version: current.draft.version,
+          contentVersion: current.draft.contentVersion,
+          completion: 'draft',
+          operations: [
+            {
+              name: 'propose_relationship',
+              arguments: {
+                id: 'free-site-link',
+                baseRevision: null,
+                value: { sourceId: 'site', targetId: 'hosting', verb: 'använder' },
+              },
+            },
+          ],
+        }),
+      ];
+    },
+    (request) => {
+      if (request.instructions.startsWith('SKYTTEL_TURN_SCOPE'))
+        return [
+          modelMessage(JSON.stringify({ mode: 'work', request: phrase, responseRequired: false })),
+        ];
+      const input = JSON.parse(String(request.input[0].content));
+      expect(input.untrusted.operations[0].arguments.value).toEqual({
+        sourceId: 'site',
+        targetId: 'hosting',
+        verb: 'använder',
+      });
+      return [
+        modelMessage(JSON.stringify({ decision: 'allow', complete: true, fulfillsRequest: true })),
+      ];
+    },
+  );
+  await setup(model.provider);
+  const mapPath = path.replace('/text-assistant', '/map');
+  for (const [id, name, kind] of [
+    ['site', 'Familjens webbplats', 'Tjänst'],
+    ['hosting', 'Driftplattformen', 'Företag'],
+  ]) {
+    const map = await (await browser.get(mapPath)).json();
+    const response = await browser.post(`${mapPath}/draft`, {
+      headers: { origin: app.origin },
+      data: {
+        version: map.draft.version,
+        contentVersion: map.contentVersion,
+        id,
+        baseRevision: null,
+        value: { name, typeId: map.types.find((type: { name: string }) => type.name === kind).id },
+      },
+    });
+    expect(response.status()).toBe(200);
+  }
+  const result = await message(await start(), phrase);
+  expect(result.error).toBeUndefined();
+  expect(result.review.relationships).toMatchObject([
+    {
+      id: 'free-site-link',
+      type: { name: 'Samband' },
+      after: { sourceId: 'site', targetId: 'hosting', verb: 'använder' },
+    },
+  ]);
+  expect(result.review.relationships?.[0].after?.reverseVerb).toBeUndefined();
+  expect(result.receipt).toBeUndefined();
+  expect(
+    model.authorizationRequests.some((request) =>
+      request.instructions.startsWith('SKYTTEL_TURN_ACTIONS'),
+    ),
+  ).toBe(true);
+});
+
 test.each([false, true])(
   'current household relationship meanings and explicit type choices remain available during writes: explicit=%s',
   async (explicit) => {
@@ -1000,7 +1079,7 @@ test.each([false, true])(
     await webProposal('Verktygslådan', 'toolbox');
     await webProposal('Garaget', 'garage');
     const mapPath = path.replace('/text-assistant', '/map');
-    for (const [id, name, description, forwardLabel, reverseLabel] of [
+    for (const [id, name, description] of [
       [
         'connected',
         'Kopplad till',
@@ -1024,7 +1103,7 @@ test.each([false, true])(
           contentVersion: state.contentVersion,
           id,
           baseRevision: null,
-          value: { name, description, forwardLabel, reverseLabel },
+          value: { name, description },
         },
       });
       expect(response.status()).toBe(200);
@@ -1473,8 +1552,6 @@ test.each(['delete', 'restore', 'restore-object-type', 'restore-relationship-typ
         value: {
           name: 'Användning i testet',
           description: 'Ett samband med uttryckliga benämningar.',
-          forwardLabel: 'Använder',
-          reverseLabel: 'Används av',
         },
       });
     }
@@ -1500,12 +1577,7 @@ test.each(['delete', 'restore', 'restore-object-type', 'restore-relationship-typ
       const value = {
         name,
         description,
-        ...(object
-          ? {}
-          : {
-              forwardLabel: definition.forwardLabel,
-              reverseLabel: definition.reverseLabel,
-            }),
+        ...(object ? {} : {}),
       };
       typeRestoration = {
         name: object ? 'propose_object_type' : 'propose_relationship_type',
@@ -1536,6 +1608,123 @@ test.each(['delete', 'restore', 'restore-object-type', 'restore-relationship-typ
       },
     ]);
     expect(result.receipt).toBeUndefined();
+  },
+);
+
+test.each([
+  ['omitted', 'draft', 'delivered'],
+  ['omitted', 'saved', 'delivered'],
+  ['explicit', 'draft', 'delivered'],
+  ['explicit', 'saved', 'delivered'],
+  ['omitted', 'saved', 'lost'],
+  ['explicit', 'saved', 'lost'],
+  ['omitted', 'saved', 'wrong-identity'],
+  ['explicit', 'saved', 'wrong-identity'],
+])(
+  'a repeated relationship with %s grouping selects its own verb in the %s with %s delivery',
+  async (grouping, location, deliveryMode) => {
+    let typeId: string | undefined;
+    let expectedToolResult: Record<string, unknown> | undefined;
+    let toolResult: unknown;
+    const model = textModel((request) => {
+      const current = JSON.parse(
+        String(request.input.findLast((item) => item.role === 'user')?.content),
+      );
+      if (!lastToolResult(request)) {
+        expectedToolResult = { ...current.draft, existingId: 'z-depends' };
+        return [
+          modelTool('propose_relationship', {
+            id: 'repeated-depends',
+            baseRevision: null,
+            version: current.draft.version,
+            contentVersion: current.draft.contentVersion,
+            value: {
+              ...(typeId ? { typeId } : {}),
+              sourceId: 'vehicle',
+              targetId: 'charger',
+              verb: 'är beroende av',
+            },
+          }),
+        ];
+      }
+      toolResult = lastToolResult(request);
+      return [modelMessage('Sambandet finns redan.')];
+    });
+    const delivery = controlledBatchDelivery();
+    await setup(model.provider, undefined, async (incoming, dispatch) => {
+      if (deliveryMode === 'lost') return delivery.dispatch(incoming, dispatch);
+      const rpc = await incoming
+        .clone()
+        .json()
+        .catch(() => null);
+      const response = await dispatch(incoming);
+      if (deliveryMode !== 'wrong-identity' || rpc?.params?.name !== 'apply_draft_batch')
+        return response;
+      const envelope = await response.json();
+      const value = JSON.parse(envelope.result.content[0].text);
+      value.applied[0].result.existingId = 'a-uses';
+      envelope.result.content[0].text = JSON.stringify(value);
+      return Response.json(envelope, { status: response.status, headers: response.headers });
+    });
+    await webProposal('Bilen', 'vehicle');
+    await webProposal('Laddtjänsten', 'charger');
+    const mapPath = path.replace('/text-assistant', '/map');
+    let map = await (await browser.get(mapPath)).json();
+    if (grouping === 'explicit') typeId = map.relationshipTypes[0].id;
+    for (const [id, verb] of [
+      ['a-uses', 'använder'],
+      ['z-depends', 'är beroende av'],
+    ]) {
+      const response = await browser.post(`${mapPath}/relationship`, {
+        headers: { origin: app.origin },
+        data: {
+          version: map.draft.version,
+          contentVersion: map.contentVersion,
+          id,
+          baseRevision: null,
+          value: {
+            ...(typeId ? { typeId } : {}),
+            sourceId: 'vehicle',
+            targetId: 'charger',
+            verb,
+          },
+        },
+      });
+      expect(response.status(), await response.text()).toBe(200);
+      map = await (await browser.get(mapPath)).json();
+    }
+    if (location === 'saved') {
+      const saved = await browser.post(`${mapPath}/save`, {
+        headers: { origin: app.origin },
+        data: {
+          version: map.draft.version,
+          contentVersion: map.contentVersion,
+          operationId: 'seed-relationships',
+        },
+      });
+      expect(saved.status(), await saved.text()).toBe(200);
+    }
+    const before = await (await browser.get(mapPath)).json();
+    if (deliveryMode === 'lost') delivery.arm();
+    const result = await message(
+      await start(),
+      'Bilen är beroende av Laddtjänsten. Behåll det sambandet och spara inte.',
+    );
+    if (deliveryMode === 'wrong-identity') {
+      expect(result.error).toBe('assistant_batch_committed_changed');
+      expect(model.requests).toHaveLength(1);
+    } else {
+      expect(result.error).toBeUndefined();
+      expect(result.phase).toBe('ready');
+      expect(model.requests).toHaveLength(2);
+      expect(expectedToolResult).toBeDefined();
+      expect(toolResult).toEqual(expectedToolResult);
+    }
+    expect(result.review.version).toBe(before.draft.version);
+    expect(result.receipt).toBeUndefined();
+    const after = await (await browser.get(mapPath)).json();
+    expect(after.draft).toEqual(before.draft);
+    expect(after.relationships).toEqual(before.relationships);
   },
 );
 
@@ -3065,7 +3254,7 @@ test.each(['draft', 'latest_save'])(
     await propose('relationship', {
       id: 'alex-tonrum',
       baseRevision: null,
-      value: { ...relationship, typeId: usageType.id },
+      value: { ...relationship, typeId: usageType.id, verb: 'Använder' },
     });
     await propose('save', { operationId: 'baseline' });
     await propose('draft', {
@@ -3076,7 +3265,7 @@ test.each(['draft', 'latest_save'])(
     await propose('relationship', {
       id: 'alex-tonrum',
       baseRevision: 1,
-      value: { ...relationship, typeId: paymentType.id },
+      value: { ...relationship, typeId: paymentType.id, verb: 'Betalar' },
     });
     if (source === 'latest_save') await propose('save', { operationId: 'correction' });
 

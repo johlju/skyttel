@@ -306,13 +306,15 @@ Föreslå `garage`, Garaget, med en annan aktuell typ från katalogen och
 utan egenskaper. Skapa sambandstypen `stored` med följande värde:
 
 ```json
-{"name":"Förvaring","description":"Sakens plats","forwardLabel":"förvaras i","reverseLabel":"innehåller"}
+{"name":"Förvaring","description":"Sakens plats"}
 ```
 
-Föreslå `parking` med typ `stored`, `sourceId: "bike"` och
-`targetId: "garage"`. Föreslå samma fulla värde med nytt ID `duplicate`;
+Föreslå `parking` med typ `stored`, `verb: "förvaras i"`,
+`reverseVerb: "innehåller"`, `sourceId: "bike"` och `targetId: "garage"`.
+Föreslå samma fulla värde med nytt ID `duplicate`;
 befintligt samband ska återanvändas. Föreslå också `second-kind` mellan
-samma objekt med en annan aktuell sambandstyp. Granska och spara.
+samma objekt med en annan aktuell sambandstyp, `verb: "Använder"` och
+`reverseVerb: "Används av"`. Granska och spara.
 
 Behåll objektets och båda sambandens identiteter. Läs cykelns aktuella
 revision och föreslå samma objekt med `typeId: "vehicle"` och egenskapen:

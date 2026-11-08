@@ -100,14 +100,9 @@ export function assistantStartDraft(
   for (const change of relationships ?? [])
     for (const value of [change.before, change.after])
       if (value) for (const id of [value.sourceId, value.targetId, value.typeId]) ids.add(id);
-  const selected = (value: {
-    id: string;
-    name?: string;
-    forwardLabel?: string;
-    reverseLabel?: string;
-  }) =>
+  const selected = (value: { id: string; name?: string }) =>
     ids.has(value.id) ||
-    [value.name, value.forwardLabel, value.reverseLabel].some(
+    [value.name].some(
       (label) =>
         label &&
         (mentioned(value.id, label) ||

@@ -550,7 +550,6 @@ test.each(['object', 'relationship'] as const)(
     const value = {
       name: 'Private meaning',
       description: 'Private explanation',
-      ...(kind === 'relationship' ? { forwardLabel: 'links', reverseLabel: 'linked' } : {}),
     };
     expect((await definition(route, type.id, value, other)).status).toBe(200);
     const pending = (await read(other)).draft;
@@ -792,7 +791,6 @@ test.each(['object', 'relationship'] as const)(
     const value = {
       name: 'New meaning',
       description: '',
-      ...(kind === 'relationship' ? { forwardLabel: 'connects', reverseLabel: 'connected' } : {}),
     };
     expect(
       (
@@ -858,8 +856,6 @@ test.each(['object-type', 'relationship-type'] as const)(
         : {
             name: 'Senare namn',
             description: type.description,
-            forwardLabel: 'binder',
-            reverseLabel: 'hör till',
           };
     expect((await definition(kind, type.id, value, other)).status).toBe(200);
     await save('concurrent-definition', other);
@@ -898,10 +894,7 @@ test.each(['object-type', 'relationship-type'] as const)(
 test.each(['object-type', 'relationship-type'] as const)(
   '%s removal cancels an unused new definition without creating a tombstone or deleting other work',
   async (kind) => {
-    const value =
-      kind === 'object-type'
-        ? { name: 'Egen typ', description: '' }
-        : { name: 'Egen typ', description: '', forwardLabel: 'binder', reverseLabel: 'hör till' };
+    const value = { name: 'Egen typ', description: '' };
     expect((await definition(kind, 'new-type', value)).status).toBe(200);
     await object('independent', (await read()).types[0].id);
     expect((await definition(kind, 'new-type', null)).status).toBe(200);
@@ -928,7 +921,6 @@ test.each(['object-type', 'relationship-type'] as const)(
     const value = {
       name: 'Unfinished type',
       description: '',
-      ...(kind === 'relationship-type' ? { forwardLabel: 'links', reverseLabel: 'linked' } : {}),
     };
     expect((await definition(kind, 'new-type', value)).status).toBe(200);
     if (kind === 'object-type') await object('new-content', 'new-type');
@@ -954,7 +946,6 @@ test.each(['object-type', 'relationship-type'] as const)(
     const defined = {
       name: 'Egen typ',
       description: '',
-      ...(kind === 'relationship-type' ? { forwardLabel: 'binder', reverseLabel: 'hör till' } : {}),
     };
     expect((await definition(kind, 'shared-type', defined)).status).toBe(200);
     await save('define-type');

@@ -31,8 +31,6 @@ test('a lost mixed-property save reply replays the exact atomic history and rece
     const relationshipType = {
       name: 'Stödjer',
       description: 'Hjälp vid odling',
-      forwardLabel: 'stödjer',
-      reverseLabel: 'stöds av',
     };
     await fixture.post('object-type', { id: 'plant', baseRevision: null, value: objectType });
     await fixture.post('relationship-type', {
@@ -46,6 +44,8 @@ test('a lost mixed-property save reply replays the exact atomic history and rece
       typeId: 'support',
       sourceId: 'alex',
       targetId: 'rose',
+      verb: 'stödjer',
+      reverseVerb: 'stöds av',
 
       properties,
     };
@@ -75,7 +75,7 @@ test('a lost mixed-property save reply replays the exact atomic history and rece
     await fixture.post('relationship-type', {
       id: 'support',
       baseRevision: 1,
-      value: { ...relationshipType, forwardLabel: 'vårdar', reverseLabel: 'vårdas av' },
+      value: { ...relationshipType, description: 'Uppdaterad hjälp vid odling' },
     });
     const pending = await fixture.read();
     const body = {
@@ -125,7 +125,7 @@ test('a lost mixed-property save reply replays the exact atomic history and rece
         before: { sourceId: 'alex', targetId: 'rose', properties },
         after: { sourceId: 'alex', targetId: 'alex', properties: changed, revision: 2 },
         beforeType: relationshipType,
-        type: { forwardLabel: 'vårdar', reverseLabel: 'vårdas av' },
+        type: { description: 'Uppdaterad hjälp vid odling' },
         objectNames: { alex: 'Alex', rose: 'Rosen' },
       },
     ]);

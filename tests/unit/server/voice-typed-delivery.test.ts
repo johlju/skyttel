@@ -472,8 +472,6 @@ const sharesTypeProposal = {
     value: {
       name: 'Delar',
       description: '',
-      forwardLabel: 'delar med',
-      reverseLabel: 'delar med',
     },
   },
 };

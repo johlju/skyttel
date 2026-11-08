@@ -27,6 +27,7 @@ test.each(['another-owner', 'replaced-content', 'another-attempt', 'missing-proo
     ];
     const value: RelationshipValue = {
       typeId: 'uses',
+      verb: 'använder',
       sourceId: 'alex-umea',
       targetId: 'music',
       properties: [

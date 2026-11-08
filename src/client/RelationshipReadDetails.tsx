@@ -1,5 +1,6 @@
 import type { MapObject, RelationshipType, RelationshipValue } from '../shared/map.js';
 import { propertyValueText } from '../shared/properties.js';
+import { relationshipReverseVerb, relationshipVerb } from '../shared/relationship-verb.js';
 import { lifecycleText } from './read-field-values.js';
 import { SavedPropertyOrder } from './SavedPropertyOrder.js';
 
@@ -21,8 +22,11 @@ export function relationshipPropertyValues(
           'Objektet finns inte längre',
       },
     ],
-    ['direction', { label: 'Riktning', value: type?.forwardLabel ?? type?.name ?? 'Ej uppgivet' }],
-    ['reverse', { label: 'Omvänd riktning', value: type?.reverseLabel || 'Ej uppgivet' }],
+    ['direction', { label: 'Riktning', value: relationshipVerb(value) }],
+    [
+      'reverse',
+      { label: 'Omvänd riktning', value: relationshipReverseVerb(value) || 'Ej uppgivet' },
+    ],
     [
       'target',
       {

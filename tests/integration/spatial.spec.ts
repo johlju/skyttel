@@ -234,6 +234,7 @@ test('RYMD-02: focus, filters and camera navigation preserve the shared selectio
         baseRevision: null,
         value: {
           typeId: state.relationshipTypes.find((item) => item.name === 'Använder')?.id,
+          verb: 'Använder',
           sourceId: 'lo',
           targetId: 'music',
         },
@@ -387,6 +388,7 @@ test('RYMD-03: context actions and draft symbols distinguish proposals from save
         baseRevision: null,
         value: {
           typeId: state.relationshipTypes.find((item) => item.name === 'Använder')?.id,
+          verb: 'Använder',
           sourceId: 'lo',
           targetId: 'music',
         },
@@ -605,6 +607,7 @@ test('RYMD-05: labels, keyboard editing and relationship text survive view chang
         baseRevision: null,
         value: {
           typeId: state.relationshipTypes.find((item) => item.name === 'Använder')?.id,
+          verb: 'Använder',
           sourceId: 'lo',
           targetId: 'music',
         },
@@ -919,6 +922,7 @@ test('RYMD-07: ended objects and relationships retain status beside draft symbol
           baseRevision: null,
           value: {
             typeId: state.relationshipTypes.find((item) => item.name === 'Använder')?.id,
+            verb: 'Använder',
             sourceId: 'lo',
             targetId: 'music',
           },
@@ -976,6 +980,7 @@ test('RYMD-07: ended objects and relationships retain status beside draft symbol
       (await read()).draft.relationships?.find((change) => change.after?.sourceId === 'lo')?.after,
     ).toMatchObject({
       typeId: state.relationshipTypes.find((item) => item.name === 'Använder')?.id,
+      verb: 'Använder',
       sourceId: 'lo',
       targetId: 'music',
       lifecycle: 'ended',
@@ -991,6 +996,7 @@ test('RYMD-07: ended objects and relationships retain status beside draft symbol
           baseRevision: null,
           value: {
             typeId: state.relationshipTypes.find((item) => item.name === 'Använder')?.id,
+            verb: 'Använder',
             sourceId: 'lo',
             targetId: 'music',
             lifecycle: 'ended',
@@ -1097,6 +1103,7 @@ test('RYMD-08: focus retains old and proposed relationship endpoints and opens t
         baseRevision: null,
         value: {
           typeId: state.relationshipTypes.find((type) => type.name === 'Betalar')?.id,
+          verb: 'Betalar',
           sourceId: 'lo',
           targetId: 'music',
         },
@@ -1200,6 +1207,7 @@ test('RYMD-09: dense mobile maps offer separate pointer and keyboard targets wit
             baseRevision: null,
             value: {
               typeId: initial.relationshipTypes[0].id,
+              verb: 'Använder',
               sourceId: 'dense-6',
               targetId: 'dense-7',
             },

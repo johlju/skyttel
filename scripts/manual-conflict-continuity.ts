@@ -50,17 +50,23 @@ const preparations = {
   'new-reference': () => prepareConflictReferenceContinuity(page.request, other.request),
   'new-removed-object': () => prepareRemovedObjectConflict(page.request, other.request),
   'new-removed-relationship': () =>
-    prepareRelationshipSpecialConflict(page.request, other.request, 'removed'),
+    prepareRelationshipSpecialConflict(page.request, other.request, 'removed', 'Använder'),
   'new-duplicate': () =>
-    prepareRelationshipSpecialConflict(page.request, other.request, 'duplicate'),
+    prepareRelationshipSpecialConflict(page.request, other.request, 'duplicate', 'Använder'),
   'new-missing-endpoint': () =>
-    prepareRelationshipSpecialConflict(page.request, other.request, 'missing-endpoint'),
+    prepareRelationshipSpecialConflict(page.request, other.request, 'missing-endpoint', 'Använder'),
   'new-edited-missing-endpoint': () =>
-    prepareRelationshipSpecialConflict(page.request, other.request, 'edited-missing-endpoint'),
+    prepareRelationshipSpecialConflict(
+      page.request,
+      other.request,
+      'edited-missing-endpoint',
+      'Använder',
+    ),
   'new-own-removal': () => prepareOwnRemovalConflict(page.request, other.request),
-  'new-connections': () => prepareOwnRemovalConflict(page.request, other.request, 'connections'),
+  'new-connections': () =>
+    prepareOwnRemovalConflict(page.request, other.request, 'connections', 'Använder'),
   'new-combined-removal': () =>
-    prepareOwnRemovalConflict(page.request, other.request, 'facts-and-connections'),
+    prepareOwnRemovalConflict(page.request, other.request, 'facts-and-connections', 'Använder'),
   'new-missing-object-type': () =>
     prepareArchiveConflict(other.request, page.request, 'missing-object-type'),
   'new-missing-relationship-type': () =>
@@ -249,12 +255,6 @@ try {
           baseRevision: null,
           value: {
             name: 'Förfalskat återställningsförslag',
-            ...('forwardLabel' in historicalDefinition
-              ? {
-                  forwardLabel: historicalDefinition.forwardLabel,
-                  reverseLabel: historicalDefinition.reverseLabel,
-                }
-              : {}),
           },
           restoration: { contentVersion: state.contentVersion, definition: historicalDefinition },
         },

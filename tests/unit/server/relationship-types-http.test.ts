@@ -9,8 +9,6 @@ let path: string;
 const definition = {
   name: 'Förvaring',
   description: 'Förvaringsplats',
-  forwardLabel: 'förvaras i',
-  reverseLabel: 'innehåller',
 };
 const read = async (actor = client): Promise<MapState> => (await actor.request(path)).json();
 const post = (route: string, body: unknown, actor = client) => actor.json(`${path}/${route}`, body);
@@ -67,14 +65,31 @@ beforeEach(async () => {
 });
 afterEach(() => fixture.close());
 
-test('type and label validation keeps the private draft unchanged and rejects malformed fields', async () => {
+test('categories contain only a name and description', async () => {
+  const before = await read();
+  expect((await define()).status).toBe(200);
+  expect((await save('category')).status).toBe(200);
+  expect((await read()).relationshipTypes.find((type) => type.id === 'storage')).toEqual({
+    id: 'storage',
+    householdId: before.types[0].householdId,
+    revision: 1,
+    ...definition,
+  });
+  expect((await read()).objects).toEqual(before.objects);
+});
+
+test('category validation keeps the private draft unchanged and rejects malformed fields', async () => {
   const unchanged = await read();
   for (const value of [
     'not a definition',
     [],
     {},
     { ...definition, fields: null },
-    ...['name', 'forwardLabel', 'reverseLabel'].flatMap((key) =>
+    ...['forwardLabel', 'reverseLabel'].map((key) => ({
+      ...definition,
+      [key]: 'otillåten metadata',
+    })),
+    ...['name'].flatMap((key) =>
       [null, ' ', 'x'.repeat(201)].map((invalid) => ({ ...definition, [key]: invalid })),
     ),
     { ...definition, description: null },
@@ -100,8 +115,10 @@ test('type and label validation keeps the private draft unchanged and rejects ma
   expect((await define(definition, 99)).status).toBe(409);
   expect((await edge(null, client, { typeRevision: 99 })).status).toBe(409);
   expect((await edge(null, client, { typeRevision: 1 })).status).toBe(200);
-  expect((await define({ ...definition, reverseLabel: 'rymmer' })).status).toBe(200);
-  expect((await read()).draft.relationships?.[0].type.reverseLabel).toBe('rymmer');
+  expect((await define({ ...definition, description: 'Förvaringens förklaring' })).status).toBe(
+    200,
+  );
+  expect((await read()).draft.relationships?.[0].type.description).toBe('Förvaringens förklaring');
   expect((await read(member)).relationshipTypes.some((type) => type.id === 'storage')).toBe(false);
   expect((await edge(null, member)).status).toBe(400);
   expect((await save('initial')).status).toBe(200);
@@ -109,17 +126,17 @@ test('type and label validation keeps the private draft unchanged and rejects ma
   expect(state.relationships).toHaveLength(1);
   expect(state.relationshipTypes.find((type) => type.id === 'storage')).toMatchObject({
     ...definition,
-    reverseLabel: 'rymmer',
+    description: 'Förvaringens förklaring',
   });
 });
 
-test('explicit type conflict choices preserve independent labels and refresh dependent relationship snapshots', async () => {
+test('explicit type conflict choices preserve independent category metadata and refresh dependent relationship snapshots', async () => {
   await define();
   await edge();
   await save('initial');
   await define({ ...definition, name: 'Min förvaring' }, 1);
   await edge(1);
-  await define({ ...definition, description: 'Ny förklaring', reverseLabel: 'rymmer' }, 1, member);
+  await define({ ...definition, description: 'Ny förklaring' }, 1, member);
   await save('member-definition', member);
   const unchanged = await read();
   expect((await save('stale')).status).toBe(409);
@@ -133,7 +150,6 @@ test('explicit type conflict choices preserve independent labels and refresh dep
   expect((await read()).draft.relationshipTypes?.[0].after).toMatchObject({
     name: 'Min förvaring',
     description: 'Ny förklaring',
-    reverseLabel: 'rymmer',
     revision: 3,
   });
   expect((await save('resolved')).status).toBe(200);
@@ -167,13 +183,11 @@ test('explicit type conflict choices preserve independent labels and refresh dep
   const resolved = history.find((entry: SaveReceipt) => entry.operationId === 'resolved');
   expect(resolved.relationshipTypes[0].before).toMatchObject({
     description: 'Ny förklaring',
-    reverseLabel: 'rymmer',
     revision: 2,
   });
   expect(resolved.relationships[0].type).toMatchObject({
     name: 'Min förvaring',
     description: 'Ny förklaring',
-    reverseLabel: 'rymmer',
     revision: 3,
   });
 });

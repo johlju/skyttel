@@ -8,6 +8,11 @@ modell eller kontrollerad ersättare samt godkänt eller underkänt resultat.
 De länkade integrationstesterna verifierar de kontrollerade flödena.
 Stegen här är stöd för felsökning; automatiken kräver ingen manuell upprepning.
 
+När förberedelsen anger ett samband som **A → verb → B**, skriv den
+angivna mittdelen i **Verb** på det enskilda sambandet. Välj den angivna
+sambandstypen separat. När ett steg ändrar både typen och formuleringen,
+ändra också **Verb** uttryckligen.
+
 ## Konfigurerade användare
 
 - Alex Exempel är administratör i det påhittade hushållet Textprov.
@@ -1424,8 +1429,8 @@ detaljer från kvittot efter ett kort sparbesked.
 **Användare:** Alex i den kontrollerade installationen.
 
 **Förutsättningar:** Lo och Tonrum (Tjänst, Gäller fortfarande) samt deras
-Använder-samband
-är samlat sparade. Terminalen håller modellsvar.
+samband med **Verb: Använder** och **Sambandstyp: Använder** är samlat
+sparade. Terminalen håller modellsvar.
 Datorfönstret är bredare än 700 px.
 Alla uppgifter är påhittade.
 
@@ -1456,9 +1461,10 @@ testfallet “TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitt
 **Steg:**
 
 1. Redigera det sparade sambandet via **Tabell → Samband för Lo Exempel**.
-   Byt Använder till **Betalar**, välj **Lägg i utkastet**, läs bekräftelsen
-   och stäng samband. Redigera Tonrum och välj **Upphört** under
-   **Objektets status**, sedan **Lägg i utkastet och stäng**.
+   Välj **Betalar** under **Sambandstyp** och skriv **Betalar** i **Verb**.
+   Välj **Lägg i utkastet**, läs bekräftelsen och stäng samband. Redigera
+   Tonrum och välj **Upphört** under **Objektets status**, sedan
+   **Lägg i utkastet och stäng**.
 2. Öppna utkastet och läs båda rättelserna innan något senare uppdrag.
    Skicka **Läs upp hela utkastet.** Låt operatören leverera rapporten.
    Läs **Utkast:**, **Tonrum (Gäller: aktuellt → upphört)** och
@@ -1475,7 +1481,7 @@ testfallet “TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitt
 
 - Både det osparade utkastet och det senaste kvittot beskriver den
   verkliga ändringen från aktuellt till upphört och från Använder till
-  Betalar. Förevärdet får inte beskrivas med den nya sambandstypen.
+  Betalar. Förevärdet ska behålla sitt ursprungliga verb och sin sambandstyp.
 - Begärda detaljer visas som Skyttels svar i samtalstexten. Granskningen kräver
   ingen kartmarkering och ändrar eller sparar inga uppgifter.
 - Själva sparandet bekräftas kort. Detaljer ges när de efterfrågas och

@@ -41,11 +41,7 @@ export function draftProposalDescriptors(draft: MapDraft): DraftProposalDescript
       return {
         key: draftProposalKey('relationship', change.id),
         name: value
-          ? relationshipDetails(
-              value,
-              change.type.forwardLabel ?? change.type.name,
-              proposedRelationshipNames(draft, change),
-            )
+          ? relationshipDetails(value, proposedRelationshipNames(draft, change))
           : 'Samband',
         kind: 'Samband' as const,
         change,

@@ -14,61 +14,33 @@ export function relationshipTypes(database: Database.Database, householdId: stri
   const usage = definitionUsage(database, householdId);
   function read(includeRemoved = false): RelationshipType[] {
     return database
-      .prepare(`SELECT t.*, l.forwardLabel, l.reverseLabel FROM relationship_type t
-      LEFT JOIN relationship_type_labels l ON l.typeId = t.id
+      .prepare(`SELECT t.* FROM relationship_type t
       WHERE t.householdId = ? ${includeRemoved ? '' : "AND NOT EXISTS (SELECT 1 FROM removed_type WHERE kind = 'relationshipType' AND typeId = t.id)"} ORDER BY t.name, t.id`)
-      .all(householdId)
-      .map((row) => {
-        const { forwardLabel, reverseLabel, ...type } = row as RelationshipType;
-        return {
-          ...type,
-          ...(forwardLabel ? { forwardLabel } : {}),
-          ...(reverseLabel ? { reverseLabel } : {}),
-        };
-      });
+      .all(householdId) as RelationshipType[];
   }
   function validate(value: unknown) {
     const type = value as Partial<RelationshipType> | null;
     if (
       !type ||
       Object.keys(type).some(
-        (key) =>
-          ![
-            'id',
-            'householdId',
-            'revision',
-            'name',
-            'description',
-            'forwardLabel',
-            'reverseLabel',
-          ].includes(key),
+        (key) => !['id', 'householdId', 'revision', 'name', 'description'].includes(key),
       ) ||
       typeof type.name !== 'string' ||
       !type.name.trim() ||
       type.name.length > 200 ||
       typeof type.description !== 'string' ||
-      type.description.length > 2000 ||
-      typeof type.forwardLabel !== 'string' ||
-      !type.forwardLabel.trim() ||
-      type.forwardLabel.length > 200 ||
-      typeof type.reverseLabel !== 'string' ||
-      !type.reverseLabel.trim() ||
-      type.reverseLabel.length > 200
+      type.description.length > 2000
     )
       throw new MapError('invalid_relationship_type', 400);
     return {
       name: type.name.trim(),
       description: type.description,
-      forwardLabel: type.forwardLabel.trim(),
-      reverseLabel: type.reverseLabel.trim(),
     };
   }
   function validateDefinition(type: RelationshipType) {
     return validate({
       name: type.name,
       description: type.description,
-      forwardLabel: type.forwardLabel ?? type.name,
-      reverseLabel: type.reverseLabel ?? type.name,
     });
   }
   return {
@@ -153,6 +125,7 @@ export function relationshipTypes(database: Database.Database, householdId: stri
         revision: (existing?.restoration?.definition.revision ?? before?.revision ?? 0) + 1,
         ...validate(body.value),
       };
+      validateDefinition(after);
 
       draft.relationshipTypes = [
         ...(draft.relationshipTypes ?? []).filter((item) => item.id !== body.id),
@@ -197,13 +170,6 @@ export function relationshipTypes(database: Database.Database, householdId: stri
             change.after.description,
           );
         if (change.restoration) tombstones.restoreType('relationshipType', change.id);
-        if (change.after.forwardLabel && change.after.reverseLabel)
-          database
-            .prepare(`INSERT INTO relationship_type_labels (typeId, forwardLabel, reverseLabel) VALUES (?, ?, ?)
-          ON CONFLICT(typeId) DO UPDATE SET forwardLabel = excluded.forwardLabel, reverseLabel = excluded.reverseLabel`)
-            .run(change.id, change.after.forwardLabel, change.after.reverseLabel);
-        else
-          database.prepare('DELETE FROM relationship_type_labels WHERE typeId = ?').run(change.id);
       }
       return (draft.relationshipTypes ?? []).map(({ id, before, after }) => ({
         id,

@@ -61,6 +61,7 @@ export async function prepareConversationReview({
     });
   }
   const login = {
+    verb: 'Inloggningsadress',
     typeId: initial.relationshipTypes.find((entry) => entry.name === 'Inloggningsadress')?.id,
     sourceId: 'account',
     targetId: 'email',
@@ -102,6 +103,7 @@ export async function prepareConversationReview({
     baseRevision: null,
     value: {
       typeId: initial.relationshipTypes.find((entry) => entry.name === 'Betalar')?.id,
+      verb: 'Betalar',
       sourceId: 'lo',
       targetId: 'card',
     },
@@ -112,8 +114,6 @@ export async function prepareConversationReview({
     value: {
       name: 'Förvaras',
       description: '',
-      forwardLabel: 'förvaras i',
-      reverseLabel: 'innehåller',
     },
   });
 }

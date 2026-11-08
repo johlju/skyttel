@@ -33,7 +33,148 @@ beforeEach(async () => {
 });
 afterEach(() => fixture.close());
 
-test('zero-reference choices round-trip and schema37 archives receive only missing defaults', async () => {
+test('free relationship verbs round-trip saved values, draft proposals and history without category binding', async () => {
+  const read = async () => (await client.request(`${path}/map`)).json();
+  let state = await read();
+  await client.json(`${path}/map/draft`, {
+    version: state.draft.version,
+    id: 'room',
+    baseRevision: null,
+    value: { typeId: state.types[0].id, name: 'Rummet' },
+  });
+  for (const [id, verb] of [
+    ['placement', 'lyser i'],
+    ['control', 'styrs från'],
+  ]) {
+    state = await read();
+    expect(
+      (
+        await client.json(`${path}/map/relationship`, {
+          version: state.draft.version,
+          id,
+          baseRevision: null,
+          value: {
+            typeId: state.relationshipTypes[0].id,
+            sourceId: 'lamp',
+            targetId: 'room',
+            verb,
+          },
+        })
+      ).status,
+    ).toBe(200);
+  }
+  state = await read();
+  const saved = await (
+    await client.json(`${path}/map/save`, {
+      version: state.draft.version,
+      operationId: 'free-verb-save',
+    })
+  ).json();
+  state = await read();
+  expect(
+    (
+      await client.json(`${path}/map/relationship`, {
+        version: state.draft.version,
+        id: 'pending-link',
+        baseRevision: null,
+        value: {
+          typeId: state.relationshipTypes[0].id,
+          sourceId: 'lamp',
+          targetId: 'room',
+          verb: 'hör hemma i',
+        },
+      })
+    ).status,
+  ).toBe(200);
+  const prepared = await (await client.json(`${path}/exports`, {})).json();
+  const bytes = new Uint8Array(
+    await (await client.request(`${path}/exports/${prepared.id}`)).arrayBuffer(),
+  );
+  const ready = await (await upload(bytes)).json();
+  expect(
+    (
+      await client.json(`${path}/imports/${ready.id}/confirm`, {
+        contentVersion: 1,
+        confirmed: true,
+      })
+    ).status,
+  ).toBe(200);
+  state = await read();
+  expect(state.relationships.map((edge: { verb: string }) => edge.verb).sort()).toEqual([
+    'lyser i',
+    'styrs från',
+  ]);
+  expect(
+    state.relationships.every((edge: { reverseVerb?: string }) => edge.reverseVerb === undefined),
+  ).toBe(true);
+  expect(state.draft.relationships[0].after.verb).toBe('hör hemma i');
+  const history = await (await client.request(`${path}/map/history`)).json();
+  const retained = history.history.find(
+    (receipt: { operationId: string }) => receipt.operationId === saved.receipt.operationId,
+  );
+  expect(
+    retained.relationships.map((change: { after: { verb: string } }) => change.after.verb).sort(),
+  ).toEqual(['lyser i', 'styrs från']);
+  await fixture.restart();
+  expect((await read()).draft.relationships[0].after.verb).toBe('hör hemma i');
+});
+
+test('current archives reject category labels and missing saved relationship wording', async () => {
+  const state = await (await client.request(`${path}/map`)).json();
+  expect(
+    (
+      await client.json(`${path}/map/relationship`, {
+        version: state.draft.version,
+        id: 'self-link',
+        baseRevision: null,
+        value: {
+          typeId: state.relationshipTypes[0].id,
+          sourceId: 'lamp',
+          targetId: 'lamp',
+          verb: 'belyser',
+        },
+      })
+    ).status,
+  ).toBe(200);
+  expect(
+    (
+      await client.json(`${path}/map/save`, {
+        version: state.draft.version + 1,
+        operationId: 'edge',
+      })
+    ).status,
+  ).toBe(200);
+  const prepared = await (await client.json(`${path}/exports`, {})).json();
+  archive = new Uint8Array(
+    await (await client.request(`${path}/exports/${prepared.id}`)).arrayBuffer(),
+  );
+  const before = await (await client.request(`${path}/map`)).json();
+  for (const mutate of [
+    (content: Record<string, unknown>) => {
+      content.relationshipTypeLabels = [];
+    },
+    (content: Record<string, unknown>) => {
+      (content.relationshipTypes as Record<string, unknown>[])[0].forwardLabel = 'gammal';
+    },
+    (content: Record<string, unknown>) => {
+      const saves = content.saves as {
+        receipt: { relationships?: { type: Record<string, unknown> }[] };
+      }[];
+      const relationship = saves.flatMap(({ receipt }) => receipt.relationships ?? [])[0];
+      relationship.type.reverseLabel = 'gammal';
+    },
+    (content: Record<string, unknown>) => {
+      delete (content.relationships as Record<string, unknown>[])[0].verb;
+    },
+  ]) {
+    const response = await upload(changedContent(mutate));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'invalid_archive' });
+    expect(await (await client.request(`${path}/map`)).json()).toEqual(before);
+  }
+});
+
+test('zero-reference choices round-trip in current archives', async () => {
   const preferences = {
     ...defaultViewSettings,
     invertX: true,
@@ -43,7 +184,6 @@ test('zero-reference choices round-trip and schema37 archives receive only missi
     zeroReferenceAlwaysVisible: true,
     zeroReferenceOnMovement: true,
     zeroReferenceTint: 85,
-    zeroReferenceKeepSize: true,
   };
   expect(
     (await client.json(`${path}/map/view/settings`, { version: 0, settings: preferences })).status,
@@ -65,42 +205,6 @@ test('zero-reference choices round-trip and schema37 archives receive only missi
     ...preferences,
     version: 1,
   });
-
-  archive = bytes;
-  const legacy = changedContent((content) => {
-    for (const row of content.viewSettings as { settings: Record<string, unknown> }[])
-      for (const key of Object.keys(row.settings))
-        if (key.startsWith('zeroReference')) delete row.settings[key];
-  });
-  const parts = unzipSync(legacy);
-  const manifest = JSON.parse(new TextDecoder().decode(parts['manifest.json']));
-  manifest.schemaVersion = 37;
-  parts['manifest.json'] = new TextEncoder().encode(JSON.stringify(manifest));
-  const response = await client.request(`${path}/imports`, {
-    method: 'POST',
-    headers: {
-      origin: fixture.config.origin,
-      'content-type': 'application/zip',
-      'X-Skyttel-Content-Version': '2',
-    },
-    body: zipSync(parts) as BodyInit,
-  });
-  expect(response.status).toBe(201);
-  const older = await response.json();
-  expect(
-    (
-      await client.json(`${path}/imports/${older.id}/confirm`, {
-        contentVersion: 2,
-        confirmed: true,
-      })
-    ).status,
-  ).toBe(200);
-  expect((await (await client.request(`${path}/map/view`)).json()).settings).toEqual({
-    ...defaultViewSettings,
-    invertX: true,
-    background: false,
-    version: 1,
-  });
 });
 
 test('household archives exclude personal conversation choices and import preserves them', async () => {
@@ -112,7 +216,7 @@ test('household archives exclude personal conversation choices and import preser
     await (await client.request(`${path}/exports/${prepared.id}`)).arrayBuffer(),
   );
   const parts = unzipSync(bytes);
-  expect(JSON.parse(new TextDecoder().decode(parts['manifest.json'])).schemaVersion).toBe(38);
+  expect(JSON.parse(new TextDecoder().decode(parts['manifest.json'])).schemaVersion).toBe(40);
   const encoded = new TextDecoder().decode(parts['content.json']);
   for (const field of [
     'showDraftOnStart',
@@ -189,7 +293,7 @@ test('older archives are rejected before preview without changing map, private w
   const before = await Promise.all(
     routes.map(async (route) => (await client.request(route)).json()),
   );
-  for (const schemaVersion of [14, 23, 33, 34, 35]) {
+  for (const schemaVersion of [14, 23, 33, 34, 35, 37, 38, 39]) {
     const bytes = altered((parts) => {
       const manifest = JSON.parse(new TextDecoder().decode(parts['manifest.json']));
       manifest.version = 1;
@@ -916,8 +1020,6 @@ test('custom definitions, ended facts, removed catalog entries and unsaved priva
     value: {
       name: 'Installerad',
       description: '',
-      forwardLabel: 'installerad i',
-      reverseLabel: 'innehåller',
     },
   });
   await post('draft', {
@@ -958,7 +1060,7 @@ test('custom definitions, ended facts, removed catalog entries and unsaved priva
   await post('relationship-type', {
     id: 'unused-edge',
     baseRevision: null,
-    value: { name: 'Tillfällig', description: '', forwardLabel: 'framåt', reverseLabel: 'bakåt' },
+    value: { name: 'Tillfällig', description: '' },
   });
   await post('save', { operationId: 'unused-definitions' });
   await post('object-type', { id: 'unused', baseRevision: 1, value: null });
@@ -975,8 +1077,6 @@ test('custom definitions, ended facts, removed catalog entries and unsaved priva
     value: {
       name: 'Privat installation',
       description: '',
-      forwardLabel: 'finns i',
-      reverseLabel: 'har',
     },
   });
   await post('draft', {

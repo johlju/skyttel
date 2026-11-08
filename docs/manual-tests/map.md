@@ -4,6 +4,11 @@ Testfallen gäller att skapa, söka, rätta och ta bort objekt och samband,
 att välja mellan objekt med lika namn och att bevara ofullständiga uppgifter.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 
+När förberedelsen anger ett samband som **A → verb → B**, skriv den
+angivna mittdelen i **Verb** på det enskilda sambandet. Välj den angivna
+sambandstypen separat. När ett steg ändrar både typen och formuleringen,
+ändra också **Verb** uttryckligen.
+
 ## Konfigurerade användare
 
 Använd den administratör som anges av `SKYTTEL_FIRST_ADMIN_PROVIDER` och
@@ -249,8 +254,9 @@ Identitet.
 
 **Steg:**
 
-1. Öppna Samband för Familjemusik och Nytt samband. Välj Betalas med och
-   Betalkonto som verkligt Till objekt. Lägg till Uppgiftens säkerhet (Text,
+1. Öppna Samband för Familjemusik och Nytt samband. Välj typen Betalas med,
+   skriv **Betalas med** i **Verb** och välj Betalkonto som verkligt Till
+   objekt. Lägg till Uppgiftens säkerhet (Text,
    Obesvarad fråga), lägg i utkastet och stäng sambandet. Ladda om.
 2. Öppna Visa utkastet. Läs **Identiteten är olöst. Rätta objektet i det
    ordinarie flödet.** för Betalkonto och kontrollera
@@ -446,10 +452,11 @@ i ljust tema; behåll samma databas vid omstart.
 4. Skapa Batteriet av samma typ med Ospecificerat objekt och utan fria
    egenskaper. Lägg i utkastet.
 5. Öppna Typer igen och skapa Komplettering med beskrivningen Delar som
-   används ihop och benämningarna kompletteras av och kompletterar. Lägg typen
+   används ihop. Lägg typen
    i utkastet och återgå till kartan.
 6. Öppna Samband för Paneler på taket och Nytt samband. Välj Komplettering och
-   Batteriet som verkligt mål. Lägg till Uppgiftens säkerhet (Text, Osäkert
+   Batteriet som verkligt mål. Ange kompletteras av i Verb. Lägg till
+   Uppgiftens säkerhet (Text, Osäkert
    uppgivet). Lägg i utkastet och stäng sambandet.
 7. Granska de fem förslagen i Visa utkastet. Läs båda objektens hela förslag
    och sambandet. Panelernas Reserv är Nej; Batteriet saknar egenskapsrader.
@@ -569,8 +576,11 @@ testinstallationen med samma databas.
    personen **Lo**, e-postadressen `familj@example.test`, kortet
    **Familjekort**, bankkontot **Hushållskonto** och företaget **Moln AB**.
 2. Skapa sambandet
-   **Familjemusik → Gäller tjänstekontot → Familjens konto**.
-3. Försök lägga till exakt samma samband igen. Läs **Sambandet finns redan**.
+   **Familjemusik → Gäller tjänstekontot → Familjens konto**. Välj
+   **Gäller tjänstekontot** under **Sambandstyp** och skriv
+   **Gäller tjänstekontot** i **Verb**.
+3. Försök lägga till exakt samma samband igen med samma typ, ändpunkter och
+   **Verb: Gäller tjänstekontot**. Läs **Sambandet finns redan**.
    Välj **Avbryt redigeringen**, kasta endast det oskickade tillägget och
    stäng samband. Granska hela utkastet: åtta objekt och ett samband.
 4. Spara hela utkastet. Starta om applikationen med samma databas,
@@ -619,7 +629,7 @@ Kasta hela utkastet** och den uttryckliga bekräftelsen. Bevara sparade fakta.
 **Steg:**
 
 1. Som Alex, öppna **Tabell → Samband för Kim Exempel → Nytt samband**.
-   Välj **Från objekt: Kim Exempel**, typen **Använder** och
+   Välj **Från objekt: Kim Exempel**, typen **Använder**, **Verb: Använder** och
    **Till objekt: Molnmusik**. Behåll formuläret öppet utan att skicka.
 2. Som Robin, öppna samma vanliga sambandsformulär och lägg det identiska
    kända sambandet i Robins utkast. Spara uttryckligen genom **Visa

@@ -274,6 +274,7 @@ for (const mode of ['voice', 'text'] as const) {
               typeRevision: required(paymentType).revision,
               value: {
                 typeId: required(paymentType).id,
+                verb: 'Betalar',
                 sourceId: personId,
                 targetId: subscriptionId,
               },

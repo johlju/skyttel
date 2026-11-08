@@ -8,6 +8,7 @@ import type {
 } from '../shared/map.js';
 import { objectIconLabel } from '../shared/object-icons.js';
 import { relationshipLabel } from '../shared/relationship-label.js';
+import { relationshipReverseVerb, relationshipVerb } from '../shared/relationship-verb.js';
 import { HistoricalMergeDetails } from './HistoricalMergeDetails.js';
 import { HistoricalProperties } from './HistoricalProperties.js';
 import { LifecycleDetails } from './Lifecycle.js';
@@ -159,8 +160,11 @@ function EdgeDetails({
       <p>{relationshipLabel(value, { relationshipTypes: [type] }, names)}</p>
       <p>Sambandstyp: {type.name}.</p>
       <p>Typens beskrivning: {type.description || 'Ingen beskrivning'}</p>
-      <p>Benämning från startobjektet: {type.forwardLabel ?? type.name}</p>
-      <p>Benämning från målobjektet: {type.reverseLabel || 'Visar den ursprungliga riktningen'}</p>
+      <p>Benämning från startobjektet: {relationshipVerb(value)}</p>
+      <p>
+        Benämning från målobjektet:{' '}
+        {relationshipReverseVerb(value) || 'Visar den ursprungliga riktningen'}
+      </p>
       <details>
         <summary>Sambandets objektidentiteter</summary>
         <p>

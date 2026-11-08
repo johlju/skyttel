@@ -24,6 +24,7 @@ import {
   draftProposalRefs,
 } from '../shared/draft-discard.js';
 import type {
+  DraftRelationshipChange,
   MapDraft,
   MapObject,
   MapState,
@@ -103,7 +104,11 @@ export function householdMap(
       ? {
           version: row.version,
           changes: JSON.parse(row.changes),
-          ...(row.relationships !== '[]' ? { relationships: JSON.parse(row.relationships) } : {}),
+          ...(row.relationships !== '[]'
+            ? {
+                relationships: JSON.parse(row.relationships) as DraftRelationshipChange[],
+              }
+            : {}),
           ...(row.objectTypes !== '[]' ? { objectTypes: JSON.parse(row.objectTypes) } : {}),
           ...(row.relationshipTypes !== '[]'
             ? { relationshipTypes: JSON.parse(row.relationshipTypes) }
@@ -698,7 +703,14 @@ export function householdMap(
       return transaction(() => {
         if (!Number.isSafeInteger(body.contentVersion) || (body.contentVersion as number) < 1)
           throw new MapError('invalid_request', 400);
-        if (!Number.isSafeInteger(body.typeRevision) || (body.typeRevision as number) < 0)
+        const selectedType =
+          body.value && typeof body.value === 'object'
+            ? (body.value as { typeId?: unknown }).typeId
+            : undefined;
+        if (
+          (body.typeRevision !== undefined || selectedType || body.value === null) &&
+          (!Number.isSafeInteger(body.typeRevision) || (body.typeRevision as number) < 0)
+        )
           throw new MapError('invalid_request', 400);
         assertContentVersion(database, householdId, body.contentVersion);
         const attempts = relationshipFormAttempts(

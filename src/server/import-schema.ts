@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import type { DraftChange } from '../shared/map.js';
 import { isObjectIconId } from '../shared/object-icons.js';
-import { defaultViewSettings } from '../shared/personal-view.js';
 import { propertiesSchema } from '../shared/properties.js';
 import { viewSettingsSchema } from './view-settings-schema.js';
 
@@ -22,15 +21,14 @@ const positive = natural.min(1);
 const scope = { householdId: id };
 const definitionShape = { id, ...scope, revision: positive, name, description };
 const objectType = z.object(definitionShape).strict();
-const relationshipType = z
-  .object({
-    ...definitionShape,
-    forwardLabel: text.optional(),
-    reverseLabel: text.optional(),
-  })
-  .strict();
+const relationshipType = z.object(definitionShape).strict();
 const iconId = z.string().refine(isObjectIconId);
 const lifecycle = z.enum(['active', 'ended']);
+const relationshipVerb = z
+  .string()
+  .min(1)
+  .max(200)
+  .refine((value) => Boolean(value.trim()));
 const objectValue = z
   .object({
     properties: propertiesSchema.optional(),
@@ -45,6 +43,8 @@ const objectValue = z
 const object = objectValue.extend({ id, ...scope, revision: positive });
 const relationshipValue = z
   .object({
+    verb: relationshipVerb.optional(),
+    reverseVerb: relationshipVerb.optional(),
     properties: propertiesSchema.optional(),
     typeId: id,
     sourceId: id,
@@ -155,38 +155,12 @@ const receipt = z
     relationshipTypes: z.array(relationshipTypeChange).optional(),
   })
   .strict();
-// Supported schema37 archives have no zero-reference fields. Defaults apply
-// only at this archive boundary; ordinary settings requests remain strict.
-const viewSettings = viewSettingsSchema.extend({
-  zeroReferenceVariant: viewSettingsSchema.shape.zeroReferenceVariant.default(
-    defaultViewSettings.zeroReferenceVariant,
-  ),
-  zeroReferenceWeight: viewSettingsSchema.shape.zeroReferenceWeight.default(
-    defaultViewSettings.zeroReferenceWeight,
-  ),
-  zeroReferenceAlwaysVisible: viewSettingsSchema.shape.zeroReferenceAlwaysVisible.default(
-    defaultViewSettings.zeroReferenceAlwaysVisible,
-  ),
-  zeroReferenceOnMovement: viewSettingsSchema.shape.zeroReferenceOnMovement.default(
-    defaultViewSettings.zeroReferenceOnMovement,
-  ),
-  zeroReferenceTint: viewSettingsSchema.shape.zeroReferenceTint.default(
-    defaultViewSettings.zeroReferenceTint,
-  ),
-  zeroReferenceKeepSize: viewSettingsSchema.shape.zeroReferenceKeepSize.default(
-    defaultViewSettings.zeroReferenceKeepSize,
-  ),
-});
-
 export const importContentSchema = z
   .object({
     household: z.object({ id, name: text, createdAt: text, contentVersion: positive }).strict(),
     identities: z.array(z.object({ id, name: text }).strict()),
     objectTypes: z.array(z.object(definitionShape).strict()),
     relationshipTypes: z.array(z.object(definitionShape).strict()),
-    relationshipTypeLabels: z.array(
-      z.object({ typeId: id, forwardLabel: text, reverseLabel: text }).strict(),
-    ),
     removedTypes: z.array(
       z.object({ kind: z.enum(['objectType', 'relationshipType']), typeId: id }).strict(),
     ),
@@ -210,6 +184,8 @@ export const importContentSchema = z
     relationships: z.array(
       z
         .object({
+          verb: relationshipVerb,
+          reverseVerb: relationshipVerb.nullable(),
           properties: propertiesSchema.nullable().optional(),
           id,
           ...scope,
@@ -285,8 +261,8 @@ export const importContentSchema = z
           ...scope,
           userId: id,
           version: natural,
-          settings: viewSettings,
-          backgroundVersion: z.literal(1).default(1),
+          settings: viewSettingsSchema,
+          backgroundVersion: z.literal(1),
         })
         .strict(),
     ),
@@ -314,7 +290,7 @@ export const importManifestSchema = z
     version: z.literal(2),
     createdAt: text,
     householdId: id,
-    schemaVersion: z.union([z.literal(37), z.literal(38)]),
+    schemaVersion: z.literal(40),
     parts: z
       .array(
         z

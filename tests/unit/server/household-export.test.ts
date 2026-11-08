@@ -128,13 +128,10 @@ test('retained definitions, generic merge history, revoked owners, all private d
     fixture.database
       .prepare('INSERT INTO removed_type VALUES (?, ?)')
       .run('objectType', state.types[1].id);
-    fixture.database
-      .prepare('INSERT INTO relationship_type_labels VALUES (?, ?, ?)')
-      .run(state.relationshipTypes[0].id, 'använder', 'används av');
     for (const [index, label] of ['Okänt', 'Uttryckligen inget', 'Osäkert uppgivet'].entries())
       fixture.database
         .prepare(
-          "INSERT INTO map_relationship (id, householdId, typeId, revision, sourceId, targetId, deleted, lifecycle, properties) VALUES (?, ?, ?, 1, ?, 'survivor', 0, ?, ?)",
+          "INSERT INTO map_relationship (id, householdId, typeId, revision, sourceId, targetId, deleted, lifecycle, properties, verb) VALUES (?, ?, ?, 1, ?, 'survivor', 0, ?, ?, 'använder')",
         )
         .run(
           `edge-${index}`,
@@ -192,10 +189,7 @@ test('retained definitions, generic merge history, revoked owners, all private d
     sourceId: 'survivor',
     targetId: 'survivor',
   });
-  expect(content.relationshipTypeLabels[0]).toMatchObject({
-    forwardLabel: 'använder',
-    reverseLabel: 'används av',
-  });
+  expect(content).not.toHaveProperty('relationshipTypeLabels');
   expect(content.positions).toContainEqual({
     householdId,
     userId,

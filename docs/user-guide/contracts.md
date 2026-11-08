@@ -21,7 +21,8 @@ Ett hyresavtal är ett eget avtal. Återkommande hyra gör det inte till ett
 abonnemang. Använd samma företagsobjekt för hyresvärden i båda avtalen.
 En person eller förening kan också vara hyresvärd.
 
-Välj **Från objekt**, **Sambandstyp** och **Till objekt**. Exempel:
+Välj **Från objekt**, ett fritt **Verb** och **Till objekt**. Välj en
+**Sambandstyp** som separat gruppering om du vill. Exempel på ordval:
 
 - Bostadens hyresavtal → Gäller → Bostaden.
 - Garagets hyresavtal → Gäller → Garaget.

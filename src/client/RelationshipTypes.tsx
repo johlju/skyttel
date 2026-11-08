@@ -6,8 +6,6 @@ export function RelationshipTypeDetails({ type }: { type: RelationshipType | nul
     <>
       <p>Sambandstyp: {type.name}</p>
       <p>{type.description || 'Ingen beskrivning'}</p>
-      <p>Benämning från startobjektet: {type.forwardLabel ?? type.name}</p>
-      <p>Benämning från målobjektet: {type.reverseLabel ?? 'Visar den ursprungliga riktningen'}</p>
     </>
   ) : (
     <p>Finns inte i kartan</p>
@@ -26,16 +24,12 @@ export function RelationshipTypeEditor({
   disabled: boolean;
   stale: boolean;
   onDirty: () => void;
-  onSubmit: (
-    value: Pick<RelationshipType, 'name' | 'description' | 'forwardLabel' | 'reverseLabel'> | null,
-  ) => void;
+  onSubmit: (value: Pick<RelationshipType, 'name' | 'description'> | null) => void;
   onClose: () => void;
 }) {
   const [value, setValue] = useState({
     name: initial.name,
     description: initial.description,
-    forwardLabel: initial.forwardLabel ?? initial.name,
-    reverseLabel: initial.reverseLabel ?? '',
   });
   const form = useRef<HTMLFormElement>(null);
   function change(key: keyof typeof value, text: string) {
@@ -75,26 +69,7 @@ export function RelationshipTypeEditor({
           value={value.description}
           onChange={(event) => change('description', event.target.value)}
         />
-        <p>
-          Benämningarna beskriver samma samband från båda objekten. Exempel: cykeln förvaras i
-          garaget och garaget innehåller cykeln.
-        </p>
-        <label htmlFor="edge-type-forward">Benämning från startobjektet</label>
-        <input
-          id="edge-type-forward"
-          required
-          maxLength={200}
-          value={value.forwardLabel}
-          onChange={(event) => change('forwardLabel', event.target.value)}
-        />
-        <label htmlFor="edge-type-reverse">Benämning från målobjektet</label>
-        <input
-          id="edge-type-reverse"
-          required
-          maxLength={200}
-          value={value.reverseLabel}
-          onChange={(event) => change('reverseLabel', event.target.value)}
-        />
+        <p>Typen är en gruppering. Varje enskilt samband har sitt eget fria verb.</p>
         {stale && (
           <p role="alert">
             Formuläret bygger på ett äldre utkast. Kopiera text du vill behålla och öppna

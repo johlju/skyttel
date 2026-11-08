@@ -25,6 +25,10 @@ annat arbete. Typdefinitioner finns under **Inställningar → Typer**;
 **Objekttyper** och **Sambandstyper och riktning** visar respektive lista.
 Välj **Tillbaka till kartan** före objekt- och sambandsarbete.
 
+Verb hör till det enskilda sambandet. När ett fall anger ett ordval,
+fyll även fältet **Verb**; ett typval väljer bara gruppering. Om ingen
+omvänd benämning finns visas den ursprungliga riktningen från båda objekten.
+
 Granska utkastet genom **Skriv till Skyttel → Visa utkastet → Visa förslaget:
 [namn]**.
 Stäng läsningen med krysset. Spara hela utkastet separat och invänta
@@ -66,16 +70,14 @@ medlem.
 
 **Steg:**
 
-1. Skapa sambandstypen Förvaring i Typer. Försök skicka före varje
-   obligatoriskt värde
-   och kontrollera fokus. Ange namnet, beskrivningen Var hushållets saker
-finns och
-   benämningarna förvaras i och innehåller. Lägg typförslaget i utkastet.
+1. Skapa sambandstypen Förvaring i Typer. Försök skicka före det
+   obligatoriska namnet och kontrollera fokus. Ange namnet och beskrivningen
+   Var hushållets saker finns. Lägg typförslaget i utkastet.
 2. Skapa Alex blå cykel som Fordon och Garaget som Bostad. Lägg båda i
    utkastet. Öppna
    Samband för Alex blå cykel, Nytt samband och välj Förvaring till Garaget.
-Lägg till
-   Anteckning (Text, Låst skåp). Lägg i utkastet och stäng sambandet.
+   Ange förvaras i som Verb. Lägg till Anteckning (Text, Låst skåp).
+   Lägg i utkastet och stäng sambandet.
 3. Starta om installationen, ladda om och granska sambandsförslaget. Spara hela
    utkastet. Starta om igen och läs sambandet.
 
@@ -120,28 +122,24 @@ och Garaget.
 **Steg:**
 
 1. Skapa Alex blå cykel och Garaget i utkastet. Skapa Förvaring med
-   beskrivningen Var
-   hushållets saker finns och benämningarna förvaras i och innehåller.
-2. Öppna Nytt samband från cykeln och välj Garaget. Försök skicka utan typ,
-   välj sedan
-   Förvaring och lägg i utkastet. Läs typens omvända benämning i förslaget.
-3. Försök lägga till samma typ och ändpunkter igen. Läs Sambandet finns redan
-   och avbryt
-   formuläret med bekräftad förlust. Spara hela utkastet.
+   beskrivningen Var hushållets saker finns.
+2. Öppna Nytt samband från cykeln och välj Garaget. Ange verbet förvaras i
+   och den valfria omvända benämningen innehåller på sambandet. Välj
+   Förvaring som gruppering och lägg i utkastet. Läs förslaget.
+3. Försök lägga till samma typ, verb och ändpunkter igen. Läs Sambandet finns
+   redan och avbryt formuläret med bekräftad förlust. Spara hela utkastet.
 4. Läs sambandet från cykeln och från Garaget. Öppna redigering från Garaget och
    kontrollera att cykeln fortfarande är frånobjektet. Stäng utan ändring.
 5. Ändra typens namn till Plats, beskrivningen till Hushållets
-   förvaringsplatser och
-   benämningen från startobjektet till finns i. Granska definitionens gamla
-och nya
-   beskrivning, spara och läs sambandet igen.
+   förvaringsplatser. Granska definitionens gamla och nya beskrivning, spara
+   och läs sambandet igen.
 
 **Förväntat resultat:**
 
 - Båda benämningarna avser samma riktade samband med oförändrade objekt och
   identitet.
 - Dubblett ger begripligt besked och typens namnändring visas efter samlat
-  sparande.
+  sparande. Sambandets ordval förvaras i och innehåller behålls.
 
 ### STY-03: Vanlig medlem redigerar delad typ med privat förslag
 
@@ -178,15 +176,14 @@ Spara först Gemensamt objekt.
 **Steg:**
 
 1. Robin öppnar Typer, Sambandstyper och riktning och ändrar hushållets första
-   sambandstyp, Använder. Ange Medlemmens förklaring som beskrivning och
-   **används av** i det obligatoriska fältet **Benämning från målobjektet**.
-   Behåll namnet och benämningen från startobjektet. Lägg typförslaget i
+   sambandstyp, Använder. Ange Medlemmens förklaring som beskrivning.
+   Behåll namnet. Lägg typförslaget i
    utkastet och kontrollera att förslaget finns i Robins utkast.
 2. Alex kontrollerar att Robins förslag inte finns i Alex utkast och att den
    sparade
    typen fortfarande har sin gamla beskrivning.
 3. Robin sparar hela utkastet. Alex laddar om, öppnar samma typ och läser
-   beskrivningen och benämningen **används av** från målobjektet.
+   beskrivningen.
 
 **Förväntat resultat:**
 
@@ -203,6 +200,11 @@ Spara först Gemensamt objekt.
 medlem.
 
 **Förutsättningar:** Alex och Robin delar ett tomt hushåll i separata profiler.
+Förberedaren kör den separata
+[förberedelsen för typkonflikt](historical-definition-preparation.md#typkonflikt-i-sty-04)
+i båda profilerna före stegen. Den skapar samtidiga typförslag genom publika
+anrop. Typformuläret ändrar namn och beskrivning; sambandets verb och
+valfria omvända benämning hör till det enskilda sambandet.
 
 <!-- markdownlint-disable MD013 -->
 <!--
@@ -217,7 +219,7 @@ medlem.
   "reference": "Chromium på dator; riktig lokal server och SQLite.",
   "outcomes": [
     "Konflikten stoppar hela sparandet fram till uttryckligt val.",
-    "Plats och har sparas med Robins oberoende beskrivning Los nya förklaring och sambandet."
+    "Plats sparas med Robins oberoende beskrivning Los nya förklaring och sambandet. Sambandets egna ordval förvaras i och innehåller är oförändrade."
   ]
 }
 ```
@@ -226,23 +228,23 @@ medlem.
 
 **Steg:**
 
-1. Spara Förvaring med förvaras i och innehåller. Alex föreslår namnet Plats
-   och omvänd
-   benämning har. Lägg också Cykeln, Garaget och ett Förvaring-samband i Alex
-utkast.
-2. Robin ändrar samma sparade typs beskrivning till Los nya förklaring och
-   omvänd
-   benämning till rymmer och sparar.
-3. Alex försöker spara, öppnar Granska konflikter och väljer sina föreslagna
-   motstridiga
-   värden. Lägg valen i utkastet och granska typen Plats.
-4. Spara hela utkastet. Starta om och läs sparandet i historiken.
+1. Alex laddar om och öppnar **Granska konflikter**. Läs typförslagets namn
+   **Plats** mot det sparade namnet **Los plats**. Den gemensamma kartan
+   innehåller ännu inte Cykeln, Garaget eller deras samband.
+2. Välj Alex föreslagna motstridiga värden och **Lägg valen i utkastet**.
+   Läs resultatet, stäng och granska hela typförslaget **Plats** i utkastet.
+   Robins oberoende beskrivning **Los nya förklaring** finns kvar. Läs också
+   Cykeln, Garaget och sambandsförslaget **Cykeln → förvaras i → Garaget**.
+3. Spara hela utkastet separat. Starta om och läs sparandet i historiken:
+   typen **Plats**, beskrivningen **Los nya förklaring** och sambandet finns
+   med. Förberedaren kontrollerar namn, beskrivning och sambandets ordval
+   i det sparade underlaget och kvittot enligt den separata förberedelsen.
 
 **Förväntat resultat:**
 
 - Konflikten stoppar hela sparandet fram till uttryckligt val.
-- Plats och har sparas med Robins oberoende beskrivning Los nya förklaring och
-  sambandet.
+- Plats sparas med Robins oberoende beskrivning Los nya förklaring och
+  sambandet. Sambandets egna ordval förvaras i och innehåller är oförändrade.
 
 ### STY-05: Dubblett och samtidig sparning ger inget delsparande
 
@@ -343,7 +345,8 @@ medlem.
 
 1. Skapa Alex som Person och Blå cykeln som Fordon i utkastet. Öppna Samband
    för Alex
-   och Nytt samband. Välj Använder till Blå cykeln.
+   och Nytt samband. Välj typen Använder, skriv **Använder** i **Verb**
+   och välj Blå cykeln som Till objekt.
 2. Lägg till Anteckning (Text, Låst skåp), Belopp (Tal, 0), Startdatum (Datum,
    2026-09-27), Bekräftat (Ja/nej, Nej) och Obesvarat (Ja/nej, Tomt).
 3. Fokusera Flytta upp på Obesvarat och tryck Enter. Kontrollera fokus på dess
@@ -397,7 +400,8 @@ medlem.
 
 1. Skapa Alex som Person och Blå cykeln som Fordon i utkastet. Öppna Samband
    för Alex
-   och Nytt samband. Välj Använder till Blå cykeln.
+   och Nytt samband. Välj typen Använder, skriv **Använder** i **Verb**
+   och välj Blå cykeln som Till objekt.
 2. Lägg till Anteckning (Text, Låst skåp), Belopp (Tal, 0), Startdatum (Datum,
    2026-09-27), Bekräftat (Ja/nej, Nej) och Obesvarat (Ja/nej, Tomt).
 3. Fokusera Flytta upp på Obesvarat och tryck Enter. Kontrollera fokus på dess
@@ -448,10 +452,12 @@ medlem.
 
 **Steg:**
 
-1. Spara ett Använder-samband från Alex till Blå cykeln med Anteckning (Text,
+1. Spara ett samband med typen Använder och **Verb: Använder** från Alex
+   till Blå cykeln med Anteckning (Text,
    Behåll
    uppgiften) och Kontrollerat (Ja/nej, Nej).
-2. Redigera sambandet och välj typen Äger. Läs samma egenskapsvärden direkt.
+2. Redigera sambandet och välj typen Äger. Behåll **Verb: Använder**.
+   Läs samma egenskapsvärden direkt.
    Lägg i
    utkastet och spara.
 3. Starta om, ladda om och läs sambandet från Alex.

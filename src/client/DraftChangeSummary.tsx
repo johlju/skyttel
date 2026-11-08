@@ -64,19 +64,10 @@ export function typeDifferences(
   before: ObjectType & RelationshipType,
   after: ObjectType & RelationshipType,
 ) {
-  const changes = [
+  return [
     ...difference('Namn', before.name, after.name),
     ...difference('Beskrivning', valueText(before.description), valueText(after.description)),
   ];
-  for (const key of ['forwardLabel', 'reverseLabel'] as const)
-    changes.push(
-      ...difference(
-        key === 'forwardLabel' ? 'Framåtriktning' : 'Omvänd riktning',
-        valueText(before[key]),
-        valueText(after[key]),
-      ),
-    );
-  return changes;
 }
 function action(before: unknown, after: unknown) {
   return after ? (before ? 'Rätta' : 'Lägg till') : 'Ta bort';
@@ -105,6 +96,12 @@ export function relationshipDifferences(change: DraftRelationshipChange) {
     ),
     ...difference('Sambandstyp', (change.beforeType ?? change.type).name, change.type.name),
     ...difference('Till', target(change.before), target(change.after)),
+    ...difference('Verb', change.before.verb ?? '', change.after.verb ?? ''),
+    ...difference(
+      'Omvänd benämning',
+      change.before.reverseVerb ?? '',
+      change.after.reverseVerb ?? '',
+    ),
     ...propertyDifferences(change.before.properties, change.after.properties),
     ...lifecycleDifferences(change.before, change.after),
   ];
@@ -132,11 +129,7 @@ export function DraftChangeSummary({ review }: { review: MapDraft }) {
       ))}
       {review.relationships?.map((change) => {
         const describe = (value: NonNullable<typeof change.after>) =>
-          relationshipDetails(
-            value,
-            change.type.forwardLabel ?? change.type.name,
-            change.objectNames,
-          );
+          relationshipDetails(value, change.objectNames);
         return (
           <li key={`relationship-${change.id}`}>
             {action(change.before, change.after)} samband:{' '}

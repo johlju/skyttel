@@ -30,9 +30,9 @@ Skriv aldrig lösenord, fullständiga kortnummer eller säkerhetskoder.
 
 ## Beskriv sambanden
 
-Välj **Nytt samband**, **Från objekt**, **Sambandstyp** och **Till objekt**.
-Typens förklaring visar riktningen. Pilarna i listan och utkastet visar
-samma riktning. Exempel:
+Välj **Nytt samband**, **Från objekt**, ett fritt **Verb** och **Till objekt**.
+Välj **Sambandstyp** som gruppering om du vill. Verb och riktning hör till
+det enskilda sambandet. Exempel på ordval:
 
 - Familjens tjänstekonto → Tillhör tjänsten → Molnmusik.
 - Familjens Molnmusik → Gäller tjänstekontot → Familjens tjänstekonto.
@@ -48,7 +48,7 @@ ett tjänstekonto till en e-postadress. Samma adress kan användas av flera
 personer och tjänstekonton. **Kontokoppling** går från kort till bankkonto;
 **Kortfakturan betalas från** är ett separat samband till betalande bankkonto.
 
-Ett upprepat tillägg med samma typ, riktning och objekt visar det befintliga
+Ett upprepat tillägg med samma typ, verb, riktning och objekt visar det befintliga
 sambandet utan dubblett. Välj det befintliga sambandet och sedan
 **Redigera valt samband** vid de valda uppgifterna för att rätta det. Olika
 sambandstyper mellan samma objekt går bra.

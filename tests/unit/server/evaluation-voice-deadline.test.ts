@@ -44,6 +44,7 @@ function setup(complete = false) {
     post,
     check: vi.fn(async () => []),
     judgeContext: vi.fn(() => 'Test context'),
+    stateEvidence: () => ({ expected: { relationships: [] } }),
     read: vi.fn(async () => ({})),
     close: vi.fn(async () => {}),
     installation: {

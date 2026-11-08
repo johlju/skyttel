@@ -37,7 +37,6 @@ async function openPreferences() {
       background: false,
       zeroReferenceOnMovement: true,
       zeroReferenceTint: 23,
-      zeroReferenceKeepSize: true,
       version: 0,
     },
   };
@@ -130,7 +129,6 @@ test('all reference variants and visual weights save independently while the bac
           background: false,
           zeroReferenceOnMovement: true,
           zeroReferenceTint: 23,
-          zeroReferenceKeepSize: true,
         });
       }
     }

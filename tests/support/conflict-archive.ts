@@ -98,8 +98,6 @@ export async function prepareArchiveConflict(
     ? {
         name: 'Förvaras i',
         description: 'Förvaring',
-        forwardLabel: 'förvaras i',
-        reverseLabel: 'förvarar',
       }
     : { name: 'Solcellsanläggning', description: 'Anläggning' };
   expect(
@@ -143,6 +141,8 @@ export async function prepareArchiveConflict(
             typeId,
             sourceId: 'lo',
             targetId: 'service',
+            verb: 'förvaras i',
+            reverseVerb: 'förvarar',
             properties: [
               {
                 id: 'storage-year',

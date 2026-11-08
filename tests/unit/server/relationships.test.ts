@@ -68,6 +68,81 @@ async function member() {
   return actor;
 }
 
+test('chosen relationship verbs survive saving independently of endpoint kinds and category labels', async () => {
+  const initial = await read();
+  const vehicle = initial.types.find((type) => type.name === 'Fordon') ?? initial.types[0];
+  const service = initial.types.find((type) => type.name === 'Tjänst') ?? initial.types[1];
+  await object('a', { typeId: vehicle.id, name: 'Bilen' });
+  await object('b', { typeId: service.id, name: 'Laddtjänsten' });
+  const category = initial.relationshipTypes[0];
+  expect((await edge('uses-service', { typeId: category.id, verb: 'använder' })).status).toBe(200);
+  expect(
+    (await edge('depends-on-service', { typeId: category.id, verb: 'är beroende av' })).status,
+  ).toBe(200);
+  const staged = await read();
+  expect(staged.draft.relationships?.map((change) => change.after?.verb)).toEqual([
+    'använder',
+    'är beroende av',
+  ]);
+  const saved = await save();
+  expect(saved.status).toBe(200);
+  const { receipt } = await saved.json();
+  expect(
+    receipt.relationships.map((change: { after: { verb: string } }) => change.after.verb),
+  ).toEqual(['använder', 'är beroende av']);
+  let state = await read();
+  expect(
+    (
+      await client.json(`${path}/relationship-type`, {
+        version: state.draft.version,
+        id: category.id,
+        baseRevision: category.revision,
+        value: {
+          name: 'Tekniska kopplingar',
+          description: 'Hushållets gruppering.',
+        },
+      })
+    ).status,
+  ).toBe(200);
+  expect((await save()).status).toBe(200);
+  state = await read();
+  expect(state.relationships.find((item) => item.id === 'uses-service')?.verb).toBe('använder');
+  expect(state.relationships.find((item) => item.id === 'depends-on-service')?.verb).toBe(
+    'är beroende av',
+  );
+  expect((await edge('same-use', { typeId: category.id, verb: 'använder' })).status).toBe(200);
+  expect((await read()).draft.relationships ?? []).toEqual([]);
+});
+
+test('a category never selects wording for a new relationship without a chosen verb', async () => {
+  await object('a');
+  await object('b');
+  let state = await read();
+  expect(
+    (
+      await client.json(`${path}/relationship-type`, {
+        version: state.draft.version,
+        id: 'connections',
+        baseRevision: null,
+        value: { name: 'Tekniska kopplingar', description: 'Hushållets gruppering' },
+      })
+    ).status,
+  ).toBe(200);
+  expect((await edge('unworded', { typeId: 'connections' })).status).toBe(200);
+  state = await read();
+  expect(state.draft.relationships?.[0]).toMatchObject({
+    type: { name: 'Tekniska kopplingar' },
+    after: { verb: 'har samband med' },
+  });
+  const named = state.relationshipTypes.find((type) => type.name === 'Använder');
+  expect(named).toBeDefined();
+  expect((await edge('unworded-in-named-category', { typeId: named?.id })).status).toBe(200);
+  expect((await read()).draft.relationships?.map((change) => change.after?.verb)).toEqual([
+    'har samband med',
+    'har samband med',
+  ]);
+});
+
 test.each(['property', 'status'] as const)(
   'a relationship %s edit preserves the independent saved correction',
   async (side) => {
@@ -276,7 +351,7 @@ test('deleting an endpoint after a private type change retains the saved relatio
 });
 
 test.each(['before', 'after'] as const)(
-  'editing the retained definition %s an endpoint deletion saves labels with the deletion atomically',
+  'editing the retained definition %s an endpoint deletion saves category metadata with the deletion atomically',
   async (timing) => {
     await object('a');
     await object('b');
@@ -287,8 +362,6 @@ test.each(['before', 'after'] as const)(
     const definition = {
       name: 'Användning',
       description: 'Användning i hushållet',
-      forwardLabel: 'använder',
-      reverseLabel: 'används av',
     };
     const define = async () =>
       client.json(`${path}/relationship-type`, {
@@ -340,8 +413,6 @@ test('cascade deletion preserves the reviewed definition revision when the relat
         value: {
           name: 'Ändrad betydelse',
           description: '',
-          forwardLabel: 'kopplar till',
-          reverseLabel: 'kopplas från',
         },
       })
     ).status,

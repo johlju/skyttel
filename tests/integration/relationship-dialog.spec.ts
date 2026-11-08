@@ -625,8 +625,8 @@ test('SAMBAND-02: invalid next input and canceled form loss retain previous comp
     await dialog.getByRole('button', { name: 'Lägg i utkastet', exact: true }).click();
     const errors = dialog.getByRole('alert', { name: 'Formuläret innehåller fel' });
     await expect(errors).toBeFocused();
-    await errors.getByRole('link', { name: /^Sambandstyp:/ }).click();
-    await expect(dialog.getByLabel('Sambandstyp', { exact: true })).toBeFocused();
+    await errors.getByRole('link', { name: /^Till objekt:/ }).click();
+    await expect(dialog.getByLabel('Till objekt', { exact: true })).toBeFocused();
     await dialog.getByLabel('Sambandstyp', { exact: true }).selectOption({ label: 'Äger' });
     for (const lifecycle of ['active', 'ended']) {
       await dialog.getByLabel('Sambandets status', { exact: true }).selectOption(lifecycle);
@@ -703,6 +703,7 @@ test('SAMBAND-01: separate complete objects connect and remain independently edi
         (await read()).draft.changes.find((change) => change.after?.name === 'Blå cykeln')?.id ??
           '',
       );
+    await dialog.getByLabel('Verb', { exact: true }).fill('använder');
     await expect(dialog.getByRole('region', { name: 'Sambandet före inskickning' })).toContainText(
       'Alex använder Blå cykeln',
     );

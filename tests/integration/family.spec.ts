@@ -65,6 +65,7 @@ test('KARTA-07: native family forms save eight separate objects and one directed
     await page
       .getByLabel('Sambandstyp', { exact: true })
       .selectOption({ label: 'Gäller tjänstekontot' });
+    await page.getByLabel('Verb', { exact: true }).fill('Gäller tjänstekontot');
     await chooseRelationshipObject(page, 'Till objekt', 'Familjens konto');
     await stageRelationshipAndClose(page);
     const proposed = await read();
@@ -76,6 +77,7 @@ test('KARTA-07: native family forms save eight separate objects and one directed
     await duplicate
       .getByLabel('Sambandstyp', { exact: true })
       .selectOption({ label: 'Gäller tjänstekontot' });
+    await duplicate.getByLabel('Verb', { exact: true }).fill('Gäller tjänstekontot');
     await chooseRelationshipObject(page, 'Till objekt', 'Familjens konto');
     await duplicate.getByRole('button', { name: 'Lägg i utkastet', exact: true }).click();
     await expect(duplicate.getByRole('alert')).toContainText('Sambandet finns redan');
@@ -138,6 +140,7 @@ test('KARTA-05: manual forms preserve incomplete meanings and block an unanswere
     await page.getByRole('button', { name: 'Nytt samband', exact: true }).click();
     await chooseRelationshipObject(page, 'Från objekt', 'Familjemusik');
     await page.getByLabel('Sambandstyp', { exact: true }).selectOption({ label: 'Betalas med' });
+    await page.getByLabel('Verb', { exact: true }).fill('Betalas med');
     await setProperty(page, 'Uppgiftens säkerhet', 'Obesvarad fråga');
     await chooseRelationshipObject(page, 'Till objekt', 'Betalkonto');
     await stageRelationshipAndClose(page);
@@ -245,7 +248,7 @@ test('UTKAST-01: demo seed resumes a conflict and preserves independent proposal
     const reviewedLo = await readDraftProposal(page, 'Lo Lind');
     await expect(reviewedLo).toContainText('Spelar piano i musikföreningen.');
     await closeSupportDialog(page, 'Lo Lind');
-    const emailProposalName = 'Familjens musikkonto → Inloggningsadress → musik@example.test';
+    const emailProposalName = 'Familjens musikkonto → har inloggningsadressen → musik@example.test';
     const emailProposal = await readDraftProposal(page, emailProposalName);
     await expect(emailProposal).toContainText('familjen@example.test');
     await expect(emailProposal).toContainText('musik@example.test');
@@ -254,7 +257,8 @@ test('UTKAST-01: demo seed resumes a conflict and preserves independent proposal
     await editTableObject(page, 'Familjens musikkonto');
     await page.getByLabel('Namn', { exact: true }).fill('Familjens rättade konto');
     await page.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
-    const renamedProposalName = 'Familjens rättade konto → Inloggningsadress → musik@example.test';
+    const renamedProposalName =
+      'Familjens rättade konto → har inloggningsadressen → musik@example.test';
     const relationshipReview = await readDraftProposal(page, renamedProposalName);
     await expect(relationshipReview).toContainText('Familjens musikkonto');
     await expect(relationshipReview).toContainText('familjen@example.test');
@@ -270,7 +274,7 @@ test('UTKAST-01: demo seed resumes a conflict and preserves independent proposal
     await expect(review).toContainText('Utkastet är tomt.');
     await closeTextView(page);
     await expect(await openObjectRelationships(page, 'Familjens rättade konto')).toContainText(
-      'Familjens rättade konto → Inloggningsadress → musik@example.test',
+      'Familjens rättade konto → har inloggningsadressen → musik@example.test',
     );
   } finally {
     await installation.close();
@@ -301,6 +305,7 @@ test('KARTA-25: a concurrent duplicate refreshes the saved relationship and allo
         state.objects.find((object: { name: string }) => object.name === 'Kim Exempel').id,
       );
     await page.getByLabel('Sambandstyp', { exact: true }).selectOption({ label: 'Använder' });
+    await page.getByLabel('Verb', { exact: true }).fill('Använder');
     await page
       .getByLabel('Till objekt', { exact: true })
       .selectOption(
@@ -330,6 +335,7 @@ test('KARTA-25: a concurrent duplicate refreshes the saved relationship and allo
     await robinPage.getByRole('button', { name: 'Nytt samband', exact: true }).click();
     await chooseRelationshipObject(robinPage, 'Från objekt', 'Kim Exempel');
     await robinPage.getByLabel('Sambandstyp', { exact: true }).selectOption({ label: 'Använder' });
+    await robinPage.getByLabel('Verb', { exact: true }).fill('Använder');
     await chooseRelationshipObject(robinPage, 'Till objekt', 'Molnmusik');
     await stageRelationshipAndClose(robinPage);
     await saveReviewedConflictDraft(robinPage);

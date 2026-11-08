@@ -2,6 +2,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, expect, test } from 'vitest';
 import { ConversationDraft } from '../../../src/client/ConversationDraft.js';
 import { DraftChangeSummary } from '../../../src/client/DraftChangeSummary.js';
+import { DraftProposalDetails, draftProposals } from '../../../src/client/DraftProposalDetails.js';
 import type { DraftChange, MapDraft, ObjectType } from '../../../src/shared/map.js';
 
 afterEach(cleanup);
@@ -12,6 +13,158 @@ const type: ObjectType = {
   name: 'Konto',
   description: '',
 };
+function draftValueSide(name: string) {
+  const section = screen.getByRole('heading', { name }).closest('section');
+  if (!section) throw new Error(`Missing draft value section: ${name}`);
+  return within(section);
+}
+
+test('the full relationship proposal reads each side’s own wording independently of its category', () => {
+  const relationshipType = {
+    id: 'connection',
+    householdId: 'linden',
+    revision: 1,
+    name: 'Hushållets kopplingar',
+    description: '',
+  };
+  const draft: MapDraft = {
+    version: 1,
+    changes: [],
+    relationships: [
+      {
+        id: 'edge',
+        type: relationshipType,
+        beforeType: { ...relationshipType, name: 'Tidigare gruppering' },
+        objectNames: { alex: 'Alex', bike: 'Cykeln' },
+        before: {
+          id: 'edge',
+          householdId: 'linden',
+          revision: 1,
+          sourceId: 'alex',
+          typeId: relationshipType.id,
+          targetId: 'bike',
+          verb: 'granskar',
+          reverseVerb: 'granskas av',
+        },
+        after: {
+          sourceId: 'alex',
+          typeId: relationshipType.id,
+          targetId: 'bike',
+          verb: 'lånar',
+          reverseVerb: 'lånas av',
+        },
+      },
+    ],
+  };
+  render(<DraftProposalDetails proposal={draftProposals(draft)[0]} />);
+  for (const [heading, category, verb, reverse] of [
+    ['Sparade värden', 'Tidigare gruppering', 'granskar', 'granskas av'],
+    ['Föreslagna värden', 'Hushållets kopplingar', 'lånar', 'lånas av'],
+  ]) {
+    const side = draftValueSide(heading);
+    expect(side.getByText(category)).toBeTruthy();
+    expect(side.getByText('Verb').nextElementSibling?.textContent).toBe(verb);
+    expect(side.getByText('Omvänd benämning').nextElementSibling?.textContent).toBe(reverse);
+  }
+});
+
+test('the full relationship proposal reads neutral wording and an omitted reverse independently of its category', () => {
+  const relationshipType = {
+    id: 'owns',
+    householdId: 'linden',
+    revision: 1,
+    name: 'Äger',
+    description: '',
+  };
+  const draft: MapDraft = {
+    version: 1,
+    changes: [],
+    relationships: [
+      {
+        id: 'edge',
+        type: relationshipType,
+        objectNames: { alex: 'Alex', bike: 'Cykeln' },
+        before: {
+          id: 'edge',
+          householdId: 'linden',
+          revision: 1,
+          sourceId: 'alex',
+          typeId: relationshipType.id,
+          targetId: 'bike',
+          verb: 'lånar',
+          reverseVerb: 'lånas av',
+        },
+        after: { sourceId: 'alex', typeId: relationshipType.id, targetId: 'bike' },
+      },
+    ],
+  };
+  render(<DraftProposalDetails proposal={draftProposals(draft)[0]} />);
+  const saved = draftValueSide('Sparade värden');
+  const proposed = draftValueSide('Föreslagna värden');
+  expect(saved.getByText('Verb').nextElementSibling?.textContent).toBe('lånar');
+  expect(saved.getByText('Omvänd benämning').nextElementSibling?.textContent).toBe('lånas av');
+  expect(proposed.getByText('Verb').nextElementSibling?.textContent).toBe('har samband med');
+  expect(proposed.getByText('Omvänd benämning').nextElementSibling?.textContent).toBe(
+    'Ej uppgivet',
+  );
+  expect(proposed.getByText('Sambandstyp').nextElementSibling?.textContent).toBe('Äger');
+});
+
+test('the full retained relationship proposal preserves its own wording alongside the saved wording', () => {
+  const relationshipType = {
+    id: 'connection',
+    householdId: 'linden',
+    revision: 1,
+    name: 'Hushållets kopplingar',
+    description: '',
+  };
+  const draft: MapDraft = {
+    version: 1,
+    changes: [],
+    relationships: [
+      {
+        id: 'edge',
+        type: relationshipType,
+        objectNames: { alex: 'Alex', bike: 'Cykeln' },
+        before: {
+          id: 'edge',
+          householdId: 'linden',
+          revision: 1,
+          sourceId: 'alex',
+          typeId: relationshipType.id,
+          targetId: 'bike',
+          verb: 'granskar',
+          reverseVerb: 'granskas av',
+        },
+        after: null,
+        removedWithObjects: ['alex'],
+        suppressed: {
+          id: 'edge',
+          type: relationshipType,
+          before: null,
+          after: {
+            sourceId: 'alex',
+            typeId: relationshipType.id,
+            targetId: 'bike',
+            verb: 'lånar',
+            reverseVerb: 'lånas av',
+          },
+        },
+      },
+    ],
+  };
+  render(<DraftProposalDetails proposal={draftProposals(draft)[0]} />);
+  const saved = draftValueSide('Sparade värden');
+  const retained = within(screen.getByRole('region', { name: 'Följder av objektborttagning' }));
+  expect(saved.getByText('Verb').nextElementSibling?.textContent).toBe('granskar');
+  expect(saved.getByText('Omvänd benämning').nextElementSibling?.textContent).toBe('granskas av');
+  expect(retained.getByText('Verb').nextElementSibling?.textContent).toBe('lånar');
+  expect(retained.getByText('Omvänd benämning').nextElementSibling?.textContent).toBe('lånas av');
+  expect(retained.getByText('Sambandstyp').nextElementSibling?.textContent).toBe(
+    'Hushållets kopplingar',
+  );
+  expect(screen.queryByRole('heading', { name: 'Föreslagna värden' })).toBeNull();
+});
 
 test('the draft shows checked before-and-after properties and identity without hiding removals', () => {
   const change: DraftChange = {
@@ -93,8 +246,6 @@ test('the whole draft names additions, removals and changed relationship and typ
     revision: 1,
     name: 'Använder',
     description: '',
-    forwardLabel: 'använder',
-    reverseLabel: 'används av',
   };
   const review: MapDraft = {
     version: 2,
@@ -133,6 +284,8 @@ test('the whole draft names additions, removals and changed relationship and typ
           sourceId: 'alex',
           typeId: 'uses',
           targetId: 'bike',
+          verb: 'använder',
+          reverseVerb: 'används av',
 
           lifecycle: 'active',
 
@@ -145,6 +298,7 @@ test('the whole draft names additions, removals and changed relationship and typ
           sourceId: 'alex',
           typeId: 'uses',
           targetId: 'bike',
+          verb: 'lånar',
 
           lifecycle: 'ended',
 
@@ -155,12 +309,12 @@ test('the whole draft names additions, removals and changed relationship and typ
         id: 'new-relation',
         type: relationshipType,
         before: null,
-        after: { sourceId: 'alex', typeId: 'uses', targetId: 'bike' },
+        after: { sourceId: 'alex', typeId: 'uses', targetId: 'bike', verb: 'använder' },
         objectNames: { alex: 'Alex' },
       },
       {
         id: 'removed-relation',
-        type: { ...relationshipType, forwardLabel: undefined },
+        type: { ...relationshipType },
         before: {
           id: 'removed-relation',
           householdId: 'linden',
@@ -189,8 +343,6 @@ test('the whole draft names additions, removals and changed relationship and typ
         after: {
           ...relationshipType,
           description: 'Rättat samband',
-          forwardLabel: 'ny framåtriktning',
-          reverseLabel: undefined,
         },
       },
     ],
@@ -209,11 +361,11 @@ test('the whole draft names additions, removals and changed relationship and typ
     'old: Tas bort (Text) → Saknas',
     'shared: Nej (Ja/nej) → shared: Ja (Ja/nej)',
     'Alex → använder → bike',
-    'Alex → Använder → bike',
+    'Alex → har samband med → bike',
     'Beskrivning: Ej uppgivet → Ny typbeskrivning',
     'Beskrivning: Ej uppgivet → Rättat samband',
-    'Framåtriktning: använder → ny framåtriktning',
-    'Omvänd riktning: används av → Ej uppgivet',
+    'Verb: använder → lånar',
+    'Omvänd benämning: används av → ',
   ])
     expect(table.textContent).toContain(detail);
   const summary = screen.getByRole('list', { name: 'Alla föreslagna ändringar' });

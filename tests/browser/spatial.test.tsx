@@ -23,8 +23,6 @@ const state: MapState = {
       revision: 1,
       name: 'Använder',
       description: '',
-      forwardLabel: 'använder',
-      reverseLabel: 'används av',
     },
   ],
   objects: [
@@ -58,6 +56,8 @@ const state: MapState = {
       typeId: 'uses',
       sourceId: 'lo',
       targetId: 'music',
+      verb: 'använder',
+      reverseVerb: 'används av',
     },
     {
       id: 'other',
@@ -66,6 +66,8 @@ const state: MapState = {
       typeId: 'uses',
       sourceId: 'kim',
       targetId: 'music',
+      verb: 'använder',
+      reverseVerb: 'används av',
     },
   ],
   draft: { version: 0, changes: [] },
@@ -647,7 +649,7 @@ test.each([
           ...state,
           relationshipTypes: [
             ...state.relationshipTypes,
-            { ...state.relationshipTypes[0], id: 'other', forwardLabel: 'lånar' },
+            { ...state.relationshipTypes[0], id: 'other', name: 'Lån' },
           ],
           relationships: [before],
           draft: {

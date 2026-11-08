@@ -14,10 +14,7 @@ export interface ObjectTypeChange {
   before: ObjectType | null;
   after: ObjectType | null;
 }
-export interface RelationshipType extends TypeDefinition {
-  forwardLabel?: string;
-  reverseLabel?: string;
-}
+export interface RelationshipType extends TypeDefinition {}
 export interface RelationshipTypeChange {
   id: string;
   before: RelationshipType | null;
@@ -141,6 +138,9 @@ export type SaveOperation = SaveOperationIdentity &
 
 export interface RelationshipValue {
   properties?: Property[];
+  /** The user's wording belongs to this relationship, independently of its category. */
+  verb?: string;
+  reverseVerb?: string;
   typeId: string;
   sourceId: string;
   targetId: string;

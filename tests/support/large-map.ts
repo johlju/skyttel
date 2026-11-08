@@ -37,8 +37,8 @@ function seedMap(
     (id, householdId, typeId, revision, name, identity, properties, lifecycle)
     VALUES (?, ?, ?, 1, ?, ?, ?, ?)`);
   const edge = database.prepare(`INSERT INTO map_relationship
-    (id, householdId, typeId, revision, sourceId, targetId, properties, lifecycle)
-    VALUES (?, ?, ?, 1, ?, ?, ?, ?)`);
+    (id, householdId, typeId, revision, sourceId, targetId, verb, properties, lifecycle)
+    VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?)`);
   database.transaction(() => {
     for (let index = 0; index < objects; index += 1) {
       object.run(
@@ -68,6 +68,7 @@ function seedMap(
         edgeTypes[index % 3].id,
         `large-${source}`,
         `large-${Math.floor(source / 25) * 25 + ((source + offset) % 25)}`,
+        ['Använder', 'Betalar', 'Gäller'][index % 3],
         JSON.stringify(
           index % 7 === 0
             ? [{ id: 'certainty', label: 'Osäkert uppgivet', kind: 'boolean', value: true }]

@@ -57,6 +57,77 @@ async function post(route: string, data: unknown) {
   return response.json();
 }
 
+test('MCP stores a chosen verb between non-person objects without category or inverse wording', async () => {
+  const token = await connect();
+  let state = await (await browser.get(path)).json();
+  for (const [id, name, kind] of [
+    ['project', 'Familjens webbplats', 'Tjänst'],
+    ['hosting', 'Molndrift', 'Företag'],
+  ]) {
+    await post('draft', {
+      version: state.draft.version,
+      contentVersion: state.contentVersion,
+      id,
+      baseRevision: null,
+      value: { typeId: state.types.find((type: { name: string }) => type.name === kind).id, name },
+    });
+    state = await (await browser.get(path)).json();
+  }
+  const originalDraft = structuredClone(state.draft);
+  const rolledBack = await tool(token, 'apply_draft_batch', {
+    operationId: 'free-verb-rollback',
+    version: state.draft.version,
+    contentVersion: state.contentVersion,
+    operations: [
+      {
+        name: 'propose_relationship',
+        arguments: {
+          id: 'rollback-link',
+          baseRevision: null,
+          value: { sourceId: 'project', targetId: 'hosting', verb: 'körs hos' },
+        },
+      },
+      {
+        name: 'propose_relationship',
+        arguments: {
+          id: 'invalid-link',
+          baseRevision: null,
+          value: { sourceId: 'project', targetId: 'missing', verb: 'använder' },
+        },
+      },
+    ],
+  });
+  expect(rolledBack.error).toBe(true);
+  expect((await (await browser.get(path)).json()).draft).toEqual(originalDraft);
+  const proposed = await tool(token, 'propose_relationship', {
+    version: state.draft.version,
+    contentVersion: state.contentVersion,
+    id: 'hosting-link',
+    baseRevision: null,
+    value: { sourceId: 'project', targetId: 'hosting', verb: 'körs hos' },
+  });
+  expect(proposed.error).toBe(false);
+  expect(proposed.value.relationships[0].after).toMatchObject({
+    sourceId: 'project',
+    targetId: 'hosting',
+    verb: 'körs hos',
+  });
+  expect(proposed.value.relationships[0].after.reverseVerb).toBeUndefined();
+  expect(proposed.value.relationships[0].type.name).toBe('Samband');
+  const saved = await tool(token, 'save_draft', {
+    version: proposed.value.version,
+    contentVersion: proposed.value.contentVersion,
+    operationId: 'save-free-verb',
+  });
+  expect(saved.error).toBe(false);
+  expect(saved.value.receipt.relationships[0].after.verb).toBe('körs hos');
+  const history = await tool(token, 'read_history', {
+    operationId: 'save-free-verb',
+    userId: saved.value.receipt.userId,
+  });
+  expect(history.value.receipt.relationships[0].after.verb).toBe('körs hos');
+});
+
 test('retired historical mutations are absent from HTTP and MCP while ordinary saving and history remain available', async () => {
   const token = await connect();
   const sdk = new Client({ name: 'Historikläsare', version: '1' });

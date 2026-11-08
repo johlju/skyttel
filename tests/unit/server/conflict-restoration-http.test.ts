@@ -115,14 +115,10 @@ async function restoreArchive(snapshot: Awaited<ReturnType<typeof archive>>) {
     ),
   ).toMatchObject({ status: 'completed', contentVersion: contentVersion + 1 });
 }
-function value(kind: Kind, name: string) {
+function value(_kind: Kind, name: string) {
   return {
     name,
     description: 'Definition med historiska fält',
-
-    ...(kind === 'relationshipType'
-      ? { forwardLabel: 'förvaras i', reverseLabel: 'förvarar' }
-      : {}),
   };
 }
 /** Combine earlier owned drafts with lawful newer saved facts through the archive boundary. */

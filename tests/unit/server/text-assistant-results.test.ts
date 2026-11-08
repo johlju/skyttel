@@ -23,7 +23,6 @@ const usageType: RelationshipType = {
   revision: 1,
   name: 'Användning',
   description: '',
-  forwardLabel: 'används av',
 };
 
 test('completion details cover touched and withdrawn proposals while preserving unrelated draft work', () => {
@@ -76,8 +75,8 @@ test('completion describes verified service users with their names and the actua
       {
         id: 'lina-spotify',
         before: null,
-        after: { typeId: 'usage', sourceId: 'lina', targetId: 'spotify' },
-        type: { ...usageType, forwardLabel: 'använder' },
+        after: { typeId: 'usage', sourceId: 'lina', targetId: 'spotify', verb: 'använder' },
+        type: usageType,
         objectNames: { lina: 'Lina', spotify: 'Spotify' },
       },
     ],
@@ -89,11 +88,11 @@ test('completion describes verified service users with their names and the actua
 });
 
 test.each([
-  { type: 'Enhet', relation: 'Förbindelse', forwardLabel: 'Ansluter till' },
-  { type: 'Projekt', relation: 'Ansvar', forwardLabel: 'Förvaltas av' },
+  { type: 'Enhet', relation: 'Förbindelse', verb: 'Ansluter till' },
+  { type: 'Projekt', relation: 'Ansvar', verb: 'Förvaltas av' },
 ])(
   'completion filters default status for $type and $relation, and retains real status changes',
-  ({ type, relation, forwardLabel }) => {
+  ({ type, relation, verb }) => {
     const before: TextAssistantReview = {
       version: 1,
       contentVersion: 1,
@@ -118,8 +117,14 @@ test.each([
         {
           id: 'link',
           before: null,
-          after: { typeId: 'usage', sourceId: 'new', targetId: 'target', lifecycle: 'active' },
-          type: { ...usageType, name: relation, forwardLabel },
+          after: {
+            typeId: 'usage',
+            sourceId: 'new',
+            targetId: 'target',
+            lifecycle: 'active',
+            verb,
+          },
+          type: { ...usageType, name: relation },
           objectNames: { target: 'Motpart' },
         },
       ],
@@ -128,7 +133,7 @@ test.each([
       { subject: 'Exempel', action: 'lades till' },
       {
         subject: 'Exempel',
-        action: `${forwardLabel[0].toLocaleLowerCase('sv')}${forwardLabel.slice(1)} Motpart`,
+        action: `${verb[0].toLocaleLowerCase('sv')}${verb.slice(1)} Motpart`,
       },
     ]);
     const object = after.changes[0];
@@ -148,14 +153,14 @@ test.each([
     expect(draftUpdateDetails(after, ended)).toEqual([
       { subject: 'Status för Exempel', action: 'ändrades till upphört' },
       {
-        subject: `Status för sambandet ”Exempel ${forwardLabel} Motpart”`,
+        subject: `Status för sambandet ”Exempel ${verb} Motpart”`,
         action: 'ändrades till upphört',
       },
     ]);
     expect(draftUpdateDetails(ended, after)).toEqual([
       { subject: 'Status för Exempel', action: 'ändrades till aktuellt' },
       {
-        subject: `Status för sambandet ”Exempel ${forwardLabel} Motpart”`,
+        subject: `Status för sambandet ”Exempel ${verb} Motpart”`,
         action: 'ändrades till aktuellt',
       },
     ]);
@@ -182,6 +187,7 @@ function usage(value: Partial<MapRelationship> = {}): MapRelationship {
     typeId: 'usage',
     sourceId: 'subscription',
     targetId: 'alex',
+    verb: 'används av',
 
     ...value,
   };
@@ -271,21 +277,17 @@ test.each(['addition', 'removal'] as const)(
     expect(result.message).toContain('bild');
   },
 );
-test('type explanations and directional labels remain readable before and after a correction', () => {
+test('category names and explanations remain readable before and after a correction', () => {
   const after = {
     ...usageType,
     name: 'Ägande',
     description: 'Ägarens koppling',
-    forwardLabel: 'ägs av',
-    reverseLabel: 'äger',
   };
   const result = historyResult(
     receipt({ relationshipTypes: [{ id: usageType.id, before: usageType, after }] }),
   );
   expect(result.message).toContain('namn: Användning → Ägande');
   expect(result.message).toContain('beskrivning: tom → Ägarens koppling');
-  expect(result.message).toContain('Framåtriktning: används av → ägs av');
-  expect(result.message).toContain('Omvänd riktning: ej angivet → äger');
 });
 test('icon descriptions preserve historical type defaults when resetting the visible choice', () => {
   const result = historyResult(
@@ -327,15 +329,15 @@ test('missing historical definitions stay unknown when the selected type changes
         {
           id: 'usage',
           before: usage(),
-          after: usage({ typeId: 'ownership' }),
-          type: { ...usageType, id: 'ownership', name: 'Ägande', forwardLabel: 'ägs av' },
+          after: usage({ typeId: 'ownership', verb: 'ägs av' }),
+          type: { ...usageType, id: 'ownership', name: 'Ägande' },
           objectNames: { subscription: 'Musik', alex: 'Alex' },
         },
       ],
     }),
   );
   expect(result.message).toContain('objekttyp: okänd objekttyp → Bankkonto');
-  expect(result.message).toContain('Musik okänd sambandstyp Alex → Musik ägs av Alex');
+  expect(result.message).toContain('Musik används av Alex → Musik ägs av Alex');
   expect(result.message).toContain('sambandstyp: okänd sambandstyp → Ägande');
 });
 test('an empty draft and missing history explicitly describe the available result', () => {
@@ -366,9 +368,9 @@ test('pending and saved object corrections explain identity, active override and
   expect(saved.message).toMatch(/^Sparandet: Ändrade Hushållskortet/);
 });
 
-test('type additions and removals report complete explanations and direction labels with the correct operation tense', () => {
+test('type additions and removals report category explanations with the correct operation tense', () => {
   const created = { ...usageType, id: 'new-usage', description: 'Tjänstens användare' };
-  const removed = { ...usageType, reverseLabel: 'använder' };
+  const removed = usageType;
   const draft = {
     version: 5,
     changes: [],
@@ -389,9 +391,6 @@ test('type additions and removals report complete explanations and direction lab
   expect(saved.message).toContain('Tog bort objekttypen Kort');
   for (const result of [pending, saved]) {
     expect(result.message).toContain('beskrivning: ej angivet → Tjänstens användare');
-    expect(result.message).toContain('Framåtriktning: ej angivet → används av');
-    expect(result.message).toContain('Framåtriktning: används av → ej angivet');
-    expect(result.message).toContain('Omvänd riktning: använder → ej angivet');
   }
 });
 
@@ -404,14 +403,14 @@ test('pending relationship additions and removals use real identifiers when no e
       {
         id: 'new-edge',
         before: null,
-        after: value,
-        type: { ...usageType, forwardLabel: undefined },
+        after: { ...value, verb: undefined },
+        type: usageType,
       },
       { id: 'old-edge', before: value, after: null, type: usageType },
     ],
   };
   const pending = draftResult(draft);
-  expect(pending.message).toContain('Lägg till sambandet subscription Användning alex');
+  expect(pending.message).toContain('Lägg till sambandet subscription har samband med alex');
   expect(pending.message).toContain('Ta bort sambandet subscription används av alex');
   expect(pending.message).toContain('Gäller: ej angivet → aktuellt');
   expect(pending.message).toContain('Gäller: aktuellt → ej angivet');

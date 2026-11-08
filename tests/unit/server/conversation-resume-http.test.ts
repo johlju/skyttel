@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type APIRequestContext, request } from '@playwright/test';
@@ -527,12 +527,7 @@ test('a new request after reopening an active crash image waits for earlier reta
     return [modelMessage(`Klart: ${input.message}`)];
   });
   crashDirectory = mkdtempSync(join(tmpdir(), 'skyttel-conversation-order-crash-'));
-  const oldMigrations = join(crashDirectory, 'migrations');
-  mkdirSync(oldMigrations);
-  for (const file of readdirSync('migrations').filter((file) => Number(file.slice(0, 3)) <= 46))
-    copyFileSync(join('migrations', file), join(oldMigrations, file));
   app = await createInstallation(undefined, {
-    migrationsDirectory: oldMigrations,
     modelFetch: model.provider,
   });
   const first = await browser();

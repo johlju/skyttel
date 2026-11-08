@@ -12,7 +12,7 @@ const meanings: Record<string, string> = {
 async function readValues(side: Locator, value: object) {
   const data = value as Record<string, unknown>;
   if ('typeId' in data && !data.lifecycle) await expect(side).toContainText('Gäller fortfarande');
-  for (const key of ['name', 'description', 'forwardLabel', 'reverseLabel']) {
+  for (const key of ['name', 'description', 'verb', 'reverseVerb']) {
     if (typeof data[key] === 'string' && data[key]) await expect(side).toContainText(data[key]);
   }
   for (const [key, raw] of Object.entries(data)) {

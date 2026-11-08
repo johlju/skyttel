@@ -118,10 +118,6 @@ export async function stageNewRemovalType(page: Page, kind: 'objectType' | 'rela
       exact: true,
     })
     .fill('Hela den tillfälliga typens betydelse');
-  if (kind === 'relationshipType') {
-    await page.getByLabel('Benämning från startobjektet', { exact: true }).fill('granskar');
-    await page.getByLabel('Benämning från målobjektet', { exact: true }).fill('granskas av');
-  }
   await page
     .getByRole('button', {
       name:
@@ -151,6 +147,8 @@ export async function stageNewRemovalType(page: Page, kind: 'objectType' | 'rela
     const form = await openObjectRelationships(page, 'Alex blå cykel');
     await form.getByRole('button', { name: 'Nytt samband', exact: true }).click();
     await form.getByLabel('Sambandstyp', { exact: true }).selectOption({ label: 'Tillfällig typ' });
+    await form.getByLabel('Verb', { exact: true }).fill('granskar');
+    await form.getByLabel('Omvänd benämning (valfri)', { exact: true }).fill('granskas av');
     await setProperty(form, 'Uppgiftens säkerhet', 'Okänt');
     await form.getByLabel('Till objekt', { exact: true }).selectOption('draft-bike');
     await stageRelationshipAndClose(page);

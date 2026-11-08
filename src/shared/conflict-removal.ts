@@ -3,6 +3,7 @@ import type { ConflictChoices, ConflictProperty } from './conflict-properties.js
 import type { DraftConflict } from './draft-conflicts.js';
 import type { MapDraft, MapState, ObjectValue } from './map.js';
 import { propertyValueText } from './properties.js';
+import { relationshipVerb } from './relationship-verb.js';
 
 export const removalCombinationMessage =
   'Objektet kan inte tas bort medan sambandet till det finns kvar. Välj att ta bort sambandet eller behåll objektet.';
@@ -43,7 +44,6 @@ export function conflictRemovalProperties(
       proposed: 'Föreslagen borttagning',
     },
     ...(conflict.connections ?? []).map((edge) => {
-      const type = state.relationshipTypes.find((type) => type.id === edge.typeId);
       const source =
         state.objects.find((object) => object.id === edge.sourceId)?.name ?? edge.sourceId;
       const target =
@@ -52,7 +52,7 @@ export function conflictRemovalProperties(
         key: `relationship:${edge.id}`,
         label: 'Samband',
         before: 'Inga',
-        saved: `${source} ${type?.forwardLabel ?? type?.name ?? 'har samband med'} ${target}`,
+        saved: `${source} ${relationshipVerb(edge)} ${target}`,
         proposed: 'Föreslagen borttagning av sambandet',
       };
     }),

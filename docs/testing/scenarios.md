@@ -27,6 +27,25 @@ inte en obligatorisk exakt formulering. En kort verifierad utkastbekräftelse ä
 normalfallet för ändringar; beställda faktasvar, frågor och sammanfattningar
 måste fortfarande lämnas. Ett sparbesked förutsätter ett verifierat sparkvitto.
 
+Orden mellan pilarna anger sambandsverbet, inte en obligatorisk
+gruppering. Användarens uttryckliga verb och riktning styr oavsett objekttyper.
+Samma verb får användas med olika sambandstyper, och samma typ med olika
+verb. En begäran om en allmän koppling använder **har samband med**; den
+behöver inget extra typval eller en omvänd benämning. Historiska råresultat
+gäller kontraktet vid deras egen revision och skrivs inte om av dessa regler.
+
+Även förberedda samband har uttryckliga verb på varje enskild koppling.
+Förberedda sambandstyper innehåller namn och beskrivning; de väljer inga
+verb åt sambanden. Startläget lägger bara till de extra sambandstyper som
+scenariots förberedelse anger.
+
+När begäran anger en roll som inloggningsadress utan att välja sambandsverb
+får en naturlig formulering uttrycka samma roll från endera objektet. Då
+kontrolleras objekten strukturellt och ordvalets innebörd bedöms separat mot
+det deklarerade rollkravet. Fel roll eller fel riktning i meningen är ett
+fel även när rätt objekt är kopplade. Utan innehållsbedömning blir utfallet
+inkonklusivt. Ett uttryckligt valt verb prövas fortfarande som sådant.
+
 Alla scenarier kräver rätt hushåll, person och utkast, rätt objekttyper och
 sambandsriktningar samt bevarade ovidkommande uppgifter. Ingen uppgift får
 hittas på. En ändring i utkastet ger inte tillstånd att spara. När inget annat
@@ -136,7 +155,7 @@ Tillåtet tillståndsalternativ 1:
 
 - Disney+: namn Disney+; typ Tjänst.
 - Disney+-abonnemang: namn Disney+-abonnemang; typ Abonnemang.
-- Tillagt samband: Disney+-abonnemang → Tillhör tjänsten → Disney+.
+- Tillagt samband: Disney+-abonnemang → har samband med → Disney+.
 
 Tillåtet tillståndsalternativ 2:
 
@@ -146,7 +165,7 @@ Tillåtet tillståndsalternativ 3:
 
 - Disney+: namn Disney+; typ Tjänst.
 - Disney+-abonnemang: namn Disney+-abonnemang; typ Abonnemang.
-- Tillagt samband: Disney+-abonnemang → Gäller → Disney+.
+- Tillagt samband: Disney+-abonnemang → har samband med → Disney+.
 
 Tillåtet tillståndsalternativ 4:
 
@@ -408,7 +427,7 @@ riktning.
 
 **Förväntat svar och resultat:**
 
-- Tillagt samband: Mitt Spotify-konto → Tillhör tjänsten → Spotify.
+- Tillagt samband: Mitt Spotify-konto → har samband med → Spotify.
 
 **Om en annan nödvändig fråga behövs:** Ställ en nödvändig relevant följdfråga
 om något som varken begäran eller kartans fakta avgör. Bevara den exakta
@@ -426,10 +445,9 @@ koppling.
 **Startläge:** Kartan innehåller Netflix-abonnemang (Abonnemang) med Pris: 149,
 Valuta: SEK, Betalningsintervall: månad; Netflix (Tjänst).
 
-**Avgränsning i kontrollen:** Kontrollens tillståndskrav använder sambandstypen
-Gäller eller Tillhör tjänsten från abonnemanget till tjänsten. Exakt ett av
-sambanden ska läggas till, med rätt riktning och samma befintliga objekt som
-ändpunkter.
+**Avgränsning i kontrollen:** Lägg till ett samband med verbet **har samband
+med** från abonnemanget till tjänsten. Riktning och befintliga ändpunkter
+ska stämma. Grupperingen är valfri.
 
 **Steg 1:**
 
@@ -437,8 +455,7 @@ sambanden ska läggas till, med rätt riktning och samma befintliga objekt som
 
 **Förväntat svar och resultat:**
 
-- Tillagt samband från Netflix-abonnemang till Netflix, med sambandstypen
-  Gäller eller Tillhör tjänsten.
+- Tillagt samband: Netflix-abonnemang → har samband med → Netflix.
 
 **Om en annan nödvändig fråga behövs:** Ställ en nödvändig relevant följdfråga
 om något som varken begäran eller kartans fakta avgör. Bevara den exakta
@@ -513,7 +530,7 @@ bankkonto (Bankkonto).
 
 **Förväntat svar och resultat:**
 
-- Tillagt samband: Hushållskortet → Kontokoppling → Vårt gemensamma bankkonto.
+- Tillagt samband: Hushållskortet → har samband med → Vårt gemensamma bankkonto.
 
 **Om en annan nödvändig fråga behövs:** Ställ en nödvändig relevant följdfråga
 om något som varken begäran eller kartans fakta avgör. Bevara den exakta
@@ -548,8 +565,8 @@ följdsvar är inte definierat för den grenen.
 
 Scenario-ID: `everyday-17`.
 
-**Utvärderar:** Använda den befintliga sambandstypen med rätt riktning för
-ägande.
+**Utvärderar:** Bevara användarens ägarverb och riktningen från ägare till
+ägt objekt, oberoende av gruppering.
 
 **Startläge:** Kartan innehåller Alex Lind (Person); Volvo V60 (Fordon).
 
@@ -559,7 +576,7 @@ Scenario-ID: `everyday-17`.
 
 **Förväntat svar och resultat:**
 
-- Tillagt samband: Volvo V60 → Äger → Alex Lind.
+- Tillagt samband: Alex Lind → äger → Volvo V60.
 
 **Om en annan nödvändig fråga behövs:** Ställ en nödvändig relevant följdfråga
 om något som varken begäran eller kartans fakta avgör. Bevara den exakta
@@ -585,7 +602,7 @@ Folksam (Företag); Volvo V60 (Fordon).
 
 **Förväntat svar och resultat:**
 
-- Tillagt samband: Bilförsäkringen hos Folksam → Försäkrar → Volvo V60.
+- Tillagt samband: Bilförsäkringen hos Folksam → gäller → Volvo V60.
 
 **Om en annan nödvändig fråga behövs:** Ställ en nödvändig relevant följdfråga
 om något som varken begäran eller kartans fakta avgör. Bevara den exakta
@@ -983,9 +1000,8 @@ hitta på tjänsteanvändning.
 
 **Startläge:** Kartan innehåller Disney+ (Tjänst); Sonja (Person).
 
-**Avgränsning i kontrollen:** Kontrollens tillståndskrav använder sambandstypen
-Gäller eller Tillhör tjänsten från abonnemanget till Disney+. Exakt ett av
-sambanden ska läggas till. Sonjas betalningssamband krävs i båda alternativen.
+**Avgränsning i kontrollen:** Ett samband med verbet **har samband med**
+kopplar abonnemanget till Disney+. Sonjas betalningssamband krävs också.
 Belopp, valuta och månad får uttryckas med den avgränsade numeriska eller
 textbaserade prisrepresentation som katalogen tillåter.
 
@@ -1001,8 +1017,7 @@ textbaserade prisrepresentation som katalogen tillåter.
   tillsammans, i en eller flera egenskaper. Sonja betalar; hon är inte därmed
   avtalspart eller ägare.
 - Disney+-abonnemang: namn Disney+-abonnemang; typ Abonnemang.
-- Tillagt samband från Disney+-abonnemang till Disney+, med sambandstypen
-  Gäller eller Tillhör tjänsten.
+- Tillagt samband: Disney+-abonnemang → har samband med → Disney+.
 - Tillagt samband: Sonja → Betalar → Disney+-abonnemang.
 
 **Om en annan nödvändig fråga behövs:** Ställ en nödvändig relevant följdfråga
@@ -1070,7 +1085,7 @@ användning och tjänstetillhörighet med rätt samband.
   Spotify.
 - Johans Spotify-konto: namn Johans Spotify-konto; typ Tjänstekonto.
 - Tillagt samband: Johan → Använder → Johans Spotify-konto.
-- Tillagt samband: Johans Spotify-konto → Tillhör tjänsten → Spotify.
+- Tillagt samband: Johans Spotify-konto → hör till → Spotify.
 
 **Om en annan nödvändig fråga behövs:** Ställ en nödvändig relevant följdfråga
 om något som varken begäran eller kartans fakta avgör. Bevara den exakta
@@ -1121,7 +1136,7 @@ Scenario-ID: `everyday-36`.
 - Det nya kortets namn identifierar Visa-kortet. Kopplingen avser bankkontot hos
   Nordea, inte en kortfaktura.
 - Visa-kortet: namn Visa-kortet; typ Kort.
-- Tillagt samband: Visa-kortet → Kontokoppling → Bankkontot hos Nordea.
+- Tillagt samband: Visa-kortet → har samband med → Bankkontot hos Nordea.
 
 **Om en annan nödvändig fråga behövs:** Ställ en nödvändig relevant följdfråga
 om något som varken begäran eller kartans fakta avgör. Bevara den exakta
@@ -1179,8 +1194,8 @@ försäkringsinnehåll.
 - Det nya fordonet är Volvo V60. Johan äger det och den befintliga
   bilförsäkringen hos Folksam försäkrar det.
 - Volvo V60: namn Volvo V60; typ Fordon.
-- Tillagt samband: Volvo V60 → Äger → Johan.
-- Tillagt samband: Bilförsäkringen hos Folksam → Försäkrar → Volvo V60.
+- Tillagt samband: Johan → äger → Volvo V60.
+- Tillagt samband: Volvo V60 → är försäkrad hos → Folksam.
 
 **Om en annan nödvändig fråga behövs:** Ställ en nödvändig relevant följdfråga
 om något som varken begäran eller kartans fakta avgör. Bevara den exakta
@@ -1207,7 +1222,7 @@ Valuta: SEK, Betalningsintervall: månad.
 - Den nya bostaden är Storgatan 12 och det befintliga Telia-bredbandet hör till
   den.
 - Storgatan 12: namn Storgatan 12; typ Bostad.
-- Tillagt samband: Telias bredband → Hör till → Storgatan 12.
+- Tillagt samband: Telias bredband → har samband med → Storgatan 12.
 
 **Om en annan nödvändig fråga behövs:** Ställ en nödvändig relevant följdfråga
 om något som varken begäran eller kartans fakta avgör. Bevara den exakta
@@ -1398,10 +1413,9 @@ okänt pris.
 **Startläge:** Kartan innehåller Storgatan 12 (Bostad); Bahnhofs bredband
 (Tjänst).
 
-**Avgränsning i kontrollen:** Kontrollens tillståndskrav använder sambandstypen
-Gäller eller Tillhör tjänsten från abonnemanget till Bahnhofs bredband. Exakt
-ett av dessa samband ska läggas till. Båda alternativen kräver dessutom Hör
-till från abonnemanget till Storgatan 12; tjänst och bostad är skilda ändpunkter.
+**Avgränsning i kontrollen:** Verbet **har samband med** kopplar abonnemanget
+till Bahnhofs bredband respektive Storgatan 12. Tjänst och bostad är skilda
+ändpunkter. Grupperingarna är valfria.
 
 **Steg 1:**
 
@@ -1416,8 +1430,8 @@ till från abonnemanget till Storgatan 12; tjänst och bostad är skilda ändpun
   annat abonnemang. Ingen fråga om pris behövs för att lägga till det.
 - Bredband från Bahnhof: namn Bredband från Bahnhof; typ Abonnemang.
 - Tillagt samband från Bredband från Bahnhof till Bahnhofs bredband, med
-  sambandstypen Gäller eller Tillhör tjänsten.
-- Tillagt samband: Bredband från Bahnhof → Hör till → Storgatan 12.
+  verbet har samband med.
+- Tillagt samband: Bredband från Bahnhof → har samband med → Storgatan 12.
 
 **Om en annan nödvändig fråga behövs:** Ställ en nödvändig relevant följdfråga
 om något som varken begäran eller kartans fakta avgör. Bevara den exakta
@@ -1857,7 +1871,7 @@ Efter svaret gäller det ursprungliga målet samt:
 - Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning,
   sparfråga eller sparpåstående.
 - Tillagt samband: Alex Lind → Använder → Microsoft 365.
-- Tillagt samband: Spotify Premium Family → Betalas med → Bankkonto Reserv.
+- Tillagt samband: Spotify Premium Family → betalas från → Bankkonto Reserv.
 - Borttaget samband: Spotify Premium Family → Betalas med → Hushållskortet.
 
 **Steg 3 – ordinarie följdmeddelande:**
@@ -1998,7 +2012,7 @@ rätt pris.
 - Tillagt samband: Spotify Premium Family → Betalas med → Hushållskortet.
 - Tillagt samband: Alex arbete → Inloggningsadress → `alex@norrsken.test`.
 - Tillagt samband: Alex arbete → Kontaktadress → `hushall@norrsken.test`.
-- Tillagt samband: Molnlagring Plus → Betalas med → Bankkonto Hushåll.
+- Tillagt samband: Molnlagring Plus → betalas från → Bankkonto Hushåll.
 - Tillagt samband: Lo Berg → Betalar → Molnlagring Plus.
 - Tillagt samband: Mira Dahl → Använder → Norrsken Molnlagring.
 - Borttaget samband: Mira Dahl → Använder → Spotify.
@@ -2029,7 +2043,7 @@ I vänteläget gäller:
 - Tillagt samband: Lo Berg → Använder → Spotify.
 - Tillagt samband: Alex Lind → Använder → Microsoft 365.
 - Tillagt samband: Spotify Premium Family → Betalas med → Hushållskortet.
-- Tillagt samband: Molnlagring Plus → Betalas med → Bankkonto Hushåll.
+- Tillagt samband: Molnlagring Plus → betalas från → Bankkonto Hushåll.
 - Tillagt samband: Lo Berg → Betalar → Molnlagring Plus.
 - Borttaget samband: Spotify Premium Family → Betalas med → Bankkonto Reserv.
 - Borttaget samband: Molnlagring Plus → Betalas med → Hushållskortet.
@@ -2080,7 +2094,7 @@ först efter verifierat sparande.
 - Tillagt samband: Spotify Premium Family → Betalas med → Hushållskortet.
 - Tillagt samband: Alex arbete → Inloggningsadress → `alex@norrsken.test`.
 - Tillagt samband: Alex arbete → Kontaktadress → `hushall@norrsken.test`.
-- Tillagt samband: Molnlagring Plus → Betalas med → Bankkonto Hushåll.
+- Tillagt samband: Molnlagring Plus → betalas från → Bankkonto Hushåll.
 - Tillagt samband: Lo Berg → Betalar → Molnlagring Plus.
 - Tillagt samband: Mira Dahl → Använder → Norrsken Molnlagring.
 - Borttaget samband: Mira Dahl → Använder → Spotify.
@@ -2116,7 +2130,7 @@ I vänteläget gäller:
 - Tillagt samband: Alex Lind → Använder → Spotify.
 - Tillagt samband: Lo Berg → Använder → Spotify.
 - Tillagt samband: Spotify Premium Family → Betalas med → Hushållskortet.
-- Tillagt samband: Molnlagring Plus → Betalas med → Bankkonto Hushåll.
+- Tillagt samband: Molnlagring Plus → betalas från → Bankkonto Hushåll.
 - Tillagt samband: Lo Berg → Betalar → Molnlagring Plus.
 - Borttaget samband: Mira Dahl → Använder → Spotify.
 - Borttaget samband: Spotify Premium Family → Betalas med → Bankkonto Reserv.
@@ -2225,7 +2239,7 @@ beställd sammanfattning.
 - Tillagt samband: Spotify Premium Family → Betalas med → Hushållskortet.
 - Tillagt samband: Alex arbete → Inloggningsadress → `alex@norrsken.test`.
 - Tillagt samband: Alex arbete → Kontaktadress → `hushall@norrsken.test`.
-- Tillagt samband: Molnlagring Plus → Betalas med → Bankkonto Hushåll.
+- Tillagt samband: Molnlagring Plus → betalas från → Bankkonto Hushåll.
 - Tillagt samband: Lo Berg → Betalar → Molnlagring Plus.
 - Tillagt samband: Mira Dahl → Använder → Norrsken Molnlagring.
 - Borttaget samband: Mira Dahl → Använder → Spotify.
@@ -2262,7 +2276,7 @@ I vänteläget gäller:
 - Tillagt samband: Spotify Premium Family → Betalas med → Hushållskortet.
 - Tillagt samband: Alex arbete → Inloggningsadress → `alex@norrsken.test`.
 - Tillagt samband: Alex arbete → Kontaktadress → `hushall@norrsken.test`.
-- Tillagt samband: Molnlagring Plus → Betalas med → Bankkonto Hushåll.
+- Tillagt samband: Molnlagring Plus → betalas från → Bankkonto Hushåll.
 - Tillagt samband: Lo Berg → Betalar → Molnlagring Plus.
 - Borttaget samband: Spotify Premium Family → Betalas med → Bankkonto Reserv.
 - Borttaget samband: Alex arbete → Inloggningsadress → `m365@norrsken.test`.

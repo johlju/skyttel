@@ -7,6 +7,11 @@ permanent radering; dess oåterkalleliga omfattning provas separat i
 [raderingsfallen](household-erasure.md).
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 
+När förberedelsen anger ett samband som **A → verb → B**, skriv den
+angivna mittdelen i **Verb** på det enskilda sambandet. Välj den angivna
+sambandstypen separat. När ett steg ändrar både typen och formuleringen,
+ändra också **Verb** uttryckligen.
+
 ## Separat HTTP-underlag
 
 [lifecycle-http.test.ts](../../tests/unit/server/lifecycle-http.test.ts)
@@ -122,6 +127,7 @@ await lifecyclePost('relationship', {
   id: `previous-${lifecycleIncoming.id}`, baseRevision: null,
   value: { sourceId: lifecycleService.id, targetId: lifecycleLo.id,
     typeId: lifecycleState.relationshipTypes.find(x => x.name === 'Betalar').id,
+    verb: 'Betalar',
     lifecycle: 'active',
     properties: [{ id: 'endDate', label: 'Slutdatum',
       kind: 'date', value: '2000-01-01' }] }
@@ -481,7 +487,7 @@ förslaget. Faktisk uppläsning provas i LIVSCYKEL-09.
 **Steg:**
 
 1. Redigera sambandet från Lo till Familjemusik. Ändra Från objekt till
-   Molnmusik, välj typen **Betalar** och
+   Molnmusik, välj typen **Betalar**, skriv **Betalar** i **Verb** och välj
    status **Gäller fortfarande**. Lägg sambandet i ditt utkast med Enter och
    välj Stäng samband utan att spara. Öppna Utkast → Visa förslaget för
    Molnmusik → Betalar → Familjemusik. Läs båda värdesidorna:
@@ -545,7 +551,8 @@ connected edge and preserves history”.
 **Steg:**
 
 1. Öppna **Lo Exempel → Använder → Familjemusik**, välj **Betalar** som
-   sambandstyp och lägg sambandet i utkastet utan att spara. Välj
+   sambandstyp, skriv **Betalar** i **Verb** och lägg sambandet i utkastet
+   utan att spara. Välj
    **Stäng samband**.
 2. Välj den röda papperskorgen **Ta bort Familjemusik** på tabellraden.
    Granska **Visa utkastet**

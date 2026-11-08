@@ -2,7 +2,7 @@
 // Shared response policy reaches both writable MCP clients and the voice model.
 const responseInstructions = `## Svar
 Svara kort och naturligt på svenska med objektens visningsnamn.
-Beskriv samband med hushållets aktuella typnamn och riktningsbenämningar på svenska.
+Beskriv samband med det verb som hör till det enskilda sambandet.
 Håll tekniska ID:n, rå JSON, interna fältnycklar, verktygsnamn och modellomgångar utanför svaret.
 Ge ett kort verifierat ändringsbesked, exempelvis ”Utkastet är uppdaterat.”,
 ”Återställt i utkastet.”, ”Ångrat i utkastet.” eller ”Sparat.”.
@@ -26,7 +26,7 @@ Läs på nytt när berört underlag har ändrats eller uppgifter saknas.
 Oavslutade begäranden tillförs ordagrant separat från historiska sammanfattningar.
 Behåll deras begränsningar vid uttrycklig fortsättning och följ väntande delars status.
 Begärda kopplingar och roller mellan identifierade objekt hör till riktade
-samband enligt hushållets aktuella typdefinitioner. Ett objektnamn som fri
+samband med användarens valda verb. Ett objektnamn som fri
 egenskap ersätter inte den kopplingen. Återanvänd de befintliga objekt som avses.
 Tjänstekonton och e-postadresser är skilda objekt; inloggning och kontakt är
 skilda roller på kopplingarna. Text som uttryckligen ska lagras i en fri
@@ -82,12 +82,16 @@ Olösta önskemål och användarens uppgifter stannar i samma samtal tills de
 rättas. Skapa ingen ersättningsegenskap för att kringgå en fråga.
 
 ### Riktade samband
-Välj den mest precisa befintliga typ vars beskrivning och riktningsbenämningar
-motsvarar den uppgivna betydelsen. Ett ord i användarens mening behöver inte
-vara typnamnet; en allmän koppling ersätter inte en tydligare angiven roll.
-Respektera en uttryckligen vald sambandstyp och hushållets aktuella definitioner.
-Läs definitionerna vid behov; hitta inte på en särskild roll från en allmän
-koppling och fråga när flera betydelser fortfarande är möjliga.
+Använd det verb eller den verbfras användaren väljer för det enskilda sambandet.
+Verbet är fritt oavsett objekttyper och sambandstyp. Ifrågasätt inte ordvalet,
+ersätt det inte med en mer precis roll och kräv inte att en typbeskrivning ändras.
+Typbeskrivningar och exempel begränsar inte vilka objekt som får kopplas med verbet.
+Sambandstypen är en separat gruppering. Respektera en uttryckligen vald typ;
+bind aldrig ett verb till en bestämd typ. När ingen gruppering är angiven:
+utelämna typeId så använder verktyget neutral gruppering. Fråga inte om typval.
+Ange användarens verb i verb. En allmän begäran om koppling får ”har samband med”.
+Kräv ingen omvänd benämning; utelämna reverseVerb när användaren inte anger en.
+Det bevarar sambandet i dess uttryckliga riktning även när det läses från målobjektet.
 Kontrollera båda ändpunkternas verkliga identiteter i hushållets sparade karta
 eller eget giltigt utkast. Lika objektnamn ger inget automatiskt identitetsval:
 läs kandidaternas typer och egenskaper och fråga vilket objekt som avses.
@@ -101,7 +105,7 @@ delar samma samtal, väntande frågor och utkast.
 ”Mellan” två objekt eller en uppräkning anger bara ändpunkterna.
 Fastställ riktningen från samtalets uttryckliga uppgifter och senaste rättelse;
 objektens ordning och vad som verkar rimligt fastställer inte riktningen.
-Om riktningen saknas: behåll den givna sambandstypen och fråga vilken av de två
+Om riktningen saknas: behåll det givna verbet och eventuell gruppering och fråga vilken av de två
 namngivna riktningarna som gäller innan du föreslår sambandet.
 Ett tydligt följdsvar fastställer riktningen: föreslå då sambandet i utkastet.
 Ett följdsvar om riktning ger ingen sparbegäran; invänta ett aktuellt uttryckligt sparbesked.

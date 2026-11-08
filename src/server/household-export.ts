@@ -104,11 +104,6 @@ const collections = [
   ['objectTypes', 'SELECT * FROM object_type WHERE householdId = ? ORDER BY id', []],
   ['relationshipTypes', 'SELECT * FROM relationship_type WHERE householdId = ? ORDER BY id', []],
   [
-    'relationshipTypeLabels',
-    'SELECT l.* FROM relationship_type_labels l JOIN relationship_type t ON t.id = l.typeId WHERE t.householdId = ? ORDER BY l.typeId',
-    [],
-  ],
-  [
     'removedTypes',
     `SELECT r.* FROM removed_type r WHERE
     (r.kind = 'objectType' AND r.typeId IN (SELECT id FROM object_type WHERE householdId = ?)) OR

@@ -20,12 +20,12 @@ async function readCorrectedProposal(
   page: Page,
   relationship: boolean,
   typeName: string,
-  forwardLabel: string,
+  verb: string,
   year?: string,
 ) {
   await expectConflictDraftValues(
     page,
-    relationship ? `Lo Exempel → ${forwardLabel} → Molnmusik` : 'Solcellsanläggningen',
+    relationship ? `Lo Exempel → ${verb} → Molnmusik` : 'Solcellsanläggningen',
     relationship
       ? {
           Från: 'Lo Exempel',
@@ -50,22 +50,17 @@ async function readSavedCorrection(
   origin: string,
   relationship: boolean,
   typeName: string,
-  forwardLabel: string,
+  verb: string,
   year?: string,
 ) {
   await refreshConflictReader(page, origin);
   if (relationship)
-    await expectSavedConflictRelationship(
-      page,
-      'Lo Exempel',
-      `Lo Exempel → ${forwardLabel} → Molnmusik`,
-      {
-        Typ: typeName,
-        'Från objekt': 'Lo Exempel',
-        'Till objekt': 'Molnmusik',
-        ...(year ? { Installationsår: year } : {}),
-      },
-    );
+    await expectSavedConflictRelationship(page, 'Lo Exempel', `Lo Exempel → ${verb} → Molnmusik`, {
+      Typ: typeName,
+      'Från objekt': 'Lo Exempel',
+      'Till objekt': 'Molnmusik',
+      ...(year ? { Installationsår: year } : {}),
+    });
   else {
     const details = await expectSavedConflictObject(
       page,
@@ -181,8 +176,6 @@ test('UTKAST-66: a missing relationship type needs an actual new definition and 
     await page
       .getByLabel('Sambandstypens beskrivning', { exact: true })
       .fill('Ny faktisk definition');
-    await page.getByLabel('Benämning från startobjektet', { exact: true }).fill('förvaras i');
-    await page.getByLabel('Benämning från målobjektet', { exact: true }).fill('förvarar');
     await page
       .getByRole('button', { name: 'Lägg sambandstypen i mitt utkast', exact: true })
       .click();
@@ -201,6 +194,7 @@ test('UTKAST-66: a missing relationship type needs an actual new definition and 
     const dialog = page.getByRole('dialog', { name: 'Samband för Lo Exempel', exact: true });
     await dialog.getByRole('button', { name: 'Redigera samband', exact: true }).click();
     await dialog.getByLabel('Sambandstyp', { exact: true }).selectOption(definition?.id ?? '');
+    await dialog.getByLabel('Verb', { exact: true }).fill('förvaras i');
     await expect(
       propertyRow(dialog, 'Installationsår').getByLabel('Värde', { exact: true }),
     ).toHaveValue('Våren 2021');

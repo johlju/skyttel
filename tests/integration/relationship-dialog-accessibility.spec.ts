@@ -25,8 +25,6 @@ test('SAMBAND-12: long relationship names and field labels reflow without horizo
       value: {
         name: 'Långa provuppgifter',
         description: '',
-        forwardLabel: label,
-        reverseLabel: 'gäller för',
       },
     });
     const before = await read();
@@ -37,6 +35,8 @@ test('SAMBAND-12: long relationship names and field labels reflow without horizo
     const dialog = page.getByRole('dialog', { name: 'Samband för Alex', exact: true });
     await dialog.getByRole('button', { name: 'Nytt samband', exact: true }).click();
     await dialog.getByLabel('Sambandstyp', { exact: true }).selectOption('long-labels');
+    await dialog.getByLabel('Verb', { exact: true }).fill(label);
+    await dialog.getByLabel('Omvänd benämning (valfri)', { exact: true }).fill('gäller för');
     await dialog.getByLabel('Till objekt', { exact: true }).selectOption('bicycle');
     await addFreeProperty(dialog, fieldName, 'text', 'Bevara uppgiften');
     const sentence = dialog.getByRole('region', { name: 'Sambandet före inskickning' });

@@ -46,6 +46,99 @@ sambandet. Gamla
 egenskapsidentiteter, typidentiteter, revisioner och arkivkontrollsummor är
 tekniskt underlag, inte uppgifter som användaren ska läsa i UI-fallet.
 
+## Typkonflikt i STY-04
+
+Denna förberedelse gäller förberedaren av
+[STY-04](relationship-types.md#sty-04-typkonflikt-bevarar-oberoende-definitionsändring).
+Använd ett nytt, tomt provhushåll där Alex och Robin är inloggade i separata
+profiler. Behåll samma databas till och med omstarten. Kör endast mot den
+tillfälliga provinstallationen. Ingen modell eller direkt databasändring
+används.
+
+Öppna provhushållets karta. Kör följande i webbläsarens utvecklarkonsol
+först i Alex profil med `phase = 'alex'`, sedan i Robins profil med
+`phase = 'robin'`. Ändra bara fasen mellan körningarna. Båda profilerna
+måste ha samma hushåll öppet. Invänta konsolens klarmeddelande efter varje
+körning och ladda om Alex innan UI-fallet börjar.
+
+```js
+(async () => {
+  const phase = 'alex';
+  if (!['alex', 'robin'].includes(phase)) throw new Error('Fel fas');
+  const household = location.pathname.match(/^\/households\/([^/]+)/)?.[1];
+  if (!household) throw new Error('Öppna provhushållets karta');
+  const path = `/api/households/${household}/map`;
+  const read = async () => {
+    const response = await fetch(path);
+    if (!response.ok) throw new Error('Kartan kan inte läsas');
+    return response.json();
+  };
+  const build = await (await fetch('/api/version')).json();
+  const headers = { 'Content-Type': 'application/json',
+    'X-Skyttel-Build': `${build.commit}:${build.version}` };
+  const post = async (route, value) => {
+    const state = await read();
+    const response = await fetch(`${path}/${route}`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ version: state.draft.version,
+        contentVersion: state.contentVersion, ...value }) });
+    if (!response.ok) throw new Error(`Förberedelsen misslyckas: ${route}`);
+    return response.json();
+  };
+  const initial = await read();
+  if (initial.objects.length || initial.relationships.length ||
+      ['changes', 'relationships', 'objectTypes', 'relationshipTypes']
+        .some(key => initial.draft[key]?.length))
+    throw new Error('Använd tom karta och tomt eget utkast');
+  const value = { name: 'Förvaring', description: 'Förvaringsplats' };
+  if (phase === 'alex') {
+    await post('relationship-type', {
+      id: 'storage', baseRevision: null, value });
+    await post('save', { operationId: crypto.randomUUID() });
+    await post('relationship-type', {
+      id: 'storage', baseRevision: 1,
+      value: { ...value, name: 'Plats' } });
+    for (const [id, name] of [['bike', 'Cykeln'], ['garage', 'Garaget']])
+      await post('draft', { id, baseRevision: null,
+        value: { typeId: initial.types[0].id, name, properties: [] } });
+    await post('relationship', { id: 'storage-edge', baseRevision: null,
+      value: { typeId: 'storage', sourceId: 'bike', targetId: 'garage',
+        verb: 'förvaras i', reverseVerb: 'innehåller' } });
+  } else {
+    const type = initial.relationshipTypes.find(type => type.id === 'storage');
+    if (type?.revision !== 1) throw new Error('Kör Alex fas först');
+    await post('relationship-type', {
+      id: 'storage', baseRevision: 1,
+      value: { ...value, name: 'Los plats', description: 'Los nya förklaring' }
+    });
+    await post('save', { operationId: crypto.randomUUID() });
+  }
+  console.log(`STY-04: ${phase} är förberedd`);
+})();
+```
+
+Alex har nu ett privat typförslag och två nya objekt med ett eget riktat
+samband. Robin har sparat en nyare definition. Namnen Plats och Los plats
+är motstridiga; Robins beskrivning är en oberoende ändring. Det enskilda
+sambandet behåller sina uttryckliga ordval förvaras i och innehåller.
+
+Efter UI-fallet och omstarten kontrollerar förberedaren det tekniska
+underlaget genom det befintliga integrationsprovet. Det jämför exakt
+typidentitet `storage`, revision 3, namnet Plats, beskrivningen Los nya
+förklaring. Kvittots före-värde bevarar revision 2 och Los plats;
+sambandets typsnapshot bevarar revision 3 och Plats. Sambandets verb och
+omvända benämning behålls separat. Kör från repositoryts rot:
+
+```bash
+npm run test:integration:ci -- \
+  tests/integration/relationship-types.spec.ts --grep 'STY-04:'
+```
+
+Detta är separat automatiserat underlag från en egen tillfällig installation,
+inte en API-läsning som den vanliga användaren ska utföra. Avsluta de två
+provprofilerna och ta bort enbart provinstallationens tillfälliga databas
+efter fallet.
+
 ## Tidsordning för operatörens kontroller
 
 `result` skriver den faktiska kartan och hela Robins privata utkast via

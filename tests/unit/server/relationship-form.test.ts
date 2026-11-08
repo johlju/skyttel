@@ -121,7 +121,7 @@ test('immutable form evidence does not enter shared receipts or portable archive
     await (await client.request(`${path}/exports/${prepared.id}`)).arrayBuffer(),
   );
   const archive = unzipSync(bytes);
-  expect(JSON.parse(new TextDecoder().decode(archive['manifest.json'])).schemaVersion).toBe(38);
+  expect(JSON.parse(new TextDecoder().decode(archive['manifest.json'])).schemaVersion).toBe(40);
   const content = new TextDecoder().decode(archive['content.json']);
   expect(content).not.toContain(submission.stagingId);
   expect(content).not.toContain('relationship_form_attempt');
@@ -390,6 +390,7 @@ test.each(['member', 'installation'] as const)(
     ).json();
     const value = {
       ...(submission.value as object),
+      verb: 'har samband med',
       properties: [{ id: 'large', label: 'Anteckning', kind: 'text', value: 'å'.repeat(10_000) }],
     };
     const body = {

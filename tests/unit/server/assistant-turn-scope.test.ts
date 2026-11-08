@@ -313,7 +313,7 @@ const mutations = [
     {
       id: 'type',
       baseRevision: null,
-      value: { name: 'Injected', description: '', forwardLabel: 'a', reverseLabel: 'b' },
+      value: { name: 'Injected', description: '' },
     },
   ],
   ['propose_relationship_type', { id: 'type', baseRevision: 1, value: null }],
@@ -1188,10 +1188,7 @@ test('a requested relationship can use a saved type that no existing relationshi
       return [
         modelMessage(
           JSON.stringify(
-            definition?.name === 'Levererar till' &&
-              definition.forwardLabel === 'levererar till' &&
-              definition.reverseLabel === 'levereras av' &&
-              data.map.relationshipTypes.length === 1
+            definition?.name === 'Levererar till' && data.map.relationshipTypes.length === 1
               ? { decision: 'allow', complete: true, fulfillsRequest: true }
               : { decision: 'incomplete' },
           ),
@@ -1214,8 +1211,6 @@ test('a requested relationship can use a saved type that no existing relationshi
       value: {
         name: 'Levererar till',
         description: 'En tjänst levererar till en annan.',
-        forwardLabel: 'levererar till',
-        reverseLabel: 'levereras av',
       },
     },
   });

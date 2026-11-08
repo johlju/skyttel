@@ -838,25 +838,25 @@ async function readFamily(page: Page) {
       await expect(relationships.locator('.household-read-relationships > li')).toHaveCount(2);
     const expected = {
       'Familjens musikkonto': [
-        ['Inloggningsadress', 'Familjens musikkonto', 'musik@example.test'],
-        ['Kontaktadress', 'Familjens musikkonto', 'familjen@example.test'],
+        ['har inloggningsadressen', 'Familjens musikkonto', 'musik@example.test'],
+        ['har kontaktadressen', 'Familjens musikkonto', 'familjen@example.test'],
       ],
       'Familjens Molnmusik': [
-        ['Står på avtalet', 'Familjens Molnmusik', 'Alex Exempel'],
-        ['Betalar', 'Kim Exempel', 'Familjens Molnmusik'],
-        ['Betalas med', 'Familjens Molnmusik', 'Familjens musikkort'],
+        ['har avtalsparten', 'Familjens Molnmusik', 'Alex Exempel'],
+        ['betalar', 'Kim Exempel', 'Familjens Molnmusik'],
+        ['betalas med', 'Familjens Molnmusik', 'Familjens musikkort'],
       ],
       Molnmusik: [
-        ['Använder', 'Lo Lind', 'Molnmusik'],
-        ['Används av', 'Molnmusik', 'Lo Lind'],
+        ['använder', 'Lo Lind', 'Molnmusik'],
+        ['används av', 'Molnmusik', 'Lo Lind'],
       ],
       'Familjens musikkort': [
-        ['Kontokoppling', 'Familjens musikkort', 'Kortets kontokoppling'],
-        ['Kortfakturan betalas från', 'Familjens musikkort', 'Hushållets betalkonto'],
+        ['är kopplat till', 'Familjens musikkort', 'Kortets kontokoppling'],
+        ['har kortfaktura som betalas från', 'Familjens musikkort', 'Hushållets betalkonto'],
       ],
       'Föreningens musikkonto': [
-        ['Tillhör tjänsten', 'Föreningens musikkonto', 'Molnmusik'],
-        ['Kontaktadress', 'Föreningens musikkonto', 'familjen@example.test'],
+        ['hör till', 'Föreningens musikkonto', 'Molnmusik'],
+        ['har kontaktadressen', 'Föreningens musikkonto', 'familjen@example.test'],
       ],
     }[name];
     for (const [direction, source, target] of expected ?? []) {

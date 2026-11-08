@@ -16,7 +16,7 @@ export const judgeInstructions =
   'om ett ändrings- eller sparbesked är sant. fixedChecks anger redan utförda kontroller. ' +
   'historicalSummary beskriver tidigare samtalskontext, inte aktuellt tillstånd. ' +
   'Krav på kartans tillstånd ska dessutom prövas mot hela observedState och dess ' +
-  'oberoende expected-kontrakt. Där semantiska namn eller egenskapsetiketter ' +
+  'oberoende expected-kontrakt. expected.relationships.type är ett äldre testalias för ordval, inte ett krav på gruppering. Endast category anger ett uttryckligt grupperingskrav. verb anger ett valt verb. En relation med verbMeaning måste uttrycka den angivna rollen med verkliga ändpunkter och riktning; grupperingen avgör inte verbets innebörd. Där semantiska namn eller egenskapsetiketter ' +
   'tillåts variera måste innebörden fortfarande uppfylla kontraktet, även efter ' +
   'senare följdmeddelanden. Enbart ett framgångspåstående bevisar aldrig detta. ' +
   'Tillståndsbevis ersätter aldrig fakta, frågor eller fel som uttryckligen måste finnas ' +

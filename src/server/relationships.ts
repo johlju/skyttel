@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import type Database from 'better-sqlite3';
 import type {
@@ -10,6 +11,10 @@ import type {
   SaveReceipt,
 } from '../shared/map.js';
 import { proposedRelationships } from '../shared/map.js';
+import {
+  equivalentRelationships,
+  ungroupedRelationshipType,
+} from '../shared/relationship-identity.js';
 import { reconcileDraftRemovals } from '../shared/type-removal.js';
 import { readLifecycle } from './lifecycle.js';
 import { MapError } from './map-error.js';
@@ -24,20 +29,24 @@ export function relationships(database: Database.Database, householdId: string) 
   function read(): MapRelationship[] {
     return database
       .prepare(
-        'SELECT id, householdId, typeId, revision, sourceId, targetId, lifecycle, properties FROM map_relationship WHERE householdId = ? AND deleted = 0 ORDER BY id',
+        'SELECT id, householdId, typeId, revision, sourceId, targetId, verb, reverseVerb, lifecycle, properties FROM map_relationship WHERE householdId = ? AND deleted = 0 ORDER BY id',
       )
       .all(householdId)
       .map((row) => {
-        const { lifecycle, properties, ...value } = row as Omit<
+        const { lifecycle, properties, verb, reverseVerb, ...value } = row as Omit<
           MapRelationship,
           'lifecycle' | 'properties'
         > & {
           lifecycle: MapRelationship['lifecycle'] | null;
 
           properties: string | null;
+          verb: string | null;
+          reverseVerb: string | null;
         };
         return {
           ...value,
+          ...(verb !== null ? { verb } : {}),
+          ...(reverseVerb !== null ? { reverseVerb } : {}),
 
           ...(properties ? { properties: JSON.parse(properties) } : {}),
           ...(lifecycle ? { lifecycle } : {}),
@@ -66,13 +75,6 @@ export function relationships(database: Database.Database, householdId: string) 
       return proposed.after;
     }
     return savedEndpoint(id);
-  }
-  function sameEndpoints(left: RelationshipValue, right: RelationshipValue) {
-    return (
-      left.typeId === right.typeId &&
-      left.sourceId === right.sourceId &&
-      left.targetId === right.targetId
-    );
   }
   function assertEndpoints(draft: MapDraft, value: RelationshipValue) {
     if (
@@ -128,7 +130,7 @@ export function relationships(database: Database.Database, householdId: string) 
   }
   function assertValid(draft: MapDraft, value: RelationshipValue, id: string) {
     assertEndpoints(draft, value);
-    if (effective(draft).some((other) => other.id !== id && sameEndpoints(other, value)))
+    if (effective(draft).some((other) => other.id !== id && equivalentRelationships(other, value)))
       throw new MapError('duplicate_relationship');
   }
   function objectNames(
@@ -215,16 +217,45 @@ export function relationships(database: Database.Database, householdId: string) 
           Object.keys(value).some((key) =>
             ['knowledge', 'endDate', 'customValues'].includes(key),
           ) ||
-          typeof value.typeId !== 'string' ||
+          (value.typeId !== undefined && typeof value.typeId !== 'string') ||
+          [value.verb, value.reverseVerb].some(
+            (word) =>
+              word !== undefined && (typeof word !== 'string' || !word.trim() || word.length > 200),
+          ) ||
           typeof value.sourceId !== 'string' ||
           typeof value.targetId !== 'string'
         )
           throw new MapError('invalid_request', 400);
         const lifecycle = readLifecycle(value.lifecycle);
+        let typeId: string | undefined = value.typeId ?? existing?.after?.typeId ?? before?.typeId;
+        if (!typeId) {
+          let neutral = ungroupedRelationshipType(definitions.effective(draft));
+          if (!neutral) {
+            const id = randomUUID();
+            const updated = definitions.propose(draft, {
+              id,
+              baseRevision: null,
+              value: {
+                name: 'Samband',
+                description: 'Hushållets samband utan särskilt vald gruppering.',
+              },
+            });
+            draft.relationshipTypes = updated.relationshipTypes;
+            neutral = definitions.effective(draft).find((type) => type.id === id);
+          }
+          typeId = neutral?.id;
+        }
+        if (!typeId) throw new MapError('invalid_type', 400);
+        const previous = existing?.after ?? before;
+        const verb = value.verb ?? previous?.verb ?? 'har samband med';
+        const reverseVerb =
+          value.reverseVerb ?? (value.verb === undefined ? previous?.reverseVerb : undefined);
         after = {
-          typeId: value.typeId,
+          typeId,
           sourceId: value.sourceId,
           targetId: value.targetId,
+          ...(verb !== undefined ? { verb } : {}),
+          ...(reverseVerb !== undefined ? { reverseVerb } : {}),
           ...(lifecycle ? { lifecycle } : {}),
         };
         assertEndpoints(draft, after);
@@ -243,7 +274,7 @@ export function relationships(database: Database.Database, householdId: string) 
         throw new MapError('type_conflict');
       if (after) {
         const duplicate = effective(draft).find(
-          (value) => value.id !== body.id && sameEndpoints(value, after),
+          (value) => value.id !== body.id && equivalentRelationships(value, after),
         );
         if (duplicate) {
           // An add selects the existing relationship; an edit must not erase another one.
@@ -281,7 +312,7 @@ export function relationships(database: Database.Database, householdId: string) 
           throw new MapError('unresolved_identity');
       }
       for (let index = 0; index < final.length; index++) {
-        if (final.slice(index + 1).some((value) => sameEndpoints(final[index], value)))
+        if (final.slice(index + 1).some((value) => equivalentRelationships(final[index], value)))
           throw new MapError('duplicate_relationship');
       }
       for (const change of changes) {
@@ -326,8 +357,8 @@ export function relationships(database: Database.Database, householdId: string) 
           : null;
         if (after)
           database
-            .prepare(`INSERT INTO map_relationship (id, householdId, typeId, revision, sourceId, targetId, lifecycle, properties) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(id) DO UPDATE SET typeId = excluded.typeId, revision = excluded.revision, sourceId = excluded.sourceId, targetId = excluded.targetId, lifecycle = excluded.lifecycle, properties = excluded.properties, deleted = 0`)
+            .prepare(`INSERT INTO map_relationship (id, householdId, typeId, revision, sourceId, targetId, verb, reverseVerb, lifecycle, properties) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET typeId = excluded.typeId, revision = excluded.revision, sourceId = excluded.sourceId, targetId = excluded.targetId, verb = excluded.verb, reverseVerb = excluded.reverseVerb, lifecycle = excluded.lifecycle, properties = excluded.properties, deleted = 0`)
             .run(
               after.id,
               householdId,
@@ -335,6 +366,8 @@ export function relationships(database: Database.Database, householdId: string) 
               after.revision,
               after.sourceId,
               after.targetId,
+              after.verb ?? null,
+              after.reverseVerb ?? null,
               after.lifecycle ?? null,
               after.properties ? JSON.stringify(after.properties) : null,
             );

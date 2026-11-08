@@ -75,7 +75,8 @@ TAL-01.
   },
   "reference": "Chromium och kontrollerade text-/mediesvar enligt angiven separat förberedelse; faktisk röst eller uppläsning bedöms separat.",
   "outcomes": [
-    "Utföra ett kontrollerat familjeärende med bevarad oskickad formulärtext, inklusive rättelse och samlat sparande med verifierat kvitto."
+    "Utföra ett kontrollerat familjeärende med bevarad oskickad formulärtext, inklusive rättelse och samlat sparande med verifierat kvitto.",
+    "Sambandens Riktning visar de förberedda fria verben, oberoende av sambandstypens namn."
   ],
   "evidence": [
     {
@@ -126,7 +127,8 @@ städning.
    musikkonto** och läs dess två samband: **Tillhör tjänsten** till Molnmusik
    och **Kontaktadress** till `familjen@example.test`. Öppna **Lindens
    musikförening**: föreningen saknar samband och finns kvar som fristående
-   objekt.
+   objekt. Kontrollera **Riktning**, **Från objekt** och **Till objekt**
+   enligt tabellen nedan; **Typ** visas separat.
 7. Slå av mikrofonen och välj Nytt samtal. Ingen ny medgivanderuta visas. Läs
    familjens kvitto igen; inget extra sparande tillkommer. Logga ut och avsluta
    provmiljön enligt tidslinjen.
@@ -142,6 +144,25 @@ Det verkliga talflödet har en egen mänsklig identitet, TAL-23.
 - Sparstatus bygger på ett riktigt kvitto. Osänd text blir inte sparad. Konto,
   adresser och roller behåller sin betydelse och sina fria egenskaper.
   Alla samband har två verkliga objekt; fristående objekt är tillåtna.
+- Sambandens **Riktning** bevarar de förberedda fria verben. Läs följande
+  värden i steg 6:
+
+  <!-- markdownlint-disable MD013 -->
+  | Från objekt | Riktning | Till objekt |
+  | --- | --- | --- |
+  | Familjens musikkonto | har inloggningsadressen | `musik@example.test` |
+  | Familjens musikkonto | har kontaktadressen | `familjen@example.test` |
+  | Familjens Molnmusik | har avtalsparten | Alex Exempel |
+  | Kim Exempel | betalar | Familjens Molnmusik |
+  | Familjens Molnmusik | betalas med | Familjens musikkort |
+  | Lo Lind | använder | Molnmusik |
+  | Molnmusik | används av | Lo Lind |
+  | Familjens musikkort | är kopplat till | Kortets kontokoppling |
+  | Familjens musikkort | har kortfaktura som betalas från | Hushållets betalkonto |
+  | Föreningens musikkonto | hör till | Molnmusik |
+  | Föreningens musikkonto | har kontaktadressen | `familjen@example.test` |
+  <!-- markdownlint-enable MD013 -->
+
 - Mikrofonavslag stoppar ny inspelning direkt. En tyst anslutning kan behålla
   mikrofonspåret för att låta Skyttel tala klart. När provmiljön avslutas
   frigörs resurserna. Inget verkligt plattformsresultat tillskrivs CI eller de

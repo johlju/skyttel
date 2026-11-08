@@ -96,8 +96,6 @@ async function prepareRemovedHistory() {
         value: {
           name: 'Stödjer',
           description: 'Stöd',
-          forwardLabel: 'stödjer',
-          reverseLabel: 'stöds av',
         },
       })
     ).status,
@@ -117,7 +115,13 @@ async function prepareRemovedHistory() {
         version: (await read()).draft.version,
         id: 'support',
         baseRevision: null,
-        value: { typeId: 'supports', sourceId: 'person', targetId: 'flower' },
+        value: {
+          typeId: 'supports',
+          sourceId: 'person',
+          targetId: 'flower',
+          verb: 'stödjer',
+          reverseVerb: 'stöds av',
+        },
       })
     ).status,
   ).toBe(200);
@@ -150,8 +154,6 @@ async function prepareRemovedHistory() {
         value: {
           name: 'Hjälper',
           description: '',
-          forwardLabel: 'hjälper',
-          reverseLabel: 'hjälps av',
         },
       })
     ).status,
@@ -192,7 +194,7 @@ async function prepareRemovedHistory() {
 }
 
 test('saved history shows definitions, historical direction labels and removed content', async () => {
-  const state = await prepareRemovedHistory();
+  await prepareRemovedHistory();
   const history = await open();
   const changed = await group('changed-direction');
   const disclosure = changed.getByText('Visa ändringarna', { selector: 'summary' });
@@ -201,10 +203,8 @@ test('saved history shows definitions, historical direction labels and removed c
   await userEvent.click(disclosure);
   expect(disclosure.closest('details')?.open).toBe(true);
   const changedValues = within(disclosure.parentElement as HTMLElement);
-  expect(changedValues.getByText('Lo → stödjer → Rosen').textContent).toContain('stödjer');
-  expect(
-    changedValues.getByText(`Lo → ${state.relationshipTypes[0].name} → Rosen`).textContent,
-  ).toContain(state.relationshipTypes[0].name);
+  // A category correction preserves the chosen wording on both historical sides.
+  expect(changedValues.getAllByText('Lo → stödjer → Rosen')).toHaveLength(2);
   const retyped = await group('changed-object-type');
   await userEvent.click(retyped.getByText('Visa ändringarna', { selector: 'summary' }));
   expect(retyped.getByText(/Objekttyp: Växt/)).toBeDefined();

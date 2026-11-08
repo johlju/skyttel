@@ -5,7 +5,10 @@ den ursprungliga exempelkatalogen.
 Därför är objekt- och sambandstyper gemensamma, redigerbara definitioner,
 även när de är förifyllda; formulär och assistenter använder samma
 aktuella definitioner genom användarens privata utkast och samlade
-sparande. Typerna beskriver betydelse och sambandens riktning, medan
+sparande. Sambandstyper grupperar kopplingar. Varje samband har ett eget
+fritt verb och en egen riktning, oberoende av gruppering och ändpunkternas
+objekttyper. Hushållets ordval kräver ingen särskild typ eller omvänd
+benämning, medan
 varje objekt och samband har egna ordnade egenskaper med stabila
 identiteter, fria etiketter och valfria datatyper och värden; detta låter
 hushållet beskriva enskilda företeelser utan att ändra en gemensam mall.

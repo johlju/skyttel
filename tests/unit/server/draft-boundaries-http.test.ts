@@ -42,8 +42,6 @@ async function propose(
   const data: Record<string, unknown> | null =
     value === null ? null : { ...before, ...existing?.after, ...value };
   if (kind === 'relationshipType' && data) {
-    data.forwardLabel ??= data.name ?? 'binder';
-    data.reverseLabel ??= data.name ?? 'hör till';
     for (const key of ['id', 'householdId', 'revision']) delete data[key];
   }
   return post(
@@ -345,10 +343,6 @@ test.each(['objectType', 'relationshipType'] as const)(
       await propose(kind, 'private-type', {
         name: 'Egen typ',
         description: '',
-
-        ...(kind === 'relationshipType'
-          ? { forwardLabel: 'binder', reverseLabel: 'hör till' }
-          : {}),
       }),
     );
     await checked(
@@ -468,9 +462,6 @@ test.each([
         await propose(kind, id, {
           name: id === 'former-type' ? 'Tidigare typ' : 'Nuvarande typ',
           description: '',
-          ...(kind === 'relationshipType'
-            ? { forwardLabel: 'binder', reverseLabel: 'hör till' }
-            : {}),
         }),
       );
     }

@@ -34,15 +34,9 @@ test('STY-01: type definition and free relationship properties save together dur
     await openTypes(page);
     await page.getByRole('button', { name: 'Ny sambandstyp', exact: true }).click();
     const submit = page.getByRole('button', { name: 'Lägg sambandstypen i mitt utkast' });
-    for (const [label, value] of [
-      ['Sambandstypens namn', 'Förvaring'],
-      ['Benämning från startobjektet', 'förvaras i'],
-      ['Benämning från målobjektet', 'innehåller'],
-    ]) {
-      await submit.click();
-      await expect(page.getByLabel(label, { exact: true })).toBeFocused();
-      await page.getByLabel(label, { exact: true }).fill(value);
-    }
+    await submit.click();
+    await expect(page.getByLabel('Sambandstypens namn', { exact: true })).toBeFocused();
+    await page.getByLabel('Sambandstypens namn', { exact: true }).fill('Förvaring');
     await page.getByLabel('Sambandstypens beskrivning').fill('Var hushållets saker finns');
     await submit.click();
     await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
@@ -59,6 +53,7 @@ test('STY-01: type definition and free relationship properties save together dur
     const dialog = await openObjectRelationships(page, 'Alex blå cykel');
     await dialog.getByRole('button', { name: 'Nytt samband', exact: true }).click();
     await dialog.getByLabel('Sambandstyp', { exact: true }).selectOption({ label: 'Förvaring' });
+    await dialog.getByLabel('Verb', { exact: true }).fill('förvaras i');
     const garageId = (await read()).draft.changes.find(
       (change: { id: string; after: { name: string } }) => change.after.name === 'Garaget',
     ).id;
@@ -105,7 +100,6 @@ test('STY-03: members edit shared relationship definitions while private type pr
       .getByRole('button', { name: `Ändra sambandstyp: ${type.name}`, exact: true })
       .click();
     await member.getByLabel('Sambandstypens beskrivning').fill('Medlemmens förklaring');
-    await member.getByLabel('Benämning från målobjektet', { exact: true }).fill('används av');
     const staged = member.waitForResponse(
       (response) =>
         response.url() === `${app.path}/relationship-type` &&
@@ -121,8 +115,6 @@ test('STY-03: members edit shared relationship definitions while private type pr
       after: {
         name: type.name,
         description: 'Medlemmens förklaring',
-        forwardLabel: type.forwardLabel ?? type.name,
-        reverseLabel: 'används av',
       },
     });
     expect((await app.read()).draft.relationshipTypes ?? []).toEqual([]);
@@ -139,9 +131,6 @@ test('STY-03: members edit shared relationship definitions while private type pr
       .click();
     await expect(page.getByLabel('Sambandstypens beskrivning')).toHaveValue(
       'Medlemmens förklaring',
-    );
-    await expect(page.getByLabel('Benämning från målobjektet', { exact: true })).toHaveValue(
-      'används av',
     );
   } finally {
     await other.close();
@@ -184,8 +173,6 @@ test('STY-04: stale definitions stop the whole save and explicit resolution pres
     const value = {
       name: 'Förvaring',
       description: 'Förvaringsplats',
-      forwardLabel: 'förvaras i',
-      reverseLabel: 'innehåller',
     };
     expect(
       (
@@ -199,7 +186,7 @@ test('STY-04: stale definitions stop the whole save and explicit resolution pres
           version: 2,
           id: 'storage',
           baseRevision: 1,
-          value: { ...value, name: 'Plats', reverseLabel: 'har' },
+          value: { ...value, name: 'Plats' },
         })
       ).status(),
     ).toBe(200);
@@ -230,7 +217,13 @@ test('STY-04: stale definitions stop the whole save and explicit resolution pres
           version: 5,
           id: 'storage-edge',
           baseRevision: null,
-          value: { typeId: 'storage', sourceId: 'bike', targetId: 'garage' },
+          value: {
+            typeId: 'storage',
+            sourceId: 'bike',
+            targetId: 'garage',
+            verb: 'förvaras i',
+            reverseVerb: 'innehåller',
+          },
         })
       ).status(),
     ).toBe(200);
@@ -242,7 +235,7 @@ test('STY-04: stale definitions stop the whole save and explicit resolution pres
             version: 0,
             id: 'storage',
             baseRevision: 1,
-            value: { ...value, description: 'Los nya förklaring', reverseLabel: 'rymmer' },
+            value: { ...value, name: 'Los plats', description: 'Los nya förklaring' },
           },
           member.request,
         )
@@ -273,20 +266,22 @@ test('STY-04: stale definitions stop the whole save and explicit resolution pres
     ).toMatchObject({
       name: 'Plats',
       description: 'Los nya förklaring',
-      reverseLabel: 'har',
       revision: 3,
     });
     expect(current.relationships).toHaveLength(1);
+    expect(current.relationships[0]).toMatchObject({
+      verb: 'förvaras i',
+      reverseVerb: 'innehåller',
+    });
     const { history } = await (await page.request.get(`${path}/history`)).json();
     expect(history[0].relationshipTypes[0].before).toMatchObject({
+      name: 'Los plats',
       description: 'Los nya förklaring',
-      reverseLabel: 'rymmer',
       revision: 2,
     });
     expect(history[0].relationships[0].type).toMatchObject({
       name: 'Plats',
       description: 'Los nya förklaring',
-      reverseLabel: 'har',
       revision: 3,
     });
   } finally {
@@ -326,8 +321,6 @@ test('STY-02: forms show the same directed relationship from both objects and ed
     await page.getByRole('button', { name: 'Ny sambandstyp', exact: true }).click();
     await page.getByLabel('Sambandstypens namn').fill('Förvaring');
     await page.getByLabel('Sambandstypens beskrivning').fill('Var hushållets saker finns');
-    await page.getByLabel('Benämning från startobjektet').fill('förvaras i');
-    await page.getByLabel('Benämning från målobjektet').fill('innehåller');
     await page.getByRole('button', { name: 'Lägg sambandstypen i mitt utkast' }).click();
     await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
     await openObjectRelationships(page, 'Alex blå cykel');
@@ -335,20 +328,12 @@ test('STY-02: forms show the same directed relationship from both objects and ed
     await expect(page.getByLabel('Sambandstyp', { exact: true })).toHaveValue('');
     await page.getByLabel('Från objekt', { exact: true }).selectOption('bike');
     await page.getByLabel('Till objekt', { exact: true }).selectOption('garage');
-    await page
-      .getByRole('dialog', { name: /^Samband för / })
-      .getByRole('button', { name: 'Lägg i utkastet', exact: true })
-      .click();
-    expect((await (await page.request.get(path)).json()).draft.relationships).toBeUndefined();
+    await page.getByLabel('Verb', { exact: true }).fill('förvaras i');
+    await page.getByLabel('Omvänd benämning (valfri)', { exact: true }).fill('innehåller');
     await page.getByLabel('Sambandstyp', { exact: true }).selectOption({ label: 'Förvaring' });
     await stageRelationshipAndClose(page);
     const definition = await readDraftProposal(page, 'Förvaring');
-    await expect(
-      definition
-        .locator('dt')
-        .filter({ hasText: /^Omvänd riktning/ })
-        .locator('..'),
-    ).toContainText('innehåller');
+    await expect(definition).toContainText('Var hushållets saker finns');
     await closeSupportDialog(page, 'Förvaring');
     const review = await openDraftReview(page);
     await expect(review).toContainText('Alex blå cykel → förvaras i → Garaget');
@@ -358,6 +343,7 @@ test('STY-02: forms show the same directed relationship from both objects and ed
     await page.getByLabel('Från objekt', { exact: true }).selectOption('bike');
     await page.getByLabel('Till objekt', { exact: true }).selectOption('garage');
     await page.getByLabel('Sambandstyp', { exact: true }).selectOption({ label: 'Förvaring' });
+    await page.getByLabel('Verb', { exact: true }).fill('förvaras i');
     const duplicate = page.getByRole('dialog', { name: /^Samband för / });
     await duplicate.getByRole('button', { name: 'Lägg i utkastet', exact: true }).click();
     await expect(duplicate.getByRole('alert')).toContainText('Sambandet finns redan');
@@ -395,7 +381,6 @@ test('STY-02: forms show the same directed relationship from both objects and ed
     await page.getByRole('button', { name: 'Ändra sambandstyp: Förvaring', exact: true }).click();
     await page.getByLabel('Sambandstypens namn').fill('Plats');
     await page.getByLabel('Sambandstypens beskrivning').fill('Hushållets förvaringsplatser');
-    await page.getByLabel('Benämning från startobjektet').fill('finns i');
     await page.getByRole('button', { name: 'Lägg sambandstypen i mitt utkast' }).click();
     await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
     const changedDefinition = await readDraftProposal(page, 'Plats');
@@ -407,7 +392,7 @@ test('STY-02: forms show the same directed relationship from both objects and ed
     await page.reload();
     await openTable(page);
     await expect(await openObjectRelationships(page, 'Alex blå cykel')).toContainText(
-      'Alex blå cykel → finns i → Garaget',
+      'Alex blå cykel → förvaras i → Garaget',
     );
     const saved = await (await page.request.get(path)).json();
     expect(saved.relationships).toHaveLength(1);
@@ -457,8 +442,6 @@ test('STY-05: duplicate adds, edits and concurrent saves preserve identity and r
     const value = {
       name: 'Förvaring',
       description: 'Förvaringsplats',
-      forwardLabel: 'förvaras i',
-      reverseLabel: 'innehåller',
     };
     const propose = async (
       route: string,

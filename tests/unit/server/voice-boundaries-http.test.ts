@@ -541,12 +541,12 @@ test.each([
   },
 );
 
-test('external transcript and delegation capacity limits stop only the affected voice without dispatching a household mutation', async () => {
+test('external transcript capacity stops only the affected voice without dispatching a household mutation and permits restarting voice', async () => {
   const model = textModel(() => [modelMessage('Ett svar.')]);
   await setup(model.provider);
   const before = await readMap();
   await start();
-  for (let index = 0; index < 2001; index++)
+  const emit = (index: number) =>
     live.emit(providerId, {
       type: 'session.output_transcript.delta',
       event_id: `fragment-${index}`,
@@ -554,8 +554,21 @@ test('external transcript and delegation capacity limits stop only the affected 
       start_ms: index,
       end_ms: index,
     });
+  for (let index = 0; index < 2000; index++) emit(index);
+  expect((await poll()).voice.phase).toBe('listening');
+  emit(2000);
   await expect.poll(() => live.channels.size).toBe(0);
   expect((await poll()).voice.phase).toBe('error');
+  await start();
+  expect(live.channels.has(providerId)).toBe(true);
+  expect(model.requests).toEqual([]);
+  expect(await readMap()).toEqual(before);
+});
+
+test('external delegation capacity stops only the affected voice without dispatching a household mutation', async () => {
+  const model = textModel(() => [modelMessage('Ett svar.')]);
+  await setup(model.provider);
+  const before = await readMap();
   await start();
   live.emit(providerId, {
     type: 'session.delegation.created',
@@ -563,12 +576,15 @@ test('external transcript and delegation capacity limits stop only the affected 
     offset_ms: 0,
   });
   expect(live.sent.filter(({ event }) => event.type === 'session.commentary.append')).toEqual([]);
-  for (let index = 0; index < 501; index++)
+  const emit = (index: number) =>
     live.emit(providerId, {
       type: 'session.delegation.created',
       delegation: { id: `delegate-${index}`, target: 'client' },
       offset_ms: 0,
     });
+  for (let index = 0; index < 500; index++) emit(index);
+  expect((await poll()).voice.phase).toBe('listening');
+  emit(500);
   await expect.poll(() => live.channels.size).toBe(0);
   expect((await poll()).voice.phase).toBe('error');
   expect(model.requests).toEqual([]);

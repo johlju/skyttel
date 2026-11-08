@@ -165,8 +165,6 @@ for (const { width, height } of [
       const edgeDefinition = {
         name: edgeType.name,
         description: edgeType.description,
-        forwardLabel: edgeType.forwardLabel ?? edgeType.name,
-        reverseLabel: edgeType.reverseLabel ?? edgeType.name,
       };
       const definition = { ...objectType, description: 'Sparad ekonomi' };
       async function proposeType(
@@ -214,7 +212,12 @@ for (const { width, height } of [
         ],
       };
       await app.propose(page.request, 'draft', 'lo', original);
-      const edge: RelationshipValue = { typeId: edgeType.id, sourceId: 'lo', targetId: 'service' };
+      const edge: RelationshipValue = {
+        typeId: edgeType.id,
+        verb: 'Använder',
+        sourceId: 'lo',
+        targetId: 'service',
+      };
       await app.propose(page.request, 'relationship', 'edge', edge);
       expect((await app.save(page.request, 'base-values')).status()).toBe(200);
       await proposeType(page.request, 'object-type', {
@@ -225,8 +228,6 @@ for (const { width, height } of [
       await proposeType(page.request, 'relationship-type', {
         ...edgeDefinition,
         name: 'Min sambandstyp',
-        forwardLabel: 'använder enligt mig',
-        reverseLabel: 'används av mig',
       });
       await app.propose(page.request, 'draft', 'lo', {
         ...original,
@@ -591,6 +592,7 @@ for (const width of [1440, 390]) {
       const state = await app.read();
       const edge: RelationshipValue = {
         typeId: state.relationshipTypes[0].id,
+        verb: 'Använder',
         sourceId: 'lo',
         targetId: 'service',
         properties: [
@@ -719,12 +721,6 @@ for (const kind of ['object-type', 'relationship-type'] as const) {
         const definition = {
           name: type.name,
           description: type.description,
-          ...(isObjectType
-            ? {}
-            : {
-                forwardLabel: initial.relationshipTypes[0].forwardLabel ?? type.name,
-                reverseLabel: initial.relationshipTypes[0].reverseLabel ?? type.name,
-              }),
         };
         for (const [client, name, description] of [
           [page.request, 'Min typ', definition.description],
@@ -1260,6 +1256,7 @@ test('UTKAST-06: deleting an object requires reviewing newly saved relationships
     ).toBeEnabled();
     await app.propose(other.request, 'relationship', 'new-edge', {
       typeId: state.relationshipTypes[0].id,
+      verb: 'Använder',
       sourceId: 'lo',
       targetId: 'service',
       properties: [
@@ -1339,6 +1336,7 @@ test('UTKAST-07: overlapping relationship proposals show meanings and can accept
     const state = await app.read();
     const value: RelationshipValue = {
       typeId: state.relationshipTypes[0].id,
+      verb: 'Använder',
       sourceId: 'lo',
       targetId: 'service',
     };
@@ -1405,6 +1403,7 @@ test('UTKAST-10: relationship choices preserve independent status and preserve o
     const state = await app.read();
     const value: RelationshipValue = {
       typeId: state.relationshipTypes[0].id,
+      verb: 'Använder',
       sourceId: 'lo',
       targetId: 'service',
     };
@@ -1548,6 +1547,7 @@ for (const side of ['proposed', 'saved'] as const) {
       const state = await app.read();
       const value: RelationshipValue = {
         typeId: state.relationshipTypes[0].id,
+        verb: 'Använder',
         sourceId: 'lo',
         targetId: 'service',
       };
@@ -1561,6 +1561,7 @@ for (const side of ['proposed', 'saved'] as const) {
       await app.propose(other.request, 'relationship', 'edge', {
         ...value,
         typeId: state.relationshipTypes[1].id,
+        verb: 'Används av',
       });
       expect((await app.save(other.request, 'changed-types')).status()).toBe(200);
       const comparison = await app.read();
@@ -1764,6 +1765,7 @@ test('UTKAST-09: a deleted relationship endpoint has an explicit recovery choice
     const state = await app.read();
     await app.propose(page.request, 'relationship', 'pending-edge', {
       typeId: state.relationshipTypes[0].id,
+      verb: 'Använder',
       sourceId: 'lo',
       targetId: 'service',
       properties: [
@@ -1957,6 +1959,7 @@ test('UTKAST-02: a stale discard preserves newer object and relationship proposa
     await relationship
       .getByLabel('Sambandstyp', { exact: true })
       .selectOption(initial.relationshipTypes[0].id);
+    await relationship.getByLabel('Verb', { exact: true }).fill('Använder');
     await relationship.getByLabel('Till objekt', { exact: true }).selectOption('service');
     await stageRelationshipAndClose(newer);
     await expect(await openDraftReview(newer)).toContainText('Lo Lind → Använder → Molnmusik');

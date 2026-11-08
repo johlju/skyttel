@@ -645,8 +645,6 @@ test.each(['old-meaning', 'kept-meaning'] as const)(
             value: {
               name: id,
               description: `Betydelsen ${id}`,
-              forwardLabel: 'använder',
-              reverseLabel: 'används av',
             },
           })
         ).status,
@@ -1095,8 +1093,6 @@ test('private-only definitions and their dependent proposals can be erased witho
         value: {
           name: 'Private relationship type',
           description: '',
-          forwardLabel: 'Owns',
-          reverseLabel: 'Owned by',
         },
       })
     ).status,

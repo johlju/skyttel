@@ -590,8 +590,7 @@ await (async () => {
   const objectType = {
     name: 'Växt', description: 'Odling i hemmet',
   };
-  const edgeType = { name: 'Stödjer', description: 'Hjälp vid odling',
-    forwardLabel: 'stödjer', reverseLabel: 'stöds av' };
+  const edgeType = { name: 'Stödjer', description: 'Hjälp vid odling' };
   await post('object-type', {
     id: 'plant', baseRevision: null, value: objectType });
   await post('relationship-type', {
@@ -601,7 +600,7 @@ await (async () => {
       value: { typeId: 'plant', name,
         ...(id === 'rose' ? { properties } : {}) } });
   const edge = { typeId: 'supports', sourceId: 'lo', targetId: 'rose',
-    properties };
+    verb: 'stödjer', reverseVerb: 'stöds av', properties };
   await post('relationship', { id: 'edge', baseRevision: null, value: edge });
   await post('save', { operationId: 'properties-created' });
   const after = [properties[1],
@@ -611,12 +610,12 @@ await (async () => {
     value: { typeId: 'plant', name: 'Rosen',
       properties: after } });
   await post('relationship', { id: 'edge', baseRevision: 1,
-    value: { ...edge, properties: after } });
+    value: { ...edge, verb: 'vårdar', reverseVerb: 'vårdas av',
+      properties: after } });
   await post('object-type', { id: 'plant', baseRevision: 1,
     value: { ...objectType, description: 'Prydnadsväxter' } });
   await post('relationship-type', { id: 'supports', baseRevision: 1,
-    value: { ...edgeType, description: 'Dagens omvårdnad',
-      forwardLabel: 'vårdar', reverseLabel: 'vårdas av' } });
+    value: { ...edgeType, description: 'Dagens omvårdnad' } });
   await post('save', { operationId: 'properties-changed' });
   for (const [route, id, baseRevision] of [
     ['draft', 'lo', 1], ['draft', 'rose', 2],

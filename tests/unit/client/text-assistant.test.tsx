@@ -688,8 +688,6 @@ test('the draft table exposes every change, free properties, type edits and rela
     revision: 1,
     name: 'Använder',
     description: 'Användning',
-    forwardLabel: 'använder',
-    reverseLabel: 'används av',
   };
   const old: MapObject = {
     id: 'bike',
@@ -720,6 +718,8 @@ test('the draft table exposes every change, free properties, type edits and rela
     typeId: edgeType.id,
     sourceId: 'alex',
     targetId: 'bike',
+    verb: 'använder',
+    reverseVerb: 'används av',
   };
   const current = session();
   current.review = {

@@ -27,14 +27,13 @@ beforeEach(async () => {
 });
 afterEach(() => fixture.close());
 
-test('new personal views preserve reference defaults and the inert legacy field independently of the background', async () => {
+test('new personal views preserve reference defaults independently of the background', async () => {
   expect((await (await client.request(`${path}/view`)).json()).settings).toMatchObject({
     zeroReferenceVariant: 'circle',
     zeroReferenceWeight: 'subtle',
     zeroReferenceAlwaysVisible: false,
     zeroReferenceOnMovement: false,
     zeroReferenceTint: 0,
-    zeroReferenceKeepSize: false,
   });
 });
 
@@ -50,7 +49,6 @@ test('zero-reference preferences validate all retained choices and reject malfor
         zeroReferenceAlwaysVisible: true,
         zeroReferenceOnMovement: true,
         zeroReferenceTint: 85,
-        zeroReferenceKeepSize: true,
       };
       expect((await client.json(`${path}/view/settings`, { version, settings })).status).toBe(200);
       expect((await (await client.request(`${path}/view`)).json()).settings).toEqual({
@@ -68,7 +66,6 @@ test('zero-reference preferences validate all retained choices and reject malfor
     { zeroReferenceTint: -1 },
     { zeroReferenceTint: 86 },
     { zeroReferenceTint: 0.5 },
-    { zeroReferenceKeepSize: null },
     { zeroReferencePlaneX: false },
   ])
     expect(
@@ -134,7 +131,6 @@ test('positions and settings require current membership and never expose another
       zeroReferenceAlwaysVisible: true,
       zeroReferenceOnMovement: true,
       zeroReferenceTint: 23,
-      zeroReferenceKeepSize: true,
     },
   };
   expect((await client.json(`${path}/view/position`, ownerMove)).status).toBe(200);

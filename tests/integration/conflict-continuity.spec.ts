@@ -595,7 +595,10 @@ test('UTKAST-127: a changed relationship reference refreshes its meaning without
     ).toHaveAttribute('aria-pressed', 'true');
     await dialog.getByRole('button', { name: 'Lägg valen i utkastet', exact: true }).click();
     await expect(dialog).toContainText('✓ Valen finns i ditt utkast');
-    expect((await app.read()).draft.relationships?.[0].after).toEqual(app.value);
+    expect((await app.read()).draft.relationships?.[0].after).toEqual({
+      ...app.value,
+      verb: 'har samband med',
+    });
     expect((await app.read()).relationships).toEqual(before.relationships);
     expect((await app.read()).objects).toEqual(before.objects);
   } finally {

@@ -119,7 +119,12 @@ for (const [id, kind, title, reason, warning, action] of [
 ] as const) {
   test(`UTKAST-${id}: ${title}`, async ({ page, browser }) => {
     const other = await createPreparedContext(browser);
-    const app = await prepareRelationshipSpecialConflict(page.request, other.request, kind);
+    const app = await prepareRelationshipSpecialConflict(
+      page.request,
+      other.request,
+      kind,
+      'Använder',
+    );
     try {
       const before = await app.read();
       const history = await (await page.request.get(`${app.path}/history`)).json();
@@ -128,7 +133,7 @@ for (const [id, kind, title, reason, warning, action] of [
       const dialog = page.getByRole('dialog', { name: 'Granska konflikter', exact: true });
       const proposal = before.draft.relationships?.find((change) => change.id === 'mine');
       if (!proposal) throw new Error('Missing relationship fixture proposal');
-      const retainedName = `Lo Exempel → ${proposal.type.forwardLabel ?? proposal.type.name} → Molnmusik`;
+      const retainedName = `Lo Exempel → ${proposal.after?.verb} → Molnmusik`;
       await expect(dialog.getByRole('heading', { name: retainedName, exact: true })).toBeVisible();
       await expect(
         dialog
@@ -254,7 +259,12 @@ test('UTKAST-62: object and new connection removal choices remain independent an
   browser,
 }) => {
   const other = await createPreparedContext(browser);
-  const app = await prepareOwnRemovalConflict(page.request, other.request, 'connections');
+  const app = await prepareOwnRemovalConflict(
+    page.request,
+    other.request,
+    'connections',
+    'Använder',
+  );
   try {
     const before = await app.read();
     await page.goto(app.installation.origin);
@@ -314,7 +324,12 @@ test('UTKAST-73: removing one new connection leaves changed saved facts subject 
   browser,
 }) => {
   const other = await createPreparedContext(browser);
-  const app = await prepareOwnRemovalConflict(page.request, other.request, 'facts-and-connections');
+  const app = await prepareOwnRemovalConflict(
+    page.request,
+    other.request,
+    'facts-and-connections',
+    'Använder',
+  );
   try {
     const before = await app.read();
     await page.goto(app.installation.origin);
@@ -388,6 +403,7 @@ for (const surface of ['Karta', 'Tabell'] as const)
         page.request,
         other.request,
         'duplicate',
+        'Använder',
       );
       try {
         await page.setViewportSize({ width: 320, height: 900 });
@@ -458,7 +474,12 @@ for (const surface of ['Karta', 'Tabell'] as const) {
     browser,
   }) => {
     const other = await createPreparedContext(browser);
-    const app = await prepareOwnRemovalConflict(page.request, other.request, 'connections');
+    const app = await prepareOwnRemovalConflict(
+      page.request,
+      other.request,
+      'connections',
+      'Använder',
+    );
     try {
       await page.setViewportSize({ width: 320, height: 900 });
       const before = await app.read();

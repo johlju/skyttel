@@ -444,8 +444,6 @@ test('reports retain full removed objects, relationships and removed historical 
     value: {
       name: 'Historisk sambandstyp',
       description: 'Den historiska kopplingens definition.',
-      forwardLabel: 'hör till',
-      reverseLabel: 'har',
     },
   });
   await fixture.post('save', { operationId: 'historical-definitions-save' });

@@ -15,8 +15,6 @@ const uses = {
   revision: 1,
   name: 'Använder',
   description: '',
-  forwardLabel: 'använder',
-  reverseLabel: 'används av',
 };
 const state: MapState = {
   userId: 'alex',
@@ -36,6 +34,8 @@ const state: MapState = {
           typeId: uses.id,
           sourceId: 'lo',
           targetId: 'removed',
+          verb: 'använder',
+          reverseVerb: 'används av',
           properties: [{ id: 'note', label: 'Anteckning', kind: 'text', value: 'Bevarad text' }],
         },
         type: uses,

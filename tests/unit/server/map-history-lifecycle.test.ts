@@ -2,8 +2,8 @@ import { cpSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, expect, test } from 'vitest';
-import { openDatabase } from '../../../src/server/database.js';
 import type { MapState } from '../../../src/shared/map.js';
+import { legacyDatabaseSnapshot } from '../../support/legacy-database-snapshot.js';
 import { applicationFixture } from './fixture.js';
 
 let fixture: Awaited<ReturnType<typeof applicationFixture>>;
@@ -14,14 +14,14 @@ afterEach(() => {
   migrationDirectory = undefined;
 });
 
-async function setup(migrationsDirectory?: string) {
-  fixture = await applicationFixture({ migrationsDirectory });
-  const owner = fixture.client();
+async function setup() {
+  fixture = await applicationFixture();
+  let owner = fixture.client();
   await owner.signIn();
   const { household } = await (await owner.json('/api/households', { name: 'Linden' })).json();
   const path = `/api/households/${household.id}`;
   fixture.setSubject('reader');
-  const reader = fixture.client();
+  let reader = fixture.client();
   await reader.signIn();
   const { user } = await (await reader.request('/api/bootstrap')).json();
   const { code } = await (await owner.json(`${path}/invitations`, { userId: user.id })).json();
@@ -63,7 +63,28 @@ async function setup(migrationsDirectory?: string) {
   // This final save creates both metadata needs. Older storage can seed it
   // without asking the new reader to use an index that does not yet exist.
   const finalVersion = (await read()).draft.version;
-  return { owner, reader, path, read, post, type, finalVersion };
+  return {
+    get owner() {
+      return owner;
+    },
+    get reader() {
+      return reader;
+    },
+    path,
+    read,
+    post,
+    type,
+    finalVersion,
+    async reopen(snapshot: string) {
+      fixture.close();
+      fixture = await applicationFixture({ databaseSnapshot: snapshot });
+      owner = fixture.client();
+      await owner.signIn();
+      fixture.setSubject('reader');
+      reader = fixture.client();
+      await reader.signIn();
+    },
+  };
 }
 
 test('upgrading retained receipts restores deletion meanings and conflict attribution without changing history', async () => {
@@ -72,12 +93,13 @@ test('upgrading retained receipts restores deletion meanings and conflict attrib
   for (const name of readdirSync(migrationDirectory))
     if (name.endsWith('.sql') && Number(name.split('_')[0]) > 40)
       rmSync(join(migrationDirectory, name));
-  const app = await setup(migrationDirectory);
+  const app = await setup();
   await app.post('save', { operationId: 'combined' });
   const history = await (await app.owner.request(`${app.path}/map/history`)).json();
   await fixture.app.close();
-  openDatabase(fixture.config.databasePath).close();
-  await fixture.restart();
+  const snapshot = join(migrationDirectory, 'legacy.sqlite');
+  await legacyDatabaseSnapshot(fixture.database, snapshot, migrationDirectory);
+  await app.reopen(snapshot);
   const state = await app.read(app.reader);
   expect(state.removedObjects?.[0].type).toEqual(app.type);
   expect(state.conflictActors?.['object:kept']?.name).toBe('Alex');
@@ -255,10 +277,7 @@ test.each(['object', 'relationship', 'objectType', 'relationshipType'] as const)
             ? current.types[0]
             : current.relationshipTypes[0];
     if (!entity) throw new Error('Missing test entity');
-    const valueBase =
-      kind === 'relationshipType'
-        ? { ...entity, forwardLabel: 'Connects', reverseLabel: 'Connected by' }
-        : entity;
+    const valueBase = entity;
     const property =
       kind === 'relationship' ? 'lifecycle' : kind === 'object' ? 'name' : 'description';
     if (kind !== 'object')

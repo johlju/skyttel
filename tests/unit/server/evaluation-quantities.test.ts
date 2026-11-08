@@ -35,6 +35,7 @@ test('a numeric monthly price on the service preserves the preceding add-and-use
         typeId: added.relationshipTypes.find((type) => type.name === 'Använder')?.id,
         sourceId: 'sonja',
         targetId: serviceId,
+        verb: 'använder',
       },
     });
     expect(await environment.check(scenario.steps[1], environment.assistant, [])).toEqual([]);

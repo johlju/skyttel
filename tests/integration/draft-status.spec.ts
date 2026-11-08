@@ -333,7 +333,12 @@ test('UTKAST-14: manual text and voice proposals share one durable private draft
                 arguments: {
                   id: 'uses',
                   baseRevision: null,
-                  value: { typeId: usesType, sourceId: personId, targetId: 'music' },
+                  value: {
+                    typeId: usesType,
+                    verb: 'Använder',
+                    sourceId: personId,
+                    targetId: 'music',
+                  },
                 },
               },
             ],

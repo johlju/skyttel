@@ -242,6 +242,7 @@ export async function runTextScenario(
             sources,
             step.expected.requirements,
             (entry.target ?? step).expected,
+            environment.stateEvidence(),
           );
           if (requirements.length) {
             const verdicts: JudgeResult = options.judge

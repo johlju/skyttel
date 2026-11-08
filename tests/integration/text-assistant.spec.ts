@@ -1260,7 +1260,7 @@ test('TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitto', asyn
     await post('relationship', {
       id: 'lo-tonrum',
       baseRevision: null,
-      value: { ...relationship, typeId: usageType.id },
+      value: { ...relationship, typeId: usageType.id, verb: 'Använder' },
     });
     await post('save', { operationId: 'details-baseline' });
     await page.reload();
@@ -1272,6 +1272,7 @@ test('TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitto', asyn
     await relationshipForm
       .getByLabel('Sambandstyp', { exact: true })
       .selectOption({ label: 'Betalar' });
+    await relationshipForm.getByLabel('Verb', { exact: true }).fill('Betalar');
     await stageRelationshipAndClose(page);
     const objectForm = await editTableObject(page, 'Tonrum');
     await objectForm.getByRole('button', { name: 'Livscykel och utseende', exact: true }).click();
@@ -1287,7 +1288,11 @@ test('TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitto', asyn
       { id: 'tonrum', after: { ...service, lifecycle: 'ended' } },
     ]);
     expect(nativeState.draft.relationships).toMatchObject([
-      { id: 'lo-tonrum', after: { ...relationship, typeId: paymentType.id } },
+      {
+        id: 'lo-tonrum',
+        before: { ...relationship, typeId: usageType.id, verb: 'Använder' },
+        after: { ...relationship, typeId: paymentType.id, verb: 'Betalar' },
+      },
     ]);
     await post('draft', {
       id: 'tonrum',
@@ -1297,7 +1302,7 @@ test('TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitto', asyn
     await post('relationship', {
       id: 'lo-tonrum',
       baseRevision: 1,
-      value: { ...relationship, typeId: paymentType.id },
+      value: { ...relationship, typeId: paymentType.id, verb: 'Betalar' },
     });
     await page.reload();
     await openTable(page);
@@ -1326,7 +1331,7 @@ test('TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitto', asyn
     expect(saved.objects.find((object: { id: string }) => object.id === 'tonrum').lifecycle).toBe(
       'ended',
     );
-    expect(saved.relationships).toMatchObject([{ typeId: paymentType.id }]);
+    expect(saved.relationships).toMatchObject([{ typeId: paymentType.id, verb: 'Betalar' }]);
     await openTable(page);
     await page
       .getByRole('region', { name: 'Hushållets tabell', exact: true })

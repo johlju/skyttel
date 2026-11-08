@@ -116,8 +116,6 @@ for (const width of [1280, 390, 320]) {
         await relationshipType
           .getByLabel('Sambandstypens beskrivning')
           .fill('Delar som används ihop');
-        await relationshipType.getByLabel('Benämning från startobjektet').fill('kompletteras av');
-        await relationshipType.getByLabel('Benämning från målobjektet').fill('kompletterar');
         await relationshipType
           .getByRole('button', { name: 'Lägg sambandstypen i mitt utkast' })
           .click();
@@ -125,6 +123,7 @@ for (const width of [1280, 390, 320]) {
         await openObjectRelationships(page, 'Paneler på taket');
         await page.getByRole('button', { name: 'Nytt samband', exact: true }).click();
         const relationship = page.getByRole('group', { name: 'Sambandets detaljer', exact: true });
+        await relationship.getByLabel('Verb', { exact: true }).fill('kompletteras av');
         await relationship
           .getByLabel('Från objekt', { exact: true })
           .selectOption(

@@ -19,10 +19,6 @@ for (const kind of ['objectType', 'relationshipType'] as const) {
         value: {
           name: 'Tillfällig typ',
           description: '',
-
-          ...(kind === 'relationshipType'
-            ? { forwardLabel: 'granskar', reverseLabel: 'granskas av' }
-            : {}),
         },
       });
       await data.post(kind === 'objectType' ? 'draft' : 'relationship', {
@@ -47,9 +43,6 @@ for (const kind of ['objectType', 'relationshipType'] as const) {
         revision: 1,
         name: 'Tillfällig typ',
         description: '',
-        ...(kind === 'relationshipType'
-          ? { forwardLabel: 'granskar', reverseLabel: 'granskas av' }
-          : {}),
       });
       const changes = kind === 'objectType' ? after.draft.changes : after.draft.relationships;
       expect(changes?.find(({ id }) => id === 'typed-proposal')?.after).toEqual(
@@ -59,6 +52,7 @@ for (const kind of ['objectType', 'relationshipType'] as const) {
               sourceId: 'draft-bike',
               targetId: 'draft-bike',
               typeId: 'discard-type',
+              verb: 'har samband med',
             },
       );
       expect(after.draft.changes.filter(({ id }) => id !== 'typed-proposal')).toEqual(

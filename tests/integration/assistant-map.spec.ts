@@ -83,6 +83,7 @@ for (const viewport of [
                 baseRevision: null,
                 value: {
                   typeId: initial.relationshipTypes[0].id,
+                  verb: 'Använder',
                   sourceId: 'lo',
                   targetId: 'music',
                 },
@@ -250,9 +251,7 @@ for (const viewport of [
         expect(acknowledgements[1]).toMatchObject({
           displayed: true,
           kind: 'relationship',
-          inspector: expect.stringContaining(
-            `Lo Exempel → ${initial.relationshipTypes[0].forwardLabel ?? initial.relationshipTypes[0].name} → Molnmusik`,
-          ),
+          inspector: expect.stringContaining(`Lo Exempel → Använder → Molnmusik`),
           inspectorVisible: true,
           endpointsVisible: true,
           visible: true,

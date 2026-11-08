@@ -51,9 +51,10 @@ test('the demo preserves free properties and valid links through restart', async
       const ids = new Set(objects.map(({ id }) => id));
       const identities = new Set<string>();
       for (const edge of relationships) {
+        expect(edge.verb?.trim()).toBeTruthy();
         expect(ids.has(edge.sourceId)).toBe(true);
         expect(edge.targetId !== null && ids.has(edge.targetId)).toBe(true);
-        const identity = `${edge.typeId}:${edge.sourceId}:${edge.targetId}`;
+        const identity = `${edge.typeId}:${edge.sourceId}:${edge.targetId}:${edge.verb}`;
         expect(identities.has(identity)).toBe(false);
         identities.add(identity);
       }

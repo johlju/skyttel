@@ -65,6 +65,7 @@ async function arrange(client: APIRequestContext, origin: string) {
             sourceId,
             targetId,
             typeId: state.relationshipTypes.find((item) => item.name === 'Använder')?.id,
+            verb: 'Använder',
           },
         })
       ).ok(),
@@ -188,6 +189,7 @@ test('LIVSCYKEL-03: removing from the list immediately proposes every connected 
     const proposeTypeChange = async () => {
       await editObjectRelationship(page, 'Lo Exempel', 'Lo Exempel → Använder → Familjemusik');
       await page.getByLabel('Sambandstyp', { exact: true }).selectOption({ label: 'Betalar' });
+      await page.getByLabel('Verb', { exact: true }).fill('Betalar');
       await stageRelationshipAndClose(page);
       await openDraftReview(page);
       await expect(review).toContainText('Lo Exempel → Betalar → Familjemusik');
@@ -567,6 +569,7 @@ test('LIVSCYKEL-06: current and previous relationships retain their own accessib
             sourceId: 'service',
             targetId: 'person',
             typeId: pays?.id,
+            verb: 'Betalar',
             lifecycle: 'active',
             properties: [
               { id: 'endDate', label: 'Slutdatum', kind: 'date' as const, value: '2000-01-01' },
@@ -581,6 +584,7 @@ test('LIVSCYKEL-06: current and previous relationships retain their own accessib
     await editObjectRelationship(page, 'Lo Exempel', 'Lo Exempel → Använder → Familjemusik');
     await page.getByLabel('Från objekt', { exact: true }).selectOption('service');
     await page.getByLabel('Sambandstyp', { exact: true }).selectOption({ label: 'Betalar' });
+    await page.getByLabel('Verb', { exact: true }).fill('Betalar');
     await page.getByLabel('Sambandets status', { exact: true }).selectOption('active');
     await expect(propertyRow(page, 'Slutdatum').getByLabel('Värde', { exact: true })).toHaveValue(
       '2000-01-01',
@@ -601,6 +605,7 @@ test('LIVSCYKEL-06: current and previous relationships retain their own accessib
       sourceId: 'service',
       targetId: 'subscription',
       typeId: pays?.id,
+      verb: 'Betalar',
       lifecycle: 'active',
       properties: [
         { id: 'endDate', label: 'Slutdatum', kind: 'date' as const, value: '2000-01-01' },

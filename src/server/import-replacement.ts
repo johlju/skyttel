@@ -12,7 +12,6 @@ import { projectDraftScope } from './project-content-scope.js';
 const tables = [
   ['objectTypes', 'object_type', []],
   ['relationshipTypes', 'relationship_type', []],
-  ['relationshipTypeLabels', 'relationship_type_labels', []],
   ['removedTypes', 'removed_type', []],
   ['objects', 'map_object', ['properties']],
   ['relationships', 'map_relationship', ['properties']],
@@ -25,14 +24,6 @@ const tables = [
 ] as const;
 
 function scopedRows(database: Database.Database, table: string, householdId: string) {
-  if (table === 'relationship_type_labels') {
-    const parent = 'relationship_type';
-    return database
-      .prepare(
-        `SELECT child.* FROM ${table} child JOIN ${parent} parent ON parent.id = child.typeId WHERE parent.householdId = ? ORDER BY child.typeId`,
-      )
-      .iterate(householdId);
-  }
   if (table === 'removed_type')
     return database
       .prepare(`SELECT * FROM removed_type WHERE

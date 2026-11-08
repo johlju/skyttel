@@ -224,8 +224,6 @@ test('controlled clarification preserves the request, independent work and prope
     await propose('relationship-type', `type-${id}`, {
       name,
       description: '',
-      forwardLabel: name,
-      reverseLabel: 'Hör till',
     });
   }
   let session: TextAssistantView = await (

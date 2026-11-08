@@ -100,8 +100,6 @@ test('the whole save includes definitions and their dependent content with histo
         value: {
           name: 'Stödjer',
           description: '',
-          forwardLabel: 'stödjer',
-          reverseLabel: 'stöds av',
         },
       })
     ).status,
@@ -293,7 +291,7 @@ test('discarding an unsaved object drops only its incident proposals and all pro
         version: (await read()).draft.version,
         id: 'new-edge-type',
         baseRevision: null,
-        value: { name: 'Ny typ', description: '', forwardLabel: 'hör till', reverseLabel: 'har' },
+        value: { name: 'Ny typ', description: '' },
       })
     ).status,
   ).toBe(200);

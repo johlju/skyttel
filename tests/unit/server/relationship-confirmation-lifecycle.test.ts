@@ -1,4 +1,4 @@
-import { cpSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { copyFileSync, cpSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type Database from 'better-sqlite3';
@@ -6,6 +6,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { openDatabase } from '../../../src/server/database.js';
 import { householdMap } from '../../../src/server/map.js';
 import { relationshipConfirmationCleanup } from '../../../src/server/relationship-form-attempts.js';
+import { legacyDatabaseSnapshot } from '../../support/legacy-database-snapshot.js';
 import { applicationFixture } from './fixture.js';
 
 let fixture: Awaited<ReturnType<typeof applicationFixture>>;
@@ -28,7 +29,7 @@ async function prepare(legacy = false) {
     for (const name of readdirSync(directory))
       if (name.endsWith('.sql') && Number(name.split('_')[0]) > 41) rmSync(join(directory, name));
   }
-  fixture = await applicationFixture({ migrationsDirectory: legacy ? directory : undefined });
+  fixture = await applicationFixture();
   const client = fixture.client();
   await client.signIn();
   const { household } = await (await client.json('/api/households', { name: 'Linden' })).json();
@@ -68,7 +69,7 @@ test.each([1, 1001])(
       value: staged.relationships?.[0].after,
     };
     const insert = fixture.database.prepare(
-      'INSERT INTO relationship_form_attempt VALUES (?, ?, 1, ?, ?, ?)',
+      'INSERT INTO relationship_form_attempt (householdId, userId, contentVersion, stagingId, submission, outcome) VALUES (?, ?, 1, ?, ?, ?)',
     );
     fixture.database.transaction(() => {
       insert.run(
@@ -89,7 +90,11 @@ test.each([1, 1001])(
     })();
     const preserved = oldMap.read();
     await fixture.app.close();
+    if (!directory) throw new Error('Missing legacy migration fixture');
+    const snapshot = join(directory, 'legacy.sqlite');
+    await legacyDatabaseSnapshot(fixture.database, snapshot, directory);
     fixture.database.close();
+    copyFileSync(snapshot, fixture.config.databasePath);
     const upgradeStart = Date.now();
     reopened = openDatabase(fixture.config.databasePath);
     const deadline = () =>

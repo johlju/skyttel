@@ -29,8 +29,6 @@ export async function prepareDraftReview(client: APIRequestContext, origin: stri
     value: {
       name: 'Granskar',
       description: 'Samband för granskning',
-      forwardLabel: 'granskar',
-      reverseLabel: 'granskas av',
     },
   });
   await post('draft', {
@@ -127,6 +125,8 @@ export async function prepareDraftReview(client: APIRequestContext, origin: stri
       baseRevision: null,
       value: {
         typeId: index === 2 ? saved.relationshipTypes[0].id : relationshipType.id,
+        verb: index === 2 ? 'Använder' : 'granskar',
+        reverseVerb: index === 2 ? 'Används av' : 'granskas av',
         sourceId: index > 2 ? 'draft-unspecified' : bike.id,
         targetId: index === 0 || index === 4 ? 'draft-unspecified' : bike.id,
         properties: [
@@ -155,9 +155,7 @@ export async function prepareDraftReview(client: APIRequestContext, origin: stri
     baseRevision: relationshipType.revision,
     value: {
       name: relationshipType.name,
-      description: relationshipType.description,
-      forwardLabel: relationshipType.forwardLabel,
-      reverseLabel: 'kontrolleras av',
+      description: 'Föreslagen sambandsbeskrivning',
     },
   });
   return { household, path, read, post };
@@ -204,6 +202,8 @@ export async function prepareDraftReviewMeanings(client: APIRequestContext, orig
       sourceId: bike.id,
       targetId: 'draft-peer',
       typeId: 'draft-uses',
+      verb: 'granskar',
+      reverseVerb: 'granskas av',
       properties: [
         { id: 'endDate', label: 'Slutdatum', kind: 'date' as const, value: '2000-01-01' },
       ],
@@ -310,6 +310,8 @@ export async function prepareDraftReviewLifecycle(client: APIRequestContext, ori
       baseRevision: null,
       value: {
         typeId: 'draft-uses',
+        verb: 'granskar',
+        reverseVerb: 'granskas av',
         sourceId: id,
         targetId: 'draft-bike',
         ...(id === 'past' ? { lifecycle: 'ended' } : {}),

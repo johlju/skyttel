@@ -52,6 +52,7 @@ async function arrange(page: Page, origin: string) {
             baseRevision: null,
             value: {
               typeId: initial.relationshipTypes.find((type) => type.name === 'Använder')?.id,
+              verb: 'Använder',
               sourceId,
               targetId,
             },

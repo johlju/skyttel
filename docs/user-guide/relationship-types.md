@@ -2,11 +2,11 @@
 
 [Till användarguidens innehåll](README.md)
 
-En sambandstyp beskriver vad en koppling betyder. **Förvaring** kan till
-exempel beskriva att Alex blå cykel **förvaras i** Garaget och att Garaget
-**innehåller** Alex blå cykel. Det är ett samband med en identitet och en
-riktning, sett från två håll. Ett annat föremål i samma garage får ett eget
-samband av samma typ.
+En sambandstyp är en gruppering som hushållet väljer. Varje enskilt samband
+har sitt eget fria **Verb**, oavsett gruppering och slags objekt. En cykel
+kan **förvaras i** ett garage och en webbplats **använder** en tjänst.
+Du kan använda samma verb med olika grupperingar eller olika verb inom
+samma gruppering. Skyttel ifrågasätter inte ditt ordval.
 
 Alla hushållets medlemmar kan skapa och ändra sambandstyper. Definitionen
 är gemensam efter sparandet. Före sparandet finns förslaget i ditt utkast,
@@ -17,14 +17,16 @@ tillsammans med objekt och samband du föreslår.
 1. Öppna **Inställningar → Typer → Sambandstyper och riktning** och välj
    **Ny sambandstyp**. Ange ett namn som hjälper hushållet att välja rätt
    betydelse och en förklarande beskrivning.
-2. Ange benämningarna från startobjektet och målobjektet, till exempel
-   **förvaras i** och **innehåller**. Lägg sambandstypen i ditt utkast.
+2. Lägg sambandstypen i ditt utkast. Verbet väljer du separat för varje
+   samband, exempelvis **förvaras i**. En omvänd benämning är valfri.
 3. Skapa de två objekten separat om de saknas. Öppna **Tabell**, välj
    **Samband för** startobjektet och **Nytt samband**. Startobjektet är
-   förvalt. Välj sambandstyp, det andra objektet och riktning.
+   förvalt. Ange **Verb**, det andra objektet och riktning. Välj en
+   gruppering om du vill; **Ingen särskild gruppering** ger **Samband**.
    Objektväljaren omfattar hushållets valbara objekt och nya objekt i
-   ditt utkast, oberoende av kartans och tabellens filter. Typen och båda
-   ändpunkterna krävs. Borttagna objekt kan inte väljas.
+   ditt utkast, oberoende av kartans och tabellens filter. Båda ändpunkterna
+   krävs. Borttagna objekt kan inte väljas. Ett tomt verb ger den neutrala
+   formuleringen **har samband med**.
 4. Ange fria egenskaper och välj status vid behov. Välj **Lägg i utkastet**.
    Dialogen stannar öppen för nästa samband. Tidigare färdiga förslag
    behålls om nästa formulär innehåller ett fel eller avbryts.
@@ -47,8 +49,8 @@ kan ha samma etikett och du kan välja deras ordning utan dragning.
 
 Läs alla egenskaper i objektets sambandsdialog och välj
 **Redigera samband** för att rätta dem. Byte av sambandstyp behåller
-egenskaper, ordning och ändpunkter. Typens förklaring och riktningsetiketter
-är separata från sambandets egna egenskaper.
+egenskaper, verb, ordning och ändpunkter. Typens förklaring och äldre
+riktningsetiketter är separata från det enskilda sambandets ordval.
 
 Beskriv osäkerhet med en vanlig fri egenskap när du vill registrera den.
 En etikett har ingen automatisk betydelse. Ett datum avslutar inte
@@ -58,14 +60,14 @@ Läs mer om [egenskapsredigering](map.md#beskriv-objekt-och-samband-med-fria-ege
 ## Läs och rätta från båda objekten
 
 Välj **Samband för Cykeln** i Tabell för att se
-**Cykeln → förvaras i → Garaget**. Välj **Samband för Garaget** för att
-se **Garaget → innehåller → Cykeln**. **Redigera samband** öppnar samma
-koppling från båda hållen. Formuläret visar dess startobjekt och
-målobjekt i den sparade riktningen.
+**Cykeln → förvaras i → Garaget**. Samma sparade riktning visas från
+Garaget när ingen omvänd benämning anges. En uttryckligen angiven omvänd
+benämning kan visa samma koppling från andra hållet; den krävs aldrig.
+**Redigera samband** öppnar samma koppling från båda objekten.
 
 Du kan ändra typ eller ändpunkter och lägga till fler samband. Andra
 betydelser och omvänd riktning mellan samma objekt är tillåtna.
-Ett upprepat tillägg med samma typ, riktning och ändpunkter visar
+Ett upprepat tillägg med samma typ, verb, riktning och ändpunkter visar
 **Sambandet finns redan** och erbjuder **Redigera befintligt samband**.
 Det skapar ingen dubblett och skriver inte över sparade uppgifter.
 Ett ändrat formulär bevaras tills du uttryckligen väljer att lämna det.
@@ -74,9 +76,10 @@ Vid byte till det befintliga sambandet gäller [förlustvarningen](map.md).
 ## Ändra en gemensam definition
 
 Öppna **Sambandstyper och riktning** och välj **Ändra sambandstyp**.
-Även förifyllda och använda typer kan få rättat namn, beskrivning och
-benämningar. Ändringen byter inte identitet eller kopplar om några objekt.
-Lika namn betyder inte samma typ; läs förklaringen och riktningen före val.
+Även förifyllda och använda typer kan få rättat namn och beskrivning.
+Ändringen byter inte identitet, verb eller ändpunkter på
+befintliga samband. Äldre benämningar bevaras även vid uppgradering.
+Lika namn betyder inte samma typ; läs förklaringen före val.
 
 Granska den tidigare definitionen och ditt förslag i utkastet. Vid konflikt
 stoppas hela sparandet. Hämta aktuellt underlag och välj sparad definition
@@ -84,8 +87,8 @@ eller ditt förslag. Oberoende rättelser bevaras. Granska resultatet och
 ge ett nytt sparbesked. Historiken och kvittot bevarar tidigare definitioner,
 riktningsetiketter och ändrade kopplingar.
 
-Vid samtidiga likadana tillägg sparas bara ett samband. Den andra
-medlemmens hela utkast finns kvar och visar vilket samband som redan
+Vid samtidiga likadana tillägg med samma gruppering sparas bara ett samband.
+Den andra medlemmens hela utkast finns kvar och visar vilket samband som redan
 finns. Öppna **Granska konflikter** och bekräfta
 **Ta bort sambandet ur ditt utkast** för det överlappande förslaget.
 Det sparade sambandet och andra förslag behålls. Granska övriga förslag

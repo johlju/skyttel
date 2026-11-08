@@ -986,8 +986,6 @@ test('RADERING-07: a known erasure survives Settings navigation and reload despi
           value: {
             name: 'Senare tom sambandstyp',
             description: '',
-            forwardLabel: 'använder',
-            reverseLabel: 'används av',
           },
         })
       ).status(),

@@ -3,6 +3,7 @@ import { sameConflictValue } from '../shared/conflict-properties.js';
 import type { MapObject, MapState, RelationshipValue } from '../shared/map.js';
 import { proposedRelationships, proposedRelationshipTypes } from '../shared/map.js';
 import type { RelationshipFormResult } from '../shared/relationship-form.js';
+import { relationshipVerb } from '../shared/relationship-verb.js';
 import { EndpointPicker } from './EndpointPicker.js';
 import { useFormLeave } from './FormLeave.js';
 import { FormLossGuard } from './FormLossGuard.js';
@@ -111,13 +112,12 @@ export function RelationshipForm({
     setErrors(problems);
     return !problems.length;
   }
-  const type = state.relationshipTypes.find((type) => type.id === value.typeId);
   const choices = [...objects.values()].filter(
     (object) => !state.draft.changes.some((change) => change.id === object.id && !change.after),
   );
   const source = objects.get(value.sourceId)?.name ?? 'Välj frånobjekt';
   const target = objects.get(value.targetId ?? '')?.name ?? 'Välj tillobjekt';
-  const label = type?.forwardLabel || type?.name || 'välj sambandstyp';
+  const label = value.verb || 'har samband med';
   async function submit(remove = false) {
     if (lock.current || stale || (!remove && !validate())) return;
     lock.current = true;
@@ -130,7 +130,7 @@ export function RelationshipForm({
         stagingId,
         editor: {
           ...basis,
-          value: remove ? null : value,
+          value: remove ? null : { ...value, verb: value.verb?.trim() || 'har samband med' },
           typeRevision: typeRevisions.get(remove ? basis.value.typeId : value.typeId),
         },
       };
@@ -183,9 +183,10 @@ export function RelationshipForm({
       if (
         existing &&
         submitted &&
-        existing.typeId === submitted.typeId &&
+        (!submitted.typeId || existing.typeId === submitted.typeId) &&
         existing.sourceId === submitted.sourceId &&
-        existing.targetId === submitted.targetId
+        existing.targetId === submitted.targetId &&
+        relationshipVerb(existing) === relationshipVerb(submitted)
       ) {
         setDuplicateId(outcome.relationshipId);
         setError('Sambandet finns redan');
@@ -276,7 +277,8 @@ export function RelationshipForm({
       (edge) =>
         edge.typeId === value.typeId &&
         edge.sourceId === value.sourceId &&
-        edge.targetId === value.targetId,
+        edge.targetId === value.targetId &&
+        relationshipVerb(edge) === (value.verb?.trim() || 'har samband med'),
     );
   async function check() {
     const current = attempt.current;
@@ -419,17 +421,39 @@ export function RelationshipForm({
             <label htmlFor={`${prefix}-type`}>Sambandstyp</label>
             <select
               id={`${prefix}-type`}
-              required
               value={value.typeId}
               onChange={(event) => setValue({ ...value, typeId: event.target.value })}
             >
-              <option value="">Välj sambandstyp</option>
+              <option value="">Ingen särskild gruppering</option>
               {state.relationshipTypes.map((type) => (
                 <option key={type.id} value={type.id}>
                   {type.name}
                 </option>
               ))}
             </select>
+          </div>
+          <div className="relationship-form-wide">
+            <label htmlFor={`${prefix}-verb`}>Verb</label>
+            <input
+              id={`${prefix}-verb`}
+              maxLength={200}
+              value={value.verb ?? ''}
+              placeholder="har samband med"
+              onChange={(event) => {
+                const { reverseVerb: _reverseVerb, ...current } = value;
+                setValue({ ...current, verb: event.target.value });
+              }}
+            />
+            <p>Välj ord för just det här sambandet, oavsett typ av objekt och gruppering.</p>
+            <label htmlFor={`${prefix}-reverse-verb`}>Omvänd benämning (valfri)</label>
+            <input
+              id={`${prefix}-reverse-verb`}
+              maxLength={200}
+              value={value.reverseVerb ?? ''}
+              onChange={(event) =>
+                setValue({ ...value, reverseVerb: event.target.value || undefined })
+              }
+            />
           </div>
           <div className="relationship-form-wide">
             <EndpointPicker

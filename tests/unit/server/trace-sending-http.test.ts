@@ -185,7 +185,7 @@ test('household archive roundtrip preserves local opt-out and suspension without
     await (await operator.request(`${householdPath}/exports/${prepared.id}`)).arrayBuffer(),
   );
   const parts = unzipSync(archive);
-  expect(JSON.parse(Buffer.from(parts['manifest.json']).toString()).schemaVersion).toBe(38);
+  expect(JSON.parse(Buffer.from(parts['manifest.json']).toString()).schemaVersion).toBe(40);
   const encoded = Buffer.from(parts['content.json']).toString();
   for (const field of [
     'trace_sending',

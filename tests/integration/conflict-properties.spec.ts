@@ -301,7 +301,12 @@ test('UTKAST-29: invalid relationship property combinations keep every choice un
   const member = await other.newPage();
   try {
     let state = await app.read();
-    const edge = { typeId: state.relationshipTypes[0].id, sourceId: 'lo', targetId: 'service' };
+    const edge = {
+      typeId: state.relationshipTypes[0].id,
+      sourceId: 'lo',
+      targetId: 'service',
+      verb: 'Använder',
+    };
     await app.propose(page.request, 'relationship', 'edge', edge);
     await app.propose(page.request, 'relationship', 'existing', {
       ...edge,

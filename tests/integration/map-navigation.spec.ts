@@ -91,6 +91,7 @@ async function arrangeCoordinateReading(page: Page, origin: string) {
           baseRevision: null,
           value: {
             typeId: state.relationshipTypes.find((type) => type.name === 'Använder')?.id,
+            verb: 'Använder',
             sourceId: 'lo',
             targetId: 'kim',
           },
@@ -437,6 +438,7 @@ test('NAVIGATION-04: object details retain directed relationship access and edit
             baseRevision: null,
             value: {
               typeId: before.relationshipTypes.find((type) => type.name === 'Använder')?.id,
+              verb: 'Använder',
               sourceId: 'lo',
               targetId: 'kim',
             },

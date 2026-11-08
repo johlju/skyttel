@@ -76,13 +76,18 @@ test.each(rawCatalog.scenarios as Scenario[])(
         const names = definitions.map((type) => type.name);
         expect(new Set(names).size).toBe(names.length);
       }
-      expect(map.relationshipTypes.find((type) => type.name === 'Hör till')).toMatchObject(
-        scenario.fixture?.relationshipTypes.find((type) => type.name === 'Hör till') ?? {
-          description: '',
-          forwardLabel: 'hör till',
-          reverseLabel: 'har tjänstekonto',
-        },
-      );
+      const fixture = scenario.fixture ?? rawCatalog.base;
+      for (const definition of fixture.relationshipTypes) {
+        const stored = map.relationshipTypes.find((type) => type.name === definition.name);
+        expect(stored).toMatchObject(definition);
+        expect(Object.keys(stored ?? {}).sort()).toEqual([
+          'description',
+          'householdId',
+          'id',
+          'name',
+          'revision',
+        ]);
+      }
     } finally {
       await environment.close();
     }
@@ -161,7 +166,14 @@ test('deletion removes only its declared object and incident relationship', {
         { id: 'account', type: 'Tjänstekonto', name: 'Gammalt konto' },
         { id: 'service', type: 'Tjänst', name: 'Dropbox' },
       ],
-      relationships: [{ source: 'account', type: 'Tillhör tjänsten', target: 'service' }],
+      relationships: [
+        {
+          source: 'account',
+          type: 'Tillhör tjänsten',
+          verb: 'tillhör tjänsten',
+          target: 'service',
+        },
+      ],
       relationshipTypes: [],
       draft: { objects: {} },
     },
@@ -171,7 +183,14 @@ test('deletion removes only its declared object and incident relationship', {
         text: 'Ta bort mitt gamla konto.',
         expected: {
           removeObjects: ['account'],
-          removeRelationships: [{ source: 'account', type: 'Tillhör tjänsten', target: 'service' }],
+          removeRelationships: [
+            {
+              source: 'account',
+              type: 'Tillhör tjänsten',
+              verb: 'tillhör tjänsten',
+              target: 'service',
+            },
+          ],
           requirements: [],
         },
       },
@@ -219,6 +238,7 @@ test('ordinary stopped usage can retain its ended relationship without ending th
         typeId: relationship.typeId,
         sourceId: relationship.sourceId,
         targetId: relationship.targetId,
+        verb: relationship.verb,
         lifecycle: 'ended',
       },
     });
@@ -241,6 +261,7 @@ test('ordinary stopped usage can retain its ended relationship without ending th
         typeId: relationship.typeId,
         sourceId: relationship.sourceId,
         targetId: relationship.targetId,
+        verb: relationship.verb,
         lifecycle: 'ended',
       },
     });
@@ -346,11 +367,14 @@ test('uncertainty contracts reject confident links, reversed links and unauthori
         id: 'use',
         text: 'Jag tror att Mira använder Dropbox.',
         expected: {
-          addRelationships: [{ source: 'mira', type: 'Använder', target: 'dropbox' }],
+          addRelationships: [
+            { source: 'mira', type: 'Använder', verb: 'använder', target: 'dropbox' },
+          ],
           semanticRelationships: [
             {
               source: 'mira',
               type: 'Använder',
+              verb: 'använder',
               target: 'dropbox',
               properties: {
                 preserve: [],
@@ -377,6 +401,7 @@ test('uncertainty contracts reject confident links, reversed links and unauthori
           typeId: map.relationshipTypes.find((type) => type.name === 'Använder')?.id,
           sourceId: variant === 'reversed' ? 'dropbox' : 'mira',
           targetId: variant === 'reversed' ? 'mira' : 'dropbox',
+          verb: 'använder',
           properties:
             variant === 'confident'
               ? []
@@ -513,6 +538,7 @@ test.each([
             typeId: map.relationshipTypes.find((type) => type.name === relationshipType)?.id,
             sourceId: 'disney-plus-abonnemang',
             targetId: 'disney-service',
+            verb: 'har samband med',
           },
         });
       }
@@ -558,6 +584,7 @@ test('the approved Disney+ request rejects a reversed subscription-to-service li
         typeId: map.relationshipTypes.find((type) => type.name === 'Tillhör tjänsten')?.id,
         sourceId: 'disney-service',
         targetId: 'disney-subscription',
+        verb: 'har samband med',
       },
     });
     expect(await environment.check(scenario.steps[0], environment.assistant, [])).toContain(
