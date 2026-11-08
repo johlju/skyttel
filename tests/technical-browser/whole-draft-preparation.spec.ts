@@ -2,7 +2,12 @@ import { spawn } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../support/client.js';
-import { startConversationWithText } from '../support/conversation-page.js';
+import {
+  startConversationWithText,
+  turnMicrophoneOn,
+  voiceBox,
+} from '../support/conversation-page.js';
+import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { unexpectedPreparationDiagnostics } from '../support/preparation-diagnostics.js';
 import { expect, test } from '../support/test.js';
 
@@ -15,7 +20,23 @@ test('literal whole-draft preparation reads omitted proposals before a rejected 
   const batch = recipe?.match(/^tool REQUEST submit_changes .*"name":"Kim".*$/mu)?.[0];
   const allow = recipe?.match(/^reply CHECK .*"decision":"allow".*$/mu)?.[0];
   const reject = recipe?.match(/^reply CHECK .*"decision":"clarify".*$/mu)?.[0];
-  if (!read || !batch || !allow || !reject) throw new Error('Missing published save preparation');
+  const reading = recipe?.match(/^scope-read\nresponse-required off$/mu)?.[0];
+  const report = recipe?.match(/^tool REQUEST report_result .*$/mu)?.[0];
+  const speaking = recipe?.match(/^scope-work\nhold-check on\nuser .*\ndelegate$/mu)?.[0];
+  const correction = recipe?.match(/^tool REQUEST submit_changes .*VALUE.*$/mu)?.[0];
+  const complete = recipe?.match(/^reply CHECK .*"fulfillsRequest":true.*$/mu)?.[0];
+  if (
+    !read ||
+    !batch ||
+    !allow ||
+    !reject ||
+    !reading ||
+    !report ||
+    !speaking ||
+    !correction ||
+    !complete
+  )
+    throw new Error('Missing published save preparation');
   const child = spawn(process.execPath, ['--import', 'tsx', 'scripts/manual-voice.ts'], {
     stdio: ['pipe', 'pipe', 'pipe'],
     env: { ...process.env, FORCE_COLOR: undefined },
@@ -42,6 +63,20 @@ test('literal whole-draft preparation reads omitted proposals before a rejected 
     diagnostics += String(chunk);
   });
   const command = (line: string) => child.stdin.write(`${line}\n`);
+  function releaseTool(
+    line: string,
+    id: string,
+    draft: TextAssistantReview,
+    replacements: Record<string, string>,
+  ) {
+    const values: Record<string, string> = {
+      REQUEST: id,
+      V: String(draft.version),
+      C: String(draft.contentVersion),
+      ...replacements,
+    };
+    command(line.replace(/\b(?:REQUEST|V|C|TYPE|VALUE)\b/gu, (key) => values[key] ?? key));
+  }
   async function held(after: number, kind: string) {
     await expect
       .poll(() => events.slice(after).some((item) => item.event === 'held' && item.kind === kind))
@@ -85,6 +120,7 @@ test('literal whole-draft preparation reads omitted proposals before a rejected 
       ).status(),
     ).toBe(200);
     const before = await (await page.request.get(path)).json();
+    await page.addInitScript({ content: liveBrowserFixtureSource });
     await page.goto(`${origin}/households/${household.id}`);
     await startConversationWithText(page);
     command('hold-check on');
@@ -103,15 +139,7 @@ test('literal whole-draft preparation reads omitted proposals before a rejected 
     const lo = current.changes.find((change) => change.id === 'lo');
     if (!lo?.after) throw new Error('Missing current Lo proposal');
     at = events.length;
-    const values = {
-      REQUEST: item.id,
-      V: String(current.version),
-      C: String(current.contentVersion),
-      TYPE: lo.after.typeId,
-    };
-    command(
-      batch.replace(/\b(?:REQUEST|V|C|TYPE)\b/gu, (key) => values[key as keyof typeof values]),
-    );
+    releaseTool(batch, item.id, current, { TYPE: lo.after.typeId });
     item = await held(at, 'action-check');
     at = events.length;
     command(allow.replace('CHECK', item.id));
@@ -133,6 +161,59 @@ test('literal whole-draft preparation reads omitted proposals before a rejected 
     expect(after.draft.changes).toEqual(item.comparison?.untrusted.data.draft.changes);
     expect((await (await page.request.get(`${path}/operations`)).json()).operations).toEqual([]);
     expect((await (await page.request.get(`${path}/history`)).json()).history).toEqual([]);
+    command('hold-check off');
+    command(reading);
+    at = events.length;
+    await page
+      .getByRole('textbox', { name: 'Meddelande till Skyttel' })
+      .fill('Vad finns i utkastet?');
+    await page.getByRole('button', { name: 'Skicka', exact: true }).click();
+    item = await held(at, 'work');
+    command(report.replace('REQUEST', item.id));
+    await expect(log).toContainText('Utkast:');
+    await expect(log).not.toContainText('Skyttel arbetar…');
+    expect(
+      events.slice(at).filter((event) => event.event === 'held' && event.kind === 'work'),
+    ).toHaveLength(1);
+    expect(await (await page.request.get(path)).json()).toEqual(after);
+    await turnMicrophoneOn(page);
+    await expect(voiceBox(page)).toHaveText('Lyssnar');
+    at = events.length;
+    command(speaking);
+    item = await held(at, 'work');
+    const fresh = item.draft;
+    const kim = fresh?.changes.find((change) => change.id === 'kim');
+    if (!fresh || !kim?.after) throw new Error('Missing current Kim proposal');
+    at = events.length;
+    releaseTool(correction, item.id, fresh, {
+      VALUE: JSON.stringify({ ...kim.after, name: 'Kim Lind' }),
+    });
+    item = await held(at, 'action-check');
+    at = events.length;
+    command(allow.replace('CHECK', item.id));
+    item = await held(at, 'action-check');
+    expect(item.comparison?.untrusted.data.wholeDraft).toBe(true);
+    expect(item.comparison?.untrusted.data.draft.changes).toEqual([
+      ...before.draft.changes,
+      expect.objectContaining({
+        id: 'kim',
+        after: expect.objectContaining({ name: 'Kim Lind', typeId: person.id }),
+      }),
+    ]);
+    command(complete.replace('CHECK', item.id));
+    await expect(log).toContainText('Sparat.');
+    const saved = await (await page.request.get(path)).json();
+    expect(saved.draft.changes).toEqual([]);
+    expect(saved.objects).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Lo Exempel' }),
+        expect.objectContaining({ name: 'Kim Lind' }),
+      ]),
+    );
+    expect((await (await page.request.get(`${path}/operations`)).json()).operations).toHaveLength(
+      1,
+    );
+    expect((await (await page.request.get(`${path}/history`)).json()).history).toHaveLength(1);
     expect(events.filter((event) => event.event === 'error')).toEqual([]);
     expect(unexpectedPreparationDiagnostics(diagnostics)).toBe('');
   } finally {

@@ -1,11 +1,17 @@
 import { randomUUID } from 'node:crypto';
-import type { PendingPartReference, TextAssistantView } from '../shared/text-assistant.js';
+import { assistantChangeSummary } from '../shared/assistant-change-summary.js';
+import type {
+  ConversationReply,
+  PendingPartReference,
+  TextAssistantView,
+} from '../shared/text-assistant.js';
 import { assistantFailureMessage } from './assistant-feedback.js';
 import type { LiveSideband } from './live-provider.js';
 import { type VoiceAnswer, voiceAnswerText, voiceCommentary } from './voice-commentary.js';
 
 type Anchor = { revision: number; draftVersion: number; contentVersion: number };
 type Fragment = { role: 'user' | 'assistant'; text: string; startMs: number; endMs: number };
+type VoiceCompletionView = TextAssistantView & Pick<ConversationReply, 'failed'>;
 
 /** One executor for delegated tasks and replies to pending server questions.
  * Only new user deltas can authorize a save; conversation context cannot. */
@@ -143,7 +149,41 @@ export function voiceWork({
       })
       .catch(() => undefined);
   }
-  function append(delegationId: string | null, answer: VoiceAnswer, view?: TextAssistantView) {
+  function notices(view: VoiceCompletionView): Exclude<VoiceAnswer, string> {
+    const failure =
+      view.error || view.failed
+        ? (view.reply ?? (view.error ? assistantFailureMessage(view.error) : ''))
+        : '';
+    return [
+      { kind: 'notice' as const, text: view.requiredNotice ?? '' },
+      {
+        kind: 'notice' as const,
+        text: failure !== view.requiredNotice ? failure : '',
+      },
+    ].filter(({ text }) => text);
+  }
+  function resultText(view: VoiceCompletionView) {
+    return [view.result?.message, ...assistantChangeSummary(view.result?.changes ?? [])]
+      .filter(Boolean)
+      .join('\n');
+  }
+  function pendingQuestion(view: VoiceCompletionView) {
+    return view.questionPending
+      ? (view.modelReply ?? (view.newQuestions ?? view.questions)?.join('\n'))
+      : undefined;
+  }
+  function receiptParts(view: VoiceCompletionView): Exclude<VoiceAnswer, string> {
+    return [
+      { kind: 'result' as const, text: 'Sparat.' },
+      { kind: 'result' as const, text: resultText(view) },
+      ...notices(view),
+      {
+        kind: view.questionPending ? ('question' as const) : ('conversation' as const),
+        text: pendingQuestion(view) ?? view.modelReply ?? '',
+      },
+    ].filter(({ text }) => text);
+  }
+  function append(delegationId: string | null, answer: VoiceAnswer, view?: VoiceCompletionView) {
     if (!allowed()) return;
     const content = voiceAnswerText(answer);
     observe?.('voice_commentary', { delegationId, content, revision: view?.revision });
@@ -168,45 +208,58 @@ export function voiceWork({
       response?.({
         id: `${view.id}:${view.revision}`,
         revision: view.revision,
-        text: view.saveCheck
-          ? view.saveCheck.reply + (view.receipt ? ' Sparat.' : '')
-          : view.receipt
-            ? 'Sparat.'
-            : [view.reply, view.modelReply].filter(Boolean).join('\n'),
+        text:
+          typeof answer === 'string'
+            ? answer
+            : answer
+                .map(({ text }) => text)
+                .filter(Boolean)
+                .join('\n'),
         questionPending: Boolean(view.questionPending),
         receiptOperationId: view.receipt?.operationId,
       });
     }
   }
-  function completion(view: TextAssistantView): VoiceAnswer {
+  function completion(view: VoiceCompletionView): VoiceAnswer {
     if (view.saveCheck) return view.saveCheck.reply + (view.receipt ? ' Sparat.' : '');
-    if (view.receipt) return 'Sparat.';
-    if (view.questionPending && view.modelReply)
+    if (view.receipt) {
+      const parts = receiptParts(view);
+      return parts.length > 1 ? parts : 'Sparat.';
+    }
+    const question = pendingQuestion(view);
+    if (question)
       return [
-        { kind: 'notice', text: view.requiredNotice ?? '' },
-        { kind: 'result', text: view.result?.message ?? '' },
+        ...notices(view),
+        { kind: 'result', text: resultText(view) },
         {
           kind: 'status',
           text: view.displayedSelection ? 'Markeringen är bekräftad i kartan.' : '',
         },
-        { kind: 'question', text: view.modelReply },
+        { kind: 'question', text: question },
       ];
     if (view.phase === 'recovery')
       return 'Det är oklart om utkastet sparades. Skyttel kontrollerar det.';
-    if (view.error) return view.reply ?? assistantFailureMessage(view.error);
+    if (view.error && !view.result && !view.requiredNotice && !view.modelReply)
+      return view.reply ?? assistantFailureMessage(view.error);
+    if (view.error || view.failed)
+      return [
+        { kind: 'result', text: resultText(view) },
+        ...notices(view),
+        { kind: 'conversation', text: view.modelReply ?? '' },
+      ];
     const count =
       view.review.changes.length +
       (view.review.relationships?.length ?? 0) +
       (view.review.objectTypes?.length ?? 0) +
       (view.review.relationshipTypes?.length ?? 0);
     const verified = [
-      view.result?.message,
+      resultText(view),
       view.displayedSelection
         ? `${view.displayedItem?.kind === 'relationship' ? 'Sambandet' : 'Objektet'} är markerat.`
         : undefined,
     ].filter(Boolean);
     return [
-      { kind: 'notice', text: view.requiredNotice ?? '' },
+      ...notices(view),
       {
         kind: verified.length ? 'result' : 'status',
         text: verified.length
@@ -651,7 +704,7 @@ export function voiceWork({
         }
         if (owned !== undefined) continue;
         answeredReplies.add(reply.id);
-        const completed: TextAssistantView = {
+        const completed: VoiceCompletionView = {
           ...view,
           phase: 'ready',
           revision: reply.revision ?? view.revision,
@@ -662,11 +715,21 @@ export function voiceWork({
           result: reply.result,
           saveCheck: reply.saveCheck,
           questionPending: reply.questionPending,
+          questions: reply.questions,
+          newQuestions: reply.newQuestions,
+          failed: reply.failed,
           error: undefined,
+          displayedSelection: undefined,
+          displayedItem: undefined,
         };
         // Keep the complete reply and source boundary through silent assembly.
         const content: VoiceAnswer =
-          reply.receipt || reply.questionPending || reply.saveCheck || reply.requiredNotice
+          reply.receipt ||
+          reply.questionPending ||
+          reply.saveCheck ||
+          reply.requiredNotice ||
+          reply.result ||
+          reply.failed
             ? completion(completed)
             : [
                 { kind: 'result', text: reply.reply ?? '' },

@@ -24,13 +24,13 @@ for (const seeded of [false, true]) {
   }, async ({ page, browser }) => {
     const document = await readFile('docs/manual-tests/conversation-preparation.md', 'utf8');
     const questions = await readFile('docs/manual-tests/conversation-questions.md', 'utf8');
-    const savePreparation = await readFile(
-      'docs/manual-tests/text-conversation-preparation.md',
-      'utf8',
-    );
-    const allowSave = savePreparation.match(/^reply CHECK .*"decision":"allow".*$/mu)?.[0];
+    const heardSavePreparation = document.split('## Ljudfragment och tid för sparbesked')[1];
+    const allowSave = heardSavePreparation?.match(/^reply CHECK .*"decision":"allow".*$/mu)?.[0];
+    const heardSaveScope = heardSavePreparation?.match(/^response-required off$/mu)?.[0];
+    const restoreScope = heardSavePreparation?.match(/^response-required on$/mu)?.[0];
     const batch = document.match(/^tool REQUEST submit_changes .+$/mu)?.[0];
     const save = document.match(/^tool REQUEST save_draft .+$/mu)?.[0];
+    const draftReply = document.match(/^reply REQUEST Ändringen finns i ditt utkast\.$/mu)?.[0];
     const question = questions.match(/^\s*tool REQUEST ask_questions [^\n]+$/mu)?.[0].trim();
     const answeredQuestion = questions
       .match(/^\s*tool REQUEST ask_questions [^\n]*"updates"[^\n]+$/mu)?.[0]
@@ -47,7 +47,10 @@ for (const seeded of [false, true]) {
     if (
       !batch ||
       !allowSave ||
+      !heardSaveScope ||
+      !restoreScope ||
       !save ||
+      !draftReply ||
       !question ||
       !answeredQuestion ||
       !summaryReply ||
@@ -76,7 +79,10 @@ for (const seeded of [false, true]) {
       message?: string;
       messageId?: string;
       pendingParts?: PendingPart[];
-      comparison?: { untrusted: { data: { wholeDraft?: boolean; draft: TextAssistantReview } } };
+      comparison?: {
+        authority: { current: string; scope: { mode: string; responseRequired: boolean } };
+        untrusted: { data: { wholeDraft?: boolean; draft: TextAssistantReview } };
+      };
       requests?: Event[];
     };
     const events: Event[] = [];
@@ -330,7 +336,12 @@ for (const seeded of [false, true]) {
       if (!lo?.after) throw new Error('Missing complete public Lo proposal');
       const value = { ...lo.after, name: 'Lo Senaste' } as Record<string, unknown>;
       for (const key of ['id', 'householdId', 'revision']) delete value[key];
+      const batchAt = events.length;
       command(render(batch, item, { LO: lo.id, VALUE: JSON.stringify(value) }));
+      const afterBatch = await held(batchAt);
+      expect(afterBatch.id).not.toBe(item.id);
+      command(render(draftReply, afterBatch));
+      await expect(log).toContainText('Ändringen finns i ditt utkast.');
       await expect(log.locator('.working')).toHaveCount(0);
       await expect
         .poll(
@@ -347,6 +358,7 @@ for (const seeded of [false, true]) {
       expect((await (await member.request.get(path)).json()).draft).toEqual(privateDraft);
       await turnMicrophoneOn(page);
       let at = events.length;
+      command(heardSaveScope);
       command('user Spara hela utkastet nu.');
       command('delegate');
       item = await held(at);
@@ -358,6 +370,10 @@ for (const seeded of [false, true]) {
       command('hold-check on');
       command(render(save, item));
       const saveCheck = await held(at, 'action-check');
+      expect(saveCheck.comparison?.authority).toMatchObject({
+        current: 'Spara hela utkastet nu.',
+        scope: { mode: 'work', responseRequired: false },
+      });
       expect(saveCheck.comparison?.untrusted.data.wholeDraft).toBe(true);
       expect(saveCheck.comparison?.untrusted.data.draft).toEqual(
         expect.objectContaining({
@@ -380,7 +396,9 @@ for (const seeded of [false, true]) {
             )?.name,
         )
         .toBe('Lo Senaste');
+      await expect(log.locator('.working')).toHaveCount(0);
       await noPending();
+      command(restoreScope);
       command('assistant Sparat.');
       await expect(log).toContainText('Sparat.');
       await page.evaluate(clientTranscript);

@@ -1,3 +1,4 @@
+import { assistantChangeSummary } from '../shared/assistant-change-summary.js';
 import type { ConversationReply, TextAssistantView } from '../shared/text-assistant.js';
 import type { TranscriptRow } from './ConversationTranscript.js';
 
@@ -58,12 +59,9 @@ export function conversationCompletion() {
     if (busy || !pending.length) return;
     const finished = pending;
     pending = [];
-    const changes = new Map<string, Set<string>>();
-    for (const { subject, action } of finished.flatMap((reply) => reply.result?.changes ?? [])) {
-      const subjects = changes.get(action) ?? new Set<string>();
-      subjects.add(subject);
-      changes.set(action, subjects);
-    }
+    const changes = assistantChangeSummary(
+      finished.flatMap((reply) => reply.result?.changes ?? []),
+    );
     const failures = [
       ...new Set(
         finished
@@ -82,13 +80,11 @@ export function conversationCompletion() {
         .trim();
       return answer && answer !== reply.result?.message ? [answer] : [];
     });
-    if (!changes.size && !failures.length && !questions.length && !answers.length) return;
+    if (!changes.length && !failures.length && !questions.length && !answers.length) return;
     const sections: string[] = [];
     if (view.canceled) sections.push('Arbetet avbröts. Återstående uppgifter slutfördes inte.');
     else if (view.discarded) sections.push('Utkastet är kastat.');
-    if (!view.discarded)
-      for (const [action, subjects] of changes)
-        sections.push(`${new Intl.ListFormat('sv').format([...subjects])} ${action}.`);
+    if (!view.discarded) sections.push(...changes);
     sections.push(...answers, ...failures, ...questions);
     if (view.newQuestions !== undefined) questions = [];
     return {

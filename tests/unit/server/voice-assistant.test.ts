@@ -6,7 +6,15 @@ import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
 import { liveProvider, voiceAnswerParts } from '../../support/live-provider.js';
-import { lastToolResult, modelMessage, modelTool, textModel } from '../../support/text-model.js';
+import {
+  failExplanation,
+  lastToolResult,
+  type ModelRequest,
+  modelMessage,
+  modelTool,
+  readOnlyScope,
+  textModel,
+} from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
 let browser: APIRequestContext;
@@ -237,28 +245,52 @@ test('resuming interrupted output keeps historical context separate from new sav
 
 test('only one actual delegation executes raw voice fragments through Terra and the current MCP catalog, and a new explicit save confirms its receipt', async () => {
   let step = 0;
-  const model = textModel((body) => {
-    if (step++ === 0) return [modelTool('read_type_catalog', {})];
-    if (step === 2)
+  const model = textModel(
+    (body) => {
+      if (step++ === 0) return [modelTool('read_type_catalog', {})];
+      if (step === 2)
+        return [
+          modelTool('propose_object', {
+            version: 0,
+            contentVersion: 1,
+            id: 'family-music',
+            baseRevision: null,
+            value: {
+              typeId: lastToolResult(body).types[0].id,
+              name: 'Familjens musik',
+            },
+          }),
+        ];
+      if (step === 3) return [modelMessage('Familjens musik finns i utkastet. Vill du spara?')];
+      if (step === 4)
+        return [
+          modelTool('save_draft', { version: 1, contentVersion: 1, operationId: 'model-chosen' }),
+        ];
+      return [modelTool('report_result', { source: 'latest_save' })];
+    },
+    (body) => {
+      const input = JSON.parse(String(body.input[0].content));
+      if (body.instructions.startsWith('SKYTTEL_TURN_SCOPE'))
+        return input.current === 'Vad sparades?'
+          ? readOnlyScope()
+          : [
+              modelMessage(
+                JSON.stringify({ mode: 'work', request: input.current, responseRequired: false }),
+              ),
+            ];
       return [
-        modelTool('propose_object', {
-          version: 0,
-          contentVersion: 1,
-          id: 'family-music',
-          baseRevision: null,
-          value: {
-            typeId: lastToolResult(body).types[0].id,
-            name: 'Familjens musik',
-          },
-        }),
+        modelMessage(
+          JSON.stringify({
+            decision: 'allow',
+            complete: true,
+            fulfillsRequest: input.untrusted.operations.every((operation: { name: string }) =>
+              ['prepare_save', 'save_draft'].includes(operation.name),
+            ),
+          }),
+        ),
       ];
-    if (step === 3) return [modelMessage('Familjens musik finns i utkastet. Vill du spara?')];
-    if (step === 4)
-      return [
-        modelTool('save_draft', { version: 1, contentVersion: 1, operationId: 'model-chosen' }),
-      ];
-    return [modelTool('report_result', { source: 'latest_save' })];
-  });
+    },
+  );
   const voice = await setupVoice(model.provider);
   voice.transcript('Lägg till Familjens');
   voice.transcript(' musik.');
@@ -465,6 +497,307 @@ test.each([
   },
 );
 
+function saveExplanationAuthorization(body: ModelRequest) {
+  return [
+    modelMessage(
+      JSON.stringify(
+        body.instructions.startsWith('SKYTTEL_TURN_SCOPE')
+          ? {
+              mode: 'work',
+              request: JSON.parse(String(body.input[0].content)).current,
+              responseRequired: true,
+            }
+          : { decision: 'allow', complete: true, fulfillsRequest: true },
+      ),
+    ),
+  ];
+}
+
+test('a verified voice save retains requested saved-change report details before its final response', async () => {
+  const explanation = 'Beskrivningen hör till det sparade objektet.';
+  const model = textModel((body) => {
+    if (model.requests.length === 2) return [modelTool('report_result', { source: 'latest_save' })];
+    if (model.requests.length === 3) return [modelMessage(explanation)];
+    const { draft } = JSON.parse(
+      String(body.input.findLast((item) => item.role === 'user')?.content),
+    );
+    return [
+      modelTool('save_draft', {
+        version: draft.version,
+        contentVersion: draft.contentVersion,
+        operationId: 'controlled-report-save',
+      }),
+    ];
+  }, saveExplanationAuthorization);
+  const voice = await setupVoice(model.provider);
+  await proposal(voice.path);
+  await voice.poll();
+  voice.transcript('Beskriv de sparade objekten. Spara hela utkastet.');
+  voice.delegate();
+  await expect
+    .poll(async () => {
+      const current = (await voice.poll()).assistant;
+      return {
+        calls: model.requests.length,
+        phase: current.phase,
+        error: current.error,
+        receipt: Boolean(current.receipt),
+      };
+    })
+    .toEqual({ calls: 3, phase: 'ready', error: undefined, receipt: true });
+  const { assistant } = await voice.poll();
+  expect(assistant.receipt).toMatchObject({
+    changes: [
+      expect.objectContaining({ after: expect.objectContaining({ name: 'Formulärförslag' }) }),
+    ],
+  });
+  expect(assistant.result).toMatchObject({ kind: 'history' });
+  expect(assistant.result.message).toContain('Formulärförslag');
+  expect(assistant.modelReply).toContain(explanation);
+  const mapPath = voice.path.replace('/text-assistant', '/map');
+  const map = await (await browser.get(mapPath)).json();
+  expect(map.objects).toMatchObject([expect.objectContaining({ name: 'Formulärförslag' })]);
+  expect(map.draft.changes).toEqual([]);
+  expect((await (await browser.get(`${mapPath}/history`)).json()).history).toEqual([
+    assistant.receipt,
+  ]);
+  expect(model.requests).toHaveLength(3);
+  await expect
+    .poll(() => voiceAnswerParts(voice.live.sent).join('\n'))
+    .toContain('Formulärförslag');
+  const spoken = voiceAnswerParts(voice.live.sent).join('\n');
+  expect(spoken).toContain('Sparat.');
+  expect(spoken).toContain(explanation);
+  expect(spoken).toContain('Formulärförslag');
+  expect(spoken).toContain(assistant.result.message);
+});
+
+for (const { question, fails } of [
+  { question: undefined, fails: true },
+  { question: 'Vilket år gäller beskrivningen?', fails: true },
+  { question: 'Vilket år gäller beskrivningen?', fails: false },
+])
+  test(
+    !fails
+      ? 'a verified voice save retains its independent information question after its requested explanation'
+      : question
+        ? 'a verified voice save retains its independent information question when the required explanation fails'
+        : 'a verified voice save retains the failure of its remaining requested explanation',
+    async () => {
+      const explanation = 'Beskrivningen hör till de sparade personerna.';
+      const model = textModel(
+        (body) => {
+          if (model.requests.length > 1) return [modelMessage(explanation)];
+          const { draft } = JSON.parse(
+            String(body.input.findLast((item) => item.role === 'user')?.content),
+          );
+          return [
+            modelTool(question ? 'submit_changes' : 'save_draft', {
+              version: draft.version,
+              contentVersion: draft.contentVersion,
+              ...(question
+                ? {
+                    completion: 'save',
+                    questions: [
+                      {
+                        kind: 'information',
+                        request: 'Beskriv vilket år uppgifterna gäller.',
+                        question,
+                        dependsOnDraft: false,
+                      },
+                    ],
+                    operations: [
+                      {
+                        name: 'propose_object',
+                        arguments: {
+                          id: 'kim',
+                          baseRevision: null,
+                          value: { typeId: draft.changes[0].after.typeId, name: 'Kim' },
+                        },
+                      },
+                    ],
+                  }
+                : { operationId: 'controlled-save' }),
+            }),
+          ];
+        },
+        (body) =>
+          question && !body.instructions.startsWith('SKYTTEL_TURN_SCOPE')
+            ? [
+                modelMessage(
+                  JSON.stringify({ decision: 'allow', complete: true, fulfillsRequest: false }),
+                ),
+              ]
+            : saveExplanationAuthorization(body),
+      );
+      const voice = await setupVoice(
+        fails
+          ? failExplanation(
+              model,
+              Response.json(
+                { error: { message: 'Controlled explanation failure.' } },
+                { status: 400 },
+              ),
+            )
+          : model.provider,
+      );
+      await proposal(voice.path);
+      await voice.poll();
+      voice.transcript(
+        question
+          ? 'Lägg till Kim med samma objekttyp som Formulärförslag. Beskriv de sparade objekten och vilket år uppgifterna gäller. Spara hela utkastet.'
+          : 'Beskriv de sparade objekten. Spara hela utkastet.',
+      );
+      voice.delegate();
+      await expect
+        .poll(() => voiceAnswerParts(voice.live.sent).join('\n'))
+        .toContain(fails ? 'Modellen och resonemangsnivån stöds inte' : explanation);
+      const { assistant } = await voice.poll();
+      expect(assistant).toMatchObject({
+        phase: fails ? 'error' : 'ready',
+        receipt: {
+          changes: expect.arrayContaining([
+            expect.objectContaining({
+              after: expect.objectContaining({ name: 'Formulärförslag' }),
+            }),
+          ]),
+        },
+      });
+      expect(assistant.error).toBe(fails ? 'assistant_model_unsupported' : undefined);
+      expect(assistant.review.changes).toEqual([]);
+      if (question) {
+        expect(assistant.questionPending).toBe(true);
+        expect(assistant.newQuestions).toEqual([question]);
+        expect(assistant.pendingParts).toContainEqual(
+          expect.objectContaining({ question, status: 'waiting', kind: 'information' }),
+        );
+        if (fails) expect(assistant.modelReply).toBeUndefined();
+        else expect(assistant.modelReply).toContain(explanation);
+      }
+      const mapPath = voice.path.replace('/text-assistant', '/map');
+      const map = await (await browser.get(mapPath)).json();
+      expect(map.objects.map((object: { name: string }) => object.name).sort()).toEqual(
+        question ? ['Formulärförslag', 'Kim'] : ['Formulärförslag'],
+      );
+      expect(map.draft.changes).toEqual([]);
+      expect((await (await browser.get(`${mapPath}/history`)).json()).history).toEqual([
+        assistant.receipt,
+      ]);
+      if (question) {
+        const spoken = voiceAnswerParts(voice.live.sent).join('\n');
+        expect(spoken).toContain(
+          `Nödvändig fråga (samtalsdata): ${JSON.stringify(fails ? question : assistant.modelReply)}`,
+        );
+        if (fails)
+          expect(spoken).toContain(`Obligatoriskt besked från Skyttel: ${assistant.reply}`);
+        else expect(spoken).not.toContain('Obligatoriskt besked');
+        const { voice: current } = await voice.poll();
+        expect(current.response.text).toContain(question);
+        expect(current.response.questionPending).toBe(true);
+      }
+      expect(voiceAnswerParts(voice.live.sent).join('\n')).toContain(
+        'Skyttels resultat (verifierat): Sparat.',
+      );
+    },
+  );
+
+for (const question of [undefined, 'Vad heter kollegan?'])
+  test(
+    question
+      ? 'a verified unsaved voice change retains its pending question when the required explanation fails'
+      : 'a verified unsaved voice change retains its details when the required explanation fails',
+    async () => {
+      const model = textModel((body) => {
+        const { draft } = JSON.parse(
+          String(body.input.findLast((item) => item.role === 'user')?.content),
+        );
+        return [
+          modelTool('submit_changes', {
+            version: draft.version,
+            contentVersion: draft.contentVersion,
+            completion: 'draft',
+            questions: question
+              ? [
+                  {
+                    kind: 'change',
+                    request: 'Lägg till kollegan som person.',
+                    question,
+                    dependsOnDraft: false,
+                  },
+                ]
+              : [],
+            operations: [
+              {
+                name: 'propose_object',
+                arguments: {
+                  id: 'kim',
+                  baseRevision: null,
+                  value: { typeId: draft.changes[0].after.typeId, name: 'Kim' },
+                },
+              },
+            ],
+          }),
+        ];
+      }, saveExplanationAuthorization);
+      const voice = await setupVoice(
+        failExplanation(
+          model,
+          Response.json({ error: { message: 'Controlled explanation outage.' } }, { status: 503 }),
+        ),
+      );
+      await proposal(voice.path);
+      await voice.poll();
+      voice.transcript(
+        question
+          ? 'Lägg till Kim och en kollega med samma objekttyp som Formulärförslag och förklara typen. Spara inte.'
+          : 'Lägg till Kim med samma objekttyp som Formulärförslag och förklara typen. Spara inte.',
+      );
+      voice.delegate();
+      await expect.poll(async () => (await voice.poll()).assistant.phase).toBe('error');
+      const { assistant } = await voice.poll();
+      expect(assistant.result).toMatchObject({
+        kind: 'draft',
+        changes: [{ subject: 'Kim', action: 'lades till' }],
+      });
+      expect(assistant.error).toBe('assistant_model_temporary');
+      if (question) {
+        expect(assistant.questionPending).toBe(true);
+        expect(assistant.newQuestions).toEqual([question]);
+        expect(assistant.pendingParts).toContainEqual(
+          expect.objectContaining({ question, status: 'waiting', kind: 'change' }),
+        );
+        expect(assistant.modelReply).toBeUndefined();
+      }
+      expect(assistant.receipt).toBeUndefined();
+      const mapPath = voice.path.replace('/text-assistant', '/map');
+      const map = await (await browser.get(mapPath)).json();
+      expect(map.objects).toEqual([]);
+      expect(map.draft.changes).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: 'kim', after: expect.objectContaining({ name: 'Kim' }) }),
+        ]),
+      );
+      expect((await (await browser.get(`${mapPath}/history`)).json()).history).toEqual([]);
+      await expect
+        .poll(() => voiceAnswerParts(voice.live.sent).join('\n'))
+        .toContain(assistant.reply);
+      const spoken = voiceAnswerParts(voice.live.sent).join('\n');
+      expect(spoken).toContain('Skyttels resultat (verifierat): Utkastet är uppdaterat.');
+      expect(spoken).toContain('Kim lades till.');
+      expect(spoken).toContain(`Obligatoriskt besked från Skyttel: ${assistant.reply}`);
+      expect(spoken).not.toContain('Sparat.');
+      if (question)
+        expect(spoken).toContain(`Nödvändig fråga (samtalsdata): ${JSON.stringify(question)}`);
+      const { voice: current } = await voice.poll();
+      expect(current.response.text).toContain('Kim lades till.');
+      expect(current.response.text).toContain(assistant.reply);
+      if (question) {
+        expect(current.response.text).toContain(question);
+        expect(current.response.questionPending).toBe(true);
+      }
+    },
+  );
+
 test('voice commentary separates unverified paraphrased claims and useful questions from actual result proof', async () => {
   const modelReply =
     'Klart. Ändringarna är nu lagrade i hushållets karta. Saved successfully. Vem betalar?';
@@ -561,9 +894,11 @@ test('combined type proposals speak the directed question and retain the verifie
   });
   const content = voiceAnswerParts(voice.live.sent).join('');
   expect(content).toBe(
-    `Skyttels resultat (verifierat): Utkastet är uppdaterat.\nNödvändig fråga (samtalsdata): ${JSON.stringify(question)}`,
+    `Skyttels resultat (verifierat): Utkastet är uppdaterat.\nSambandstypen Delar lades till.\nNödvändig fråga (samtalsdata): ${JSON.stringify(question)}`,
   );
-  expect(status.voice.response.text).toBe(`Utkastet är uppdaterat.\n${question}`);
+  expect(status.voice.response.text).toBe(
+    `Utkastet är uppdaterat.\nSambandstypen Delar lades till.\n${question}`,
+  );
   expect(status.assistant.questionPending).toBe(true);
   expect(status.assistant.receipt).toBeUndefined();
   expect(Buffer.byteLength(content, 'utf8')).toBeLessThanOrEqual(480);
@@ -625,7 +960,7 @@ test('an unpunctuated save mention used for guidance does not grant automatic sa
 });
 
 test('large verified draft details are assembled completely within the Live limit', async () => {
-  const model = textModel(() => [modelTool('report_result', { source: 'draft' })]);
+  const model = textModel(() => [modelTool('report_result', { source: 'draft' })], readOnlyScope);
   const voice = await setupVoice(model.provider);
   const mapPath = voice.path.replace('/text-assistant', '/map');
   const map = await (await browser.get(mapPath)).json();

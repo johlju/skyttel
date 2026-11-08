@@ -246,6 +246,7 @@ test.each([
               JSON.stringify({
                 mode: current === correction ? 'work' : 'read',
                 request: current,
+                responseRequired: false,
               }),
             ),
           ];
@@ -254,7 +255,8 @@ test.each([
         const reference = data.queuedReference;
         // Without original server facts the provider would accept the current
         // apparent target, reproducing the lost binding rather than guessing it.
-        if (!reference) return [modelMessage('{"decision":"allow","complete":true}')];
+        if (!reference)
+          return [modelMessage('{"decision":"allow","complete":true,"fulfillsRequest":true}')];
         const original = reference.draft.changes.find(
           (item: { id: string }) => item.id === operations[0].arguments.id,
         );
@@ -267,7 +269,7 @@ test.each([
               original?.after?.name === 'Stolen' &&
                 matches.length === 1 &&
                 matches[0].id === original.id
-                ? { decision: 'allow', complete: true }
+                ? { decision: 'allow', complete: true, fulfillsRequest: true }
                 : { decision: 'clarify' },
             ),
           ),

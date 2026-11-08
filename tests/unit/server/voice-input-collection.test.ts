@@ -81,7 +81,7 @@ test('a delegation inside a word waits for the late suffix and delivers the comp
     contentVersion: 1,
   });
   expect(response).toHaveBeenCalledOnce();
-  expect(response.mock.calls[0][0].text).toBe('Hela svaret.');
+  expect(response.mock.calls[0][0].text).toBe('Utkast: 0 osparade förslag.\nHela svaret.');
   expect(work.readyForSummary()).toBe(false);
   const parts = channel.send.mock.calls
     .map(([event]) => event)

@@ -173,7 +173,10 @@ test.each([5, 300])(
     expect(JSON.parse(turn.voiceContext)).toHaveLength(46);
     await expect
       .poll(async () => (await poll()).voice.response?.text)
-      .toBe('Det är fortfarande privat.');
+      .toBe('Utkast: 1 osparat förslag.\nDet är fortfarande privat.');
+    expect(voiceAnswerParts(live.sent).join('')).toBe(
+      'Utkast: 1 osparat förslag.\nSamtal (obekräftat): "Det är fortfarande privat."',
+    );
     expect(await readMap()).toEqual(before);
   },
 );

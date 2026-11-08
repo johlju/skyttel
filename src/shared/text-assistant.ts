@@ -31,7 +31,7 @@ export type TextAssistantResult = {
   kind: 'draft' | 'restored' | 'history' | 'failure';
   /** Server-produced text grounded in checked MCP results or recorded failures. */
   message: string;
-  /** Checked proposal changes made by this task, for the text conversation's final summary. */
+  /** Checked proposal changes made by this task, for its text and voice completion. */
   changes?: TextAssistantChange[];
 };
 /** Ephemeral FIFO completion, including its delivery origin and checked outcome. */

@@ -12,6 +12,7 @@ import {
   type ModelRequest,
   modelMessage,
   modelTool,
+  readOnlyScope,
   textModel,
 } from '../../support/text-model.js';
 
@@ -484,10 +485,10 @@ test.each(['direct', 'batch'] as const)(
           modelMessage(
             JSON.stringify(
               request.instructions.startsWith('SKYTTEL_TURN_SCOPE')
-                ? { mode: 'work', request: input.current }
+                ? { mode: 'work', request: input.current, responseRequired: false }
                 : input.authority.current.includes('Lampan')
                   ? { decision: 'incomplete' }
-                  : { decision: 'allow', complete: true },
+                  : { decision: 'allow', complete: true, fulfillsRequest: true },
             ),
           ),
         ];
@@ -794,7 +795,7 @@ test.each(['cancel', 'concurrent edit'])(
 
 test('unknown prior failures and empty history produce server wording without creating a save', async () => {
   let source = 'last_failure';
-  const model = textModel(() => [modelTool('report_result', { source })]);
+  const model = textModel(() => [modelTool('report_result', { source })], readOnlyScope);
   await setup(model.provider);
   await object();
   const before = await map();
@@ -822,20 +823,39 @@ test.each([
   'a real %s refusal is preserved and reported from server facts without applying the requested type mutation',
   async (error, _fields, reason) => {
     let reporting = false;
-    const model = textModel((request) => {
-      if (reporting) return [modelTool('report_result', { source: 'last_failure' })];
-      const input = request.input.findLast((item) => item.role === 'user');
-      const { draft } = JSON.parse(String(input?.content));
-      return [
-        modelTool('propose_object_type', {
-          version: draft.version,
-          contentVersion: draft.contentVersion,
-          id: 'field-type',
-          baseRevision: 2,
-          value: null,
-        }),
-      ];
-    });
+    const model = textModel(
+      (request) => {
+        if (reporting) return [modelTool('report_result', { source: 'last_failure' })];
+        const input = request.input.findLast((item) => item.role === 'user');
+        const { draft } = JSON.parse(String(input?.content));
+        return [
+          modelTool('propose_object_type', {
+            version: draft.version,
+            contentVersion: draft.contentVersion,
+            id: 'field-type',
+            baseRevision: 2,
+            value: null,
+          }),
+        ];
+      },
+      (request) => {
+        const scope = request.instructions.startsWith('SKYTTEL_TURN_SCOPE');
+        if (scope && reporting) return readOnlyScope();
+        return [
+          modelMessage(
+            JSON.stringify(
+              scope
+                ? {
+                    mode: 'work',
+                    request: JSON.parse(String(request.input[0].content)).current,
+                    responseRequired: false,
+                  }
+                : { decision: 'allow', complete: true, fulfillsRequest: false },
+            ),
+          ),
+        ];
+      },
+    );
     await setup(model.provider);
     await checked(
       await post('map/object-type', {

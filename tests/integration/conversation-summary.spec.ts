@@ -17,7 +17,13 @@ import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
 import { openProperties, propertyRow } from '../support/property-controls.js';
 import { expect, test } from '../support/test.js';
-import { type ModelRequest, modelMessage, modelTool, textModel } from '../support/text-model.js';
+import {
+  type ModelRequest,
+  modelMessage,
+  modelTool,
+  readOnlyScope,
+  textModel,
+} from '../support/text-model.js';
 import { readVoiceProposal } from '../support/voice-work-reading.js';
 
 const summaryLine = 'Skyttel har sammanfattat samtalet för att få plats i kontexten.';
@@ -283,6 +289,7 @@ test('KONTEXT-20: nödvändiga instruktioner som inte ryms ger ett begripligt st
         ? [modelTool('report_result', { source: 'draft' })]
         : undefined,
     true,
+    { authorization: readOnlyScope },
   );
   const exact = `Spara inte. Behåll instruktionerna ordagrant: ${'blå; grön, '.repeat(300)}`;
   try {
@@ -372,18 +379,20 @@ for (const renamed of [false, true]) {
                 JSON.stringify({
                   mode: current === 'Fyll kontexten.' ? 'read' : 'work',
                   request: current,
+                  responseRequired: false,
                 }),
               ),
             ];
           }
           const { data } = JSON.parse(String(request.input[0].content)).untrusted;
-          if (!data.queuedReference) return [modelMessage('{"decision":"allow","complete":true}')];
+          if (!data.queuedReference)
+            return [modelMessage('{"decision":"allow","complete":true,"fulfillsRequest":true}')];
           return [
             modelMessage(
               JSON.stringify(
                 data.draft.changes[0].after.name ===
                   data.queuedReference.draft.changes[0].after.name
-                  ? { decision: 'allow', complete: true }
+                  ? { decision: 'allow', complete: true, fulfillsRequest: true }
                   : { decision: 'clarify' },
               ),
             ),

@@ -11,6 +11,7 @@ import {
   modelMessage,
   modelTool,
   pendingUpdate,
+  readOnlyScope,
   textModel,
 } from '../../support/text-model.js';
 
@@ -1366,7 +1367,7 @@ test('an explicit complete restatement scopes capacity-paused work while retaini
     },
     (request) => {
       if (!request.instructions.startsWith('SKYTTEL_TURN_SCOPE'))
-        return [modelMessage('{"decision":"allow","complete":true}')];
+        return [modelMessage('{"decision":"allow","complete":true,"fulfillsRequest":true}')];
       const { current, earlier } = JSON.parse(String(request.input[0].content));
       if (current !== original && current !== 'Spara hela utkastet.') {
         expect(earlier).toEqual([]);
@@ -1380,7 +1381,7 @@ test('an explicit complete restatement scopes capacity-paused work while retaini
                   mode: 'clarify',
                   request: 'Skriv hela det avgränsade uppdraget med mål och begränsningar.',
                 }
-              : { mode: 'work', request: current },
+              : { mode: 'work', request: current, responseRequired: false },
           ),
         ),
       ];
@@ -1582,6 +1583,7 @@ test.each([
                   ? 'read'
                   : 'work',
                 request: current,
+                responseRequired: false,
               }),
             ),
           ];
@@ -1589,7 +1591,8 @@ test.each([
         const { operations, data } = JSON.parse(String(request.input[0].content)).untrusted;
         const bound = data.queuedReference;
         // A missing server reference deliberately tempts the old implementation.
-        if (!bound) return [modelMessage('{"decision":"allow","complete":true}')];
+        if (!bound)
+          return [modelMessage('{"decision":"allow","complete":true,"fulfillsRequest":true}')];
         const previous = bound.draft.changes.find(
           (item: { id: string }) => item.id === operations[0].arguments.id,
         );
@@ -1602,7 +1605,7 @@ test.each([
               previous?.after?.name === 'Min stol' &&
                 matches.length === 1 &&
                 matches[0].id === previous.id
-                ? { decision: 'allow', complete: true }
+                ? { decision: 'allow', complete: true, fulfillsRequest: true }
                 : { decision: 'clarify' },
             ),
           ),
@@ -1919,12 +1922,15 @@ test('a provider cannot resolve a question it just asked before the user has ano
 test.each(['latest_save', 'save'])(
   'a %s report without a durable receipt cannot invent a saved result',
   async (source) => {
-    const model = textModel(() => [
-      modelTool('report_result', {
-        source,
-        ...(source === 'save' ? { operationId: 'never-saved', userId: 'unknown-owner' } : {}),
-      }),
-    ]);
+    const model = textModel(
+      () => [
+        modelTool('report_result', {
+          source,
+          ...(source === 'save' ? { operationId: 'never-saved', userId: 'unknown-owner' } : {}),
+        }),
+      ],
+      readOnlyScope,
+    );
     const session = await setup({ modelFetch: model.provider });
     const before = await readMap();
     const result = await settled(await send(session, 'Vad sparades tidigare?'));
@@ -1951,10 +1957,25 @@ test.each([
 ])(
   'a malformed checked-tool response with $label fails privately and preserves work',
   async ({ result }) => {
-    const model = textModel(() =>
-      model.requests.length === 1
-        ? [modelTool('read_type_catalog', {})]
-        : [modelTool('report_result', { source: 'last_failure' })],
+    const model = textModel(
+      () =>
+        model.requests.length === 1
+          ? [modelTool('read_type_catalog', {})]
+          : [modelTool('report_result', { source: 'last_failure' })],
+      (body) => {
+        const { current } = JSON.parse(String(body.input[0].content));
+        if (body.instructions.startsWith('SKYTTEL_TURN_SCOPE') && current === 'Vad var felet?')
+          return readOnlyScope();
+        return [
+          modelMessage(
+            JSON.stringify(
+              body.instructions.startsWith('SKYTTEL_TURN_SCOPE')
+                ? { mode: 'work', request: current, responseRequired: false }
+                : { decision: 'allow', complete: true, fulfillsRequest: false },
+            ),
+          ),
+        ];
+      },
     );
     const session = await setup({
       modelFetch: model.provider,

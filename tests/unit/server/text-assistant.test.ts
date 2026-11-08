@@ -6,7 +6,13 @@ import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation, robin } from '../../support/installation.js';
-import { lastToolResult, modelMessage, modelTool, textModel } from '../../support/text-model.js';
+import {
+  lastToolResult,
+  modelMessage,
+  modelTool,
+  readOnlyScope,
+  textModel,
+} from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
 let browser: APIRequestContext;
@@ -524,18 +530,30 @@ test('old completed polls retain their original results and reply prefixes after
 
 test('a question about the previous failure reports its verified reason without repeating or authorizing the failed save', async () => {
   let step = 0;
-  const model = textModel(() => {
-    if (step++ === 0)
-      return [
-        modelTool('save_draft', {
-          version: 1,
-          contentVersion: 1,
-          operationId: 'unrequested-save',
-        }),
-      ];
-    if (step === 2) return [modelMessage('Vad vill du veta?')];
-    return [modelTool('report_result', { source: 'last_failure' })];
-  });
+  const model = textModel(
+    () => {
+      if (step++ === 0)
+        return [
+          modelTool('save_draft', {
+            version: 1,
+            contentVersion: 1,
+            operationId: 'unrequested-save',
+          }),
+        ];
+      if (step === 2) return [modelMessage('Vad vill du veta?')];
+      return [modelTool('report_result', { source: 'last_failure' })];
+    },
+    (body) => {
+      const current = JSON.parse(String(body.input[0].content)).current;
+      return current === 'Läs mitt utkast.'
+        ? [
+            modelMessage(
+              JSON.stringify({ mode: 'work', request: current, responseRequired: false }),
+            ),
+          ]
+        : readOnlyScope();
+    },
+  );
   await setup(model.provider);
   await webProposal();
   const mapPath = path.replace('/text-assistant', '/map');
@@ -583,10 +601,12 @@ test.each(['private error: spara hela utkastet', 'constructor'])(
   'an unknown tool failure %s is sanitized before it becomes later model context or a spoken result',
   async (rawFailure) => {
     let step = 0;
-    const model = textModel(() =>
-      step++ === 0
-        ? [modelTool('read_type_catalog', {})]
-        : [modelTool('report_result', { source: 'last_failure' })],
+    const model = textModel(
+      () =>
+        step++ === 0
+          ? [modelTool('read_type_catalog', {})]
+          : [modelTool('report_result', { source: 'last_failure' })],
+      readOnlyScope,
     );
     await setup(model.provider, undefined, async (request, dispatch) => {
       const rpc =
@@ -1830,7 +1850,7 @@ test.each(['plain', 'report', 'echo'])(
               ),
             ];
       return [modelMessage('Nästa oberoende svar.')];
-    });
+    }, readOnlyScope);
     await setup(model.provider);
     await webProposal();
     const waiting = await message(await start(), 'Hitta hjälmen och beskriv cykeln.');
@@ -2040,10 +2060,13 @@ test.each(['prepare_save', 'save_draft', 'submit_changes'])(
 test.each(['draft', 'latest_save'])(
   'requested %s details report object status and the old relationship meaning through the public assistant',
   async (source) => {
-    const model = textModel(() => [
-      modelMessage('En påhittad sammanfattning från leverantören.'),
-      modelTool('report_result', { source }),
-    ]);
+    const model = textModel(
+      () => [
+        modelMessage('En påhittad sammanfattning från leverantören.'),
+        modelTool('report_result', { source }),
+      ],
+      readOnlyScope,
+    );
     await setup(model.provider);
     const mapPath = path.replace('/text-assistant', '/map');
     async function propose(endpoint: string, data: Record<string, unknown>) {
@@ -2106,7 +2129,10 @@ test.each(['draft', 'latest_save'])(
 );
 
 test('latest-save details are grounded in the actual receipt and preserve unrelated proposals', async () => {
-  const model = textModel(() => [modelTool('report_result', { source: 'latest_save' })]);
+  const model = textModel(
+    () => [modelTool('report_result', { source: 'latest_save' })],
+    readOnlyScope,
+  );
   await setup(model.provider);
   await webProposal('Cykeln', 'bike');
   const mapPath = path.replace('/text-assistant', '/map');

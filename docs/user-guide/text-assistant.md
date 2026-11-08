@@ -469,6 +469,22 @@ uppdaterat** eller **Sparat**, utan att läsa upp ändringarna efter varje steg.
 Be om detaljer när du vill höra dem. Nödvändiga följdfrågor och felbesked
 ges även när vanliga bekräftelser är korta.
 
+Ett enkelt färdigt uppdrag får ett kort besked från det verifierade
+resultatet. **Utkastet är uppdaterat** betyder att ändringen ligger
+osparad i ditt utkast. **Sparat** betyder att ett beständigt kvitto
+bekräftar sparandet i hushållets karta. Återstår fler beställda ändringar,
+en förklaring, jämförelse eller annan information arbetar Skyttel vidare
+med den delen. Ett statusbesked ersätter inte det återstående arbetet.
+Samma sakliga resultat och hela den beställda
+förklaringen gäller i text och med röst.
+Om sparandet är klart men förklaringen misslyckas får du både
+sparbeskedet och felbeskedet. Sparandet finns kvar i ändringshistoriken;
+en saknad förklaring betyder inte att sparandet saknas.
+Om förklaringen misslyckas efter en ändring som inte ska sparas får du
+ändringens detaljer och felbeskedet i både text och röst. Finns också
+en väntande del får du dess fråga, så att du vet vad som återstår.
+Ändringen ligger kvar osparad i ditt utkast.
+
 I textvyn läser du svar, följdfrågor och sparbesked. Välj **Visa utkastet**
 för att läsa föreslagna ändringar.
 

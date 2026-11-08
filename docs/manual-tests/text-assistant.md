@@ -30,7 +30,8 @@ formuläret; befintliga förslag i utkastet påverkas inte.
 
 1. TEXT-01 använder familjeunderlaget i
    [separat förberedelse](text-conversation-preparation.md#familjerättelsen).
-   TEXT-15 använder röstinstallationen enligt sin separata förberedelse.
+   TEXT-15 och TEXT-17 använder röstinstallationen enligt sin separata
+   förberedelse.
    Övriga fall använder den
    [kontrollerade startguiden](#controlled-text-fixture).
    Den senare håller varje modellsvar tills du släpper det i terminalen.
@@ -203,6 +204,213 @@ formulärtext”.
 
 ## Kontrollerade sena svar och fel
 
+### TEXT-17: verifierat slutbesked behåller beställd förklaring i text och röst
+
+**Syfte:** Få ett kort besked för ett färdigt enkelt uppdrag och hela den
+beställda förklaringen när samma slags uppdrag kräver mer än beskedet.
+
+**Användare:** Alex i den kontrollerade installationen.
+
+**Förutsättningar:** Lo Exempel av typen Person med beskrivningen
+Påhittad uppgift ligger osparad i utkastet. Mikrofonen är av.
+
+**Separat förberedelse:** Följ
+[verifierat slutbesked](text-conversation-preparation.md#verifierat-slutbesked).
+En kontrollerad leverantör lämnar svaren. Provet verifierar serverns och
+webbläsarens hantering; fysisk uppläsning och verklig modellförståelse
+ingår inte.
+
+**Automatiskt motsvarande test:**
+[text-assistant.spec.ts](../../tests/integration/text-assistant.spec.ts),
+TEXT-17.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/text-assistant.spec.ts",
+    "caseId": "TEXT-17"
+  },
+  "reference": "Dator; riktig server och databas med kontrollerade leverantörer. Enkelt textuppdrag, textuppdrag med förklaring och talad sparbegäran med förklaring. Separata nya installationer prövar skrivna uppdrag med mikrofonen på där förklaringen misslyckas efter verkligt sparande med en oberoende informationsfråga respektive en osparad utkaständring med en separat väntande ändringsfråga.",
+  "outcomes": [
+    "Ett verifierat enkelt uppdrag ger kort slutbesked utan att förslagen sparas.",
+    "En beställd förklaring finns kvar efter utkaständringen och efter sparande med röst.",
+    "Sparandet bekräftas med tomt utkast, verkliga objekt och ett gemensamt kvitto.",
+    "Ett verkligt sparande, dess oberoende väntande informationsfråga och felet i en återstående förklaring finns med i text och kontrollerad röstleverans.",
+    "En genomförd osparad ändring, dess separata väntande fråga och den uteblivna förklaringens felbesked finns med i text och kontrollerad röstleverans utan sparbesked."
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-result-completion-http.test.ts",
+      "title": "direct save continues requested explanation with missing result certification",
+      "purpose": "Saknad slutkontroll får inte avsluta uppdraget före den beställda förklaringen."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-result-completion-http.test.ts",
+      "title": "direct save continues requested explanation with following catalog read certification",
+      "purpose": "Ett sparande får inte hoppa över en efterföljande beställd läsning i samma verktygsomgång innan förklaringen fortsätter."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-result-completion-http.test.ts",
+      "title": "a report before requested changes keeps unfinished work active",
+      "purpose": "Ett statusbesked får inte avsluta ett ändringsuppdrag innan något av det begärda arbetet är genomfört."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-result-completion-http.test.ts",
+      "title": "a report after a partial batch keeps unfinished work active",
+      "purpose": "En godkänd självständig del och ett statusbesked får inte ersätta återstående begärda ändringar."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-result-completion-http.test.ts",
+      "title": "a report after a partial batch beside an older waiting question keeps unfinished work active",
+      "purpose": "En äldre väntande fråga får inte avsluta en ny begäran efter enbart en självständig del."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-result-completion-http.test.ts",
+      "title": "a report with a ready pending change keeps unfinished work active",
+      "purpose": "En felaktig kontrolluppgift om slutförande får inte avsluta en känd återstående ändringsdel som är redo att utföras."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/voice-assistant.test.ts",
+      "title": "a verified voice save retains requested saved-change report details before its final response",
+      "purpose": "Begärda verifierade detaljer från samma sparande måste nå rösten tillsammans med det fullständiga svaret."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/voice-assistant.test.ts",
+      "title": "a verified voice save retains its independent information question after its requested explanation",
+      "purpose": "En lyckad beställd förklaring får inte tappa en separat väntande informationsfråga efter verkligt sparande."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/voice-assistant.test.ts",
+      "title": "a verified voice save retains its independent information question when the required explanation fails",
+      "purpose": "En oberoende informationsfråga får inte försvinna ur röstleveransen när sparandet lyckas men den återstående förklaringen misslyckas."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/voice-assistant.test.ts",
+      "title": "a verified voice save retains the failure of its remaining requested explanation",
+      "purpose": "Ett verkligt sparresultat får inte dölja felet när en beställd förklaring fortfarande saknas."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/voice-assistant.test.ts",
+      "title": "a verified unsaved voice change retains its details when the required explanation fails",
+      "purpose": "En talad begärans verifierade utkaständring och verkliga fel måste båda levereras utan att påstå sparande."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/voice-assistant.test.ts",
+      "title": "a verified unsaved voice change retains its pending question when the required explanation fails",
+      "purpose": "En talad begärans självständiga ändring, väntande fråga och senare förklaringsfel måste alla levereras med sina sakliga roller."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/voice-typed-delivery.test.ts",
+      "title": "a failed typed completion delivers its own question before a later task question",
+      "purpose": "En senare begärans fråga får inte ersätta en tidigare slutförd begärans väntande fråga i röstleveransen."
+    }
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Skriv **Lägg till Kim som person med samma objekttyp som Lo Exempel
+   utan att spara.** Läs **Kim lades
+   till.** när arbetet är klart. Öppna utkastet och läs Kim. Inget
+   sparbesked visas.
+2. Skriv **Ändra Kim till Kim Lind och förklara vad objekttypen Person
+   betyder. Spara inte.** Läs både namnändringen och **Person är en
+   objekttyp. Kim Lind är ett objekt av den typen.** Utkastet visar Kim
+   Lind och inget sparbesked.
+3. Slå på mikrofonen i samma samtal. Operatören lämnar det kontrollerade
+   talet **Beskriv efter sparandet vilka objekt som är sparade. Spara
+   hela utkastet.** Läs **Sparat.** och **Lo Exempel och Kim Lind
+   finns nu i hushållets karta.** från samma svar. Utkastet är tomt.
+4. Öppna Tabell och läs Person för både Lo Exempel och Kim Lind. Öppna
+   **Rapporter → Ändringshistorik → Visa ändringarna** och läs båda
+   objekten i samma sparande.
+5. Följ förberedelsens separata felvariant i en ny installation med
+   enbart Lo Exempel osparad. Starta text och slå på mikrofonen.
+6. Skriv **Beskriv de sparade objekten och vilket år uppgifterna gäller.
+   Lägg till Kim som person. Spara hela utkastet.**
+   Operatören släpper tillägget och sparandet och avbryter därefter
+   förklaringen. Läs **Sparat.**, **Vilket år gäller beskrivningen?** och
+   felbeskedet. Kontrollera samma besked i den kontrollerade
+   röstleveransen enligt förberedelsen.
+7. Läs ett tomt utkast samt Lo Exempel och Kim av typen Person i Tabell.
+   Öppna **Rapporter → Ändringshistorik** och kontrollera att ett sparande
+   innehåller båda objekten. Informationsfrågan väntar fortfarande;
+   den gör inget osparat ändringsförslag.
+8. Följ förberedelsens osparade felvariant i ytterligare en ny
+   installation med enbart Lo Exempel osparad. Starta text och slå på
+   mikrofonen. Skriv **Lägg till Kim och en kollega med samma objekttyp
+   som Lo Exempel och förklara typen Person. Spara inte.**
+9. Operatören släpper utkaständringen och avbryter därefter förklaringen.
+   Läs **Kim lades till.**, **Vad heter kollegan?** och felbeskedet.
+   Kontrollera samma sakliga innehåll i den kontrollerade
+   röstleveransen. Inget **Sparat.** ska finnas i text eller röstleverans.
+10. Läs Kim och Lo Exempel i utkastet. Öppna
+    **Rapporter → Ändringshistorik** och kontrollera att inget sparande
+    finns.
+
+**Förväntat resultat:**
+
+- Det enkla slutbeskedet gäller ett verifierat osparat förslag. Förslaget
+  blir sparat först när ett beständigt kvitto bekräftar sparandet.
+- En beställd förklaring kräver fortsatt arbete och kommer med i hela
+  svaret, även när resultatet sparas. Ett kort statusbesked ersätter den
+  inte. Text och den kontrollerade röstleveransen ger samma sakliga
+  sparresultat och förklaring.
+- Om förklaringen misslyckas efter verkligt sparande behåller båda
+  leveranssätten sparbeskedet, den oberoende informationsfrågan och det
+  aktuella felbeskedet. Sparandet ersätter inte den uteblivna
+  förklaringen och informationsdelen väntar fortfarande.
+- Om förklaringen misslyckas efter en osparad ändring behåller båda
+  leveranssätten den genomförda ändringens detaljer, frågan om kollegan
+  och det aktuella felet. Den väntande delen framstår inte som färdig.
+  Ändringen ligger kvar i utkastet; inget sparande påstås.
+
 ### TEXT-15: avvisat sparande bevarar utkastet före ett nytt talat sparbesked
 
 **Syfte:** Behålla både tidigare och nya förslag när sparandet inte kan
@@ -258,7 +466,7 @@ TEXT-15.
     "suite": "technical-browser",
     "spec": "tests/technical-browser/whole-draft-preparation.spec.ts",
     "title": "literal whole-draft preparation reads omitted proposals before a rejected combined save",
-    "purpose": "Kör förberedelsens publicerade läsning, batch och kontrollsvar mot den disponibla installationen; hela utkastet hämtas innan Lo-förslagets typ används."
+    "purpose": "Kör publicerad läsning, batch, avvisning, informationsfråga och nytt talat sparande mot den disponibla installationen; hela utkastet hämtas innan Lo-förslagets typ används och omfattningen växlar uttryckligen mellan läsning och arbete."
   }]
 }
 ```

@@ -418,14 +418,18 @@ test('literal instruction text, mixed edits, clarification and a later save pres
           JSON.parse(String(input.input[0].content)).untrusted.operations[0].arguments.value
             .properties[0].value,
         ).toBe(literal);
-        return [modelMessage('{"decision":"allow","complete":true}')];
+        // This literal-text edit is the entire request; its independent
+        // completion judgement grants no authority to the later save.
+        return [modelMessage('{"decision":"allow","complete":true,"fulfillsRequest":true}')];
       }
       const { current, earlier } = JSON.parse(String(input.input[0].content));
       expect(JSON.stringify(input.input)).not.toContain('BROWSER-PRIVATE');
       if (turn++ === 0)
         return [modelMessage('{"mode":"clarify","request":"Vilken text vill du lagra?"}')];
       if (current !== 'Spara hela utkastet.') expect(earlier).toContain('Skapa Citat med texten.');
-      return [modelMessage(JSON.stringify({ mode: 'work', request: current }))];
+      return [
+        modelMessage(JSON.stringify({ mode: 'work', request: current, responseRequired: false })),
+      ];
     },
   );
   let session = await setup(model.provider);
@@ -496,12 +500,13 @@ test('voice read-only work rejects an injected mutation and text can subsequentl
     (input) => [
       modelMessage(
         input.instructions.startsWith('SKYTTEL_TURN_ACTIONS')
-          ? '{"decision":"allow","complete":true}'
+          ? '{"decision":"allow","complete":true,"fulfillsRequest":true}'
           : JSON.stringify({
               mode: JSON.parse(String(input.input[0].content)).current.includes('Lägg')
                 ? 'work'
                 : 'read',
               request: 'Current test request.',
+              responseRequired: false,
             }),
       ),
     ],
@@ -724,7 +729,7 @@ test('the automatic save fallback cannot expand a literal-name edit into saving'
       if (input.instructions.startsWith('SKYTTEL_TURN_SCOPE'))
         return [
           modelMessage(
-            '{"mode":"work","request":"Create an object literally named Läs och spara. No saving is requested."}',
+            '{"mode":"work","request":"Create an object literally named Läs och spara. No saving is requested.","responseRequired":false}',
           ),
         ];
       const { operations } = JSON.parse(String(input.input[0].content)).untrusted;
@@ -732,7 +737,7 @@ test('the automatic save fallback cannot expand a literal-name edit into saving'
         modelMessage(
           operations.some((operation: { name: string }) => operation.name === 'prepare_save')
             ? '{"decision":"deny","operation":0}'
-            : '{"decision":"allow","complete":true}',
+            : '{"decision":"allow","complete":true,"fulfillsRequest":true}',
         ),
       ];
     },

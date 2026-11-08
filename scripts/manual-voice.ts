@@ -27,6 +27,7 @@ async function main() {
   const pending = new Map<string, Pending>();
   let holdCheck = false;
   let scopeMode: 'read' | 'work' | undefined;
+  let responseRequired = true;
   let holdSave = false;
   let releaseSave: (() => void) | undefined;
   let sequence = 0;
@@ -80,6 +81,7 @@ async function main() {
                 request: scopeMode
                   ? JSON.parse(String(request.input[0].content)).current
                   : 'Perform the controlled test request.',
+                responseRequired,
               }
             : { decision: 'allow', complete: true },
         ),
@@ -188,6 +190,7 @@ async function main() {
               'hold-save on|off',
               'hold-check on|off',
               'scope-read | scope-work',
+              'response-required on|off',
               'release-save',
               'pending',
               'tool REQUEST TOOL JSON',
@@ -209,6 +212,12 @@ async function main() {
         if (command === 'scope-read' || command === 'scope-work') {
           scopeMode = command === 'scope-read' ? 'read' : 'work';
           emit('scope', { mode: scopeMode });
+          continue;
+        }
+        if (command === 'response-required') {
+          if (id !== 'on' && id !== 'off') throw new Error('Use response-required on or off.');
+          responseRequired = id === 'on';
+          emit('response-required', { enabled: responseRequired });
           continue;
         }
         if (command === 'hold-save') {

@@ -178,7 +178,11 @@ Läs aktuellt utkast och delens operations före fortsatt ändringsarbete.
 Utför återstående steg och ange berörda ready-delar i resolves.
 Delen är klar när verktygssvaret visar completed. Efter ett batchfel är inga
 steg från den batchen genomförda. Läs aktuellt underlag före nytt försök.
-Servern kontrollerar verkligt resultat och avslutar normalt utan extra modellanrop.
+Servern kontrollerar verkligt resultat. Ett kort slutbesked utan ytterligare
+arbetsomgång kräver separat kontroll av att hela uppdraget är klart.
+Sätt continueResponse true om en självständig ändring, förklaring,
+jämförelse, informationsdel, detalj eller markering återstår. Ett
+resultatbesked ersätter inte dessa beställda delar.
 Batchen är klar när verktygsresultatet visar utfallet eller nödvändiga frågor väntar på svar.
 
 ## Frågor och vänteläge
@@ -224,7 +228,8 @@ Vid frågor om senaste felet, använd report_result med source last_failure.
 previousFailure beskriver det senaste registrerade felet i detta samtal,
 inte ett nytt fel eller bevis för nuvarande utfall. Återge den registrerade felorsaken;
 hitta inte på en felorsak och be inte användaren läsa upp ett fel som redan finns i underlaget.
-Detalj- och felbesked är klara när report_result har återgett det begärda underlaget.
+Detalj- och felbesked utgår från report_result. Fortsätt med beställd
+förklaring, jämförelse eller annan del som rapporten inte besvarar.
 
 ## Markering i kartan
 Använd show_map_object eller show_map_item när användaren ber att markera,

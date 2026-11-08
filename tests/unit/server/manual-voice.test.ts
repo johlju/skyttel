@@ -278,7 +278,9 @@ test.each([false, true])(
   async (renamed) => {
     const document = await readFile('docs/manual-tests/conversation-preparation.md', 'utf8');
     const holdCheck = document.match(/^hold-check on$/mu)?.[0];
-    const allow = document.match(/^reply CHECK \{"decision":"allow","complete":true\}$/mu)?.[0];
+    const allow = document.match(
+      /^reply CHECK \{"decision":"allow","complete":true,"fulfillsRequest":true\}$/mu,
+    )?.[0];
     const clarify = document.match(/^reply CHECK \{"decision":"clarify"\}$/mu)?.[0];
     if (!holdCheck || !allow || !clarify) throw new Error('Missing public queued-check recipe');
     const { child, lines, exit, next, command } = launch();
@@ -360,6 +362,7 @@ test.each([false, true])(
         ).status(),
       ).toBe(200);
       await command('scope-work', 'scope');
+      await command('response-required off', 'response-required');
       await command('text-context 0');
       await command(`reply ${summary.id} Avslutad historisk läsning.`);
       const queued = await next('held');

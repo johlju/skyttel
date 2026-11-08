@@ -454,7 +454,12 @@ Fältet `questions` innehåller exakt dessa tre frågor:
 1. **Vilken Notering ska tömmas: Hem eller Arbete?**
 1. **Vilken Alex använder Molnmusik: personen i Lund eller personen i Umeå?**
 
-Vid nästa hållning släpps en ny `submit_changes`, `completion: draft`,
+Invänta nästa `held` innan användaren rättar uppgifterna. Släpp
+`ask_questions` med `questions` satt till samma tre frågetexter, utan
+`updates`. Telefonändringen är en slutförd självständig batch; hela
+uppdraget är ännu inte klart. Frågorna behåller sina väntande delar.
+
+Efter användarens rättning släpps en ny `submit_changes`, `completion: draft`,
 `questions: []` och `continueResponse: true`.
 Behåll samma Lo och alla returnerade egenskaps-ID; töm
 **Hem** genom att utelämna dess `value`, behåll **Arbete** och telefonnumret,
@@ -503,6 +508,14 @@ ljud- och skärmläsarobservationerna i FRAGA-08/09 kvarstår.
       "spec": "tests/unit/server/assistant-clarification.test.ts",
       "title": "controlled clarification preserves the request, independent work and property identities until correction and fresh whole-save intent",
       "purpose": "Kontrollerar bevarad leverantörskontext, verkliga egenskaps-ID, saknad betalningsändpunkt, uteblivet ogiltigt förslag och beständigt samlat sparande."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-result-completion-http.test.ts",
+      "title": "a new clarification cannot skip a second independent requested change",
+      "purpose": "En ny kollegafråga får inte avbryta en ännu ogjord självständig ändring; båda tydliga tilläggen görs en gång före frågepausen utan sparande."
     }
   ]
 }

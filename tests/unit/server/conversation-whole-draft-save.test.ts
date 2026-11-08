@@ -376,6 +376,9 @@ test('rejected automatic saving describes the already applied draft edit as unsa
 }, async () => {
   const model = textModel(
     (body) => {
+      const current = body.input.slice(body.input.findLastIndex((item) => item.role === 'user'));
+      if (current.some((item) => item.type === 'function_call_output'))
+        return [modelMessage('Ändringen är klar för kontroll av sparandet.')];
       const { draft } = JSON.parse(
         String(body.input.findLast((item) => item.role === 'user')?.content),
       );

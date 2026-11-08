@@ -24,9 +24,16 @@ tool REQUEST submit_changes {"version":V,"contentVersion":C,"completion":"draft"
 <!-- markdownlint-enable MD013 -->
 
 `baseRevision:null` gäller det nya, ännu osparade Lo-förslaget. För ett
-sparat objekt används dess verkliga tidigare revision. `submit_changes`
-avslutar uppdraget direkt. Invänta att arbetsraden försvinner och läs
-ändringen genom **Utkast → Visa förslaget** innan nästa uppdrag börjar.
+sparat objekt används dess verkliga tidigare revision. Provleverantörens
+vanliga inställning kräver även ett slutbesked. Efter en lyckad batch,
+invänta nästa `held` med `kind:"work"` och använd dess nya REQUEST:
+
+```text
+reply REQUEST Ändringen finns i ditt utkast.
+```
+
+Invänta att arbetsraden försvinner och läs ändringen genom
+**Utkast → Visa förslaget** innan nästa uppdrag börjar.
 
 För ett uttryckligen begärt sparande används aktuella V och C:
 
@@ -34,12 +41,18 @@ För ett uttryckligen begärt sparande används aktuella V och C:
 tool REQUEST save_draft {"version":V,"contentVersion":C,"operationId":"prov"}
 ```
 
-Ett lyckat `save_draft` avslutar uppdraget direkt: vänta på
-**Utkastet är sparat**, tomt utkast och sparad Lo, inte ett nytt `held`.
+Efter ett lyckat `save_draft`, invänta nästa `held` med `kind:"work"`
+och använd dess nya REQUEST:
+
+```text
+reply REQUEST Utkastet är sparat.
+```
+
+Vänta på slutbeskedet, tomt utkast och sparad Lo.
 I KONTEXT-01 och KONTEXT-08 prövas samma verktyg avsiktligt efter
 **Vad gjorde vi?**, utan ny sparbegäran. Det ska avvisas direkt med
 **Skyttel kunde inte slutföra uppdraget. Försök igen.**. Inget
-efterföljande modelluppdrag ska släppas i dessa tre gränser.
+efterföljande modelluppdrag ska släppas vid dessa avvisningar.
 Röstkommentarer, råa operations-ID:n, exakta kvitton, anropsordning,
 `store:false`, filinnehåll och resursantal är tekniskt underlag i
 automationen, separat från de synliga vanliga arbetsstegen.
@@ -113,7 +126,8 @@ text-context 99
 Skicka och köa de två texterna enligt fallet. Släpp läsningens `held` med
 `reply REQUEST Den första läsningen är klar.`. Håll nästa `held`, vars
 `kind` är `context-summary`, medan den manuella ändringen görs. Kör
-`scope-work` och `text-context 0` innan sammanfattningen släpps med
+`scope-work`, `response-required off` och `text-context 0` innan
+sammanfattningen släpps med
 `reply REQUEST Avslutad historisk läsning.`.
 
 Nästa arbetsanrop innehåller den köade rättelsen och aktuellt utkast.
@@ -131,8 +145,11 @@ I KONTEXT-21 har bara beskrivningen ändrats manuellt. Släpp kontrollens
 svar som tillåter samma tydliga mål och åtgärd:
 
 ```text
-reply CHECK {"decision":"allow","complete":true}
+reply CHECK {"decision":"allow","complete":true,"fulfillsRequest":true}
 ```
+
+Här är `response-required off` och hela uppdraget verifierat. Batchen
+avslutas direkt med sitt resultatbesked; något extra `reply` släpps inte.
 
 I KONTEXT-22 har målets namn ändrats till Lo Manuell. Släpp i stället
 kontrollens svar som kräver förtydligande:
@@ -156,9 +173,11 @@ ett tidigare misslyckat sparförsök, avsluta det samtalet först. Gör nästa
 förslag i det vanliga objektformuläret, så att textvyn har dess aktuella
 utkastversion. Läs hela förslaget före nästa sparande.
 Kör `hold-save on` före **Spara hela utkastet nu.**.
-Släpp `save_draft` enligt ovan och vänta på `save-registered` innan
-återkallanderutan öppnas. Anteckna dess `operationId` separat. Efter
-bekräftat återkallande körs `release-save`. Under **Identifiera sparandet
+Släpp verktygsanropet `save_draft` enligt ovan och vänta på
+`save-registered` innan återkallanderutan öppnas. Anteckna dess
+`operationId` separat. Efter bekräftat återkallande körs `release-save`.
+Samtalet är då avslutat;
+släpp inget efterföljande slutbesked. Under **Identifiera sparandet
 och användaren** kan detta råa ID jämföras som tekniskt underlag.
 Kör `hold-save off` efteråt, eller `quit` som även släpper en kvarvarande
 hållning. Denna kontroll håller ett registrerat sparande; vanligt offline
@@ -290,9 +309,34 @@ sammanfattningen tills signalen både har börjat och avslutats.
 Återställ alltid signalen till `false`. Faktiskt hört svenskt tal och
 hjälpmedlens röst har separata mänskliga observationsfall.
 
-KONTEXT-11: använd sparkommandot ovan med det hållna uppdragets aktuella
-versioner. Det inmatade `operationId` är provdata; servern väljer sitt
-verkliga ID. Läs sparade Lo-värden före ljudet. Kör därefter
+KONTEXT-11 begär bara sparande och får sitt korta besked från verifierat
+resultat. Före `user Spara hela utkastet nu.` och `delegate`, kör:
+
+```text
+response-required off
+hold-check on
+```
+
+Behåll det accepterade sparuppdraget medan `context 89` levereras enligt
+fallet. Använd sedan sparkommandot ovan med det hållna uppdragets aktuella
+versioner. Den oberoende kontrollens `held` har `kind:"action-check"`;
+kontrollera hela det aktuella utkastet och släpp dess eget CHECK:
+
+```text
+reply CHECK {"decision":"allow","complete":true,"fulfillsRequest":true}
+```
+
+Här verifieras hela den enkla sparbegäran utan ytterligare förklaring.
+Släpp inget extra `reply REQUEST` efter sparandet. Återställ före nästa
+användarmeddelande:
+
+```text
+response-required on
+hold-check off
+```
+
+Det inmatade `operationId` är provdata; servern väljer sitt verkliga ID.
+Läs sparade Lo-värden före ljudet. Kör därefter
 `assistant Sparat.` i terminalen för serverns fragment. Den tysta
 transporten skickar inte detta paket till webbläsarens mottagna ljudspår.
 Kopiera därför även följande paket i Console innan ljudet:
