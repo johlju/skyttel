@@ -2149,3 +2149,215 @@ och verifierar sjudygnsgränsen genom verklig omstart.
 - Uttryckligt avslut raderar samtalet. Omladdning återställer det inte.
   Utkastet varken sparas eller kastas av avslutet. Tangentbordsfokus går
   till **Nytt samtal** när den fokuserade avslutsknappen försvinner.
+
+### KONTEXT-25: återuppta rätt samtal på samma och annan enhet
+
+**Syfte:** Välja ett eget bevarat samtal, läsa paus och utgångstid, och
+uttryckligen fortsätta samma väntande fråga. Separata samtal och deras
+modellval ska förbli åtskilda.
+
+**Användare:** Alex i två separata webbläsarprofiler eller enheter.
+
+**Förutsättningar:** Datorfönster med bredd 1280 px. Samma hushåll,
+**Återuppta samtal**, finns i båda profilerna. Utkastet är tomt.
+
+**Separat förberedelse:** Följ
+[återuppta samtal på två enheter](conversation-preparation.md#återuppta-samtal-på-två-enheter).
+Använd en ny kontrollerad installation och avsluta den efter fallet.
+
+**Automatiskt motsvarande test:**
+[conversation-resume.spec.ts](../../tests/integration/conversation-resume.spec.ts),
+KONTEXT-25. Chromium använder två separata profiler, riktig server och SQLite
+med kontrollerad modell och Live. Mikrofon och media är kontrollerade och
+tysta; fysisk mikrofon, hört tal och skärmläsare provas separat.
+Separat HTTP-underlag använder ett verkligt lagringsfel för att kontrollera
+att ett okänt registrerat sparutfall behåller paus och spärr vid återupptagning.
+Ett annat HTTP-underlag startar om med två separata oavslutade samtal.
+Det äldre kan återupptas medan det yngre förblir pausat tills användaren
+uttryckligen återupptar även det.
+Om båda i stället väntar på förtydligande kan frågan i det äldre besvaras.
+En väntande ändringsdel i det yngre behåller samtidigt sin spärr mot sparande.
+Separat HTTP-underlag avbryter en talad förtydligandereplik efter en
+verifierad deländring och startar om servern. Efter uttrycklig återupptagning
+fortsätter samma replik med kvarvarande arbete utan att upprepa deländringen
+eller återuppliva dess tidigare sparbegäran. En separat variant tappar
+batchsvaret efter genomförandet och verifierar samma utfall efter omstart.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/conversation-resume.spec.ts",
+    "caseId": "KONTEXT-25"
+  },
+  "reference": "Dator 1280 px i två separata Chromium-profiler, riktig server och SQLite, kontrollerad modell och Live med tyst media. Samma profil efter omladdning och en annan profil skyddar skilda vägar till samma bevarade samtal; den väntande textfrågan besvaras med röst.",
+  "outcomes": [
+    "Paus och utgångstid visas före uttrycklig återupptagning. Samma väntande textfråga kan besvaras med röst efter omladdning och på annan enhet.",
+    "Bevarade samtal kan väljas separat utan att deras text blandas. Äldre Sol/låg ändrar inte det senaste personliga valet Terra/medium för ett nytt samtal.",
+    "Efter öppning får Återuppta samtalet tangentbordsfokus. Enter återupptar samtalet."
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-resume-http.test.ts",
+      "title": "another device discovers separate retained conversations and opens the selected one paused without model work",
+      "purpose": "Egen upptäckt och pausad öppning förblir skilda från modellarbete och behåller samtalets modellval."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-resume-http.test.ts",
+      "title": "only explicit approved resume renews the retained lifetime and enables the same conversation",
+      "purpose": "Endast uttrycklig återupptagning med aktuellt medgivande förnyar sju dygn; läsning gör det inte."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-resume-http.test.ts",
+      "title": "explicit resume after actual restart continues the interrupted identity before its queue without duplicating conversation turns",
+      "purpose": "En verklig omstart behåller uppdragens identitet och ordning utan dubbla samtalsrader."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-resume-http.test.ts",
+      "title": "after actual restart the oldest retained conversation resumes while its younger conversation stays paused until explicitly resumed",
+      "purpose": "Ett yngre pausat samtal blockerar inte det äldre efter omstart. Det yngre startar först efter sin egen uttryckliga återupptagning."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-resume-http.test.ts",
+      "title": "after actual restart an older retained question can be answered while a younger question stays paused and blocks saving",
+      "purpose": "Ett slutfört modelluppdrag med kvarvarande fråga hindrar inte svar i ett annat återupptaget samtal. En väntande ändringsdel behåller spärren mot sparande."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-resume-http.test.ts",
+      "title": "a new request after reopening an active crash image waits for earlier retained work before that conversation is loaded",
+      "purpose": "En aktiv databasavbild från före uppgraderingen återöppnas. Senare arbete på en annan enhet får inte gå före äldre ännu oläst arbete."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-resume-http.test.ts",
+      "title": "resume after actual restart preserves a verified partial batch and never renews its old save request",
+      "purpose": "Verifierade deländringar upprepas inte efter omstart, och gammal sparauktoritet återupplivas inte."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-resume-http.test.ts",
+      "title": "a spoken clarification resumes only unfinished work after actual restart without renewing its old save request: lostBatchReply=false",
+      "purpose": "En talad replik behåller sin identitet efter egna verifierade förtydliganden och deländringar. Omstart följd av uttrycklig återupptagning fortsätter bara kvarvarande arbete utan nytt sparande."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-resume-http.test.ts",
+      "title": "a spoken clarification resumes only unfinished work after actual restart without renewing its old save request: lostBatchReply=true",
+      "purpose": "Efter förlorat svar från en genomförd delbatch verifierar återupptagning samma utfall. Replikens eget förtydligande slutförs utan upprepad ändring eller ny sparbegäran."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/operation-recovery-http.test.ts",
+      "title": "a text request recovers its committed batch after lost MCP delivery without another model call",
+      "purpose": "Paus under förlorat batchsvar följt av öppning och återupptagning kontrollerar samma batch. Ett verifierat helt färdigt uppdrag startar inget nytt modellarbete."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-resume-http.test.ts",
+      "title": "explicit resume checks a registered save before continuing only its unfinished explanation: explanation=false",
+      "purpose": "Ett verifierat registrerat sparande som slutför hela det ursprungliga uppdraget upprepas inte vid återupptagning."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-resume-http.test.ts",
+      "title": "explicit resume checks a registered save before continuing only its unfinished explanation: explanation=true",
+      "purpose": "Efter samma verifierade sparande återupptas bara den återstående förklaringen, utan nytt sparande eller nya kvitton."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-persistence-http.test.ts",
+      "title": "restoration cannot return or recreate a snapshot retired during connection: another device",
+      "purpose": "Två samtidiga öppningar på skilda enheter kan inte flytta över den senast öppnade anslutningen till den tidigare enheten."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/save-operation-recovery-http.test.ts",
+      "title": "a lost registered save response survives conversation stop and restart with a repeatable unknown outcome",
+      "purpose": "Ett verkligt lagringsfel behåller det ursprungliga sparförsöket som okänt. Återupptagning lämnar samtalet pausat och startar inget modellarbete."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/save-operation-recovery-http.test.ts",
+      "title": "a lost registered save response survives conversation stop and restart with a repeatable known outcome",
+      "purpose": "Återupptagning kontrollerar och slutför samma redan registrerade sparförsök med ett enda kvitto, utan nytt modellarbete."
+    }
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. I första profilen: välj **Skriv till Skyttel → Nytt samtal** och
+   godkänn aktuellt medgivande utan att spara det. Välj **Låg** i
+   resonemangsdialogen och **GPT-6.1 Sol** i modelldialogen. Skicka
+   **Beskriv garaget utan att ändra något.**. Läs **Vilket garage?**.
+2. Ladda om och öppna textvyn. Läs **Samtalet är pausat** och **Löper ut**
+   med tidpunkt. Välj **Återuppta samtalet** och godkänn aktuellt medgivande
+   igen. Frågan ska vara kvar och meddelandefältet ska gå att använda.
+3. Logga in som Alex i den andra profilen och öppna samma hushåll.
+   Starta ett nytt textsamtal. Välj **Medium** och **GPT-6.1 Terra**.
+   Skicka **Beskriv cykeln utan att ändra något.**. Läs
+   **Det andra samtalet gäller cykeln.**.
+4. Välj **Bevarade samtal** och läs utgångstiderna. Välj
+   **Öppna Beskriv garaget utan att ändra något.**. Läs **Vilket garage?**
+   och **GPT-6.1 Sol, Låg**. Cykelsamtalets svar ska inte ingå här.
+5. Kontrollera synligt fokus på **Återuppta samtalet**. Tryck Enter, slå
+   på **Prata med Skyttel** och säg **Det västra garaget.** enligt den
+   kontrollerade förberedelsen. Läs **Garaget heter Västra.**.
+6. Välj **Bevarade samtal → Öppna Beskriv cykeln utan att ändra något.**.
+   Läs cykelsamtalets svar utan garagets nya svar. Välj **Nytt samtal**.
+   Modellvalet ska vara **GPT-6.1 Terra, Medium**.
+   Mikrofonen ska vara av efter bytet till det andra samtalet.
+
+**Förväntat resultat:**
+
+- Öppning visar det valda samtalet pausat före fortsatt arbete. Läsning
+  ensam startar inget nytt modellarbete och förlänger inte livslängden.
+  Uttrycklig återupptagning förnyar de sju dygnen.
+- Samma väntande fråga och dess svar hör till samma samtal. Text från
+  det andra samtalet blandas inte in, och ett äldre samtals val ändrar
+  inte nästa nya samtals personliga modellval.
+  En redan visad fråga visas inte en gång till av återupptagningen.
+- Kontrollerna går att nå med tangentbord och öppning lämnar fokus på
+  den meningsfulla nästa handlingen, **Återuppta samtalet**.

@@ -78,6 +78,15 @@ export function conversationBatchPending(
 export function conversationStorage(database: Database.Database, now: () => number) {
   clocks.set(database, now);
   const enabled = available(database);
+  const ordered =
+    enabled &&
+    Boolean(
+      database
+        .prepare(
+          "SELECT 1 FROM sqlite_master WHERE name = 'conversation_request_order' AND type = 'table'",
+        )
+        .get(),
+    );
   const erase = (id: string) =>
     enabled && database.prepare('DELETE FROM conversation WHERE id = ?').run(id);
   function sweep() {
@@ -86,6 +95,15 @@ export function conversationStorage(database: Database.Database, now: () => numb
   sweep();
   const timer = setInterval(sweep, 60_000).unref();
   const storage = {
+    reserveMessageSequence() {
+      if (!ordered) return;
+      const next = database
+        .prepare(`UPDATE conversation_request_order SET nextSequence = nextSequence + 1
+        WHERE id = 1 RETURNING nextSequence - 1 AS sequence`)
+        .get() as { sequence: number } | undefined;
+      if (!next) throw new MapError('assistant_unavailable', 503);
+      return next.sequence;
+    },
     erase,
     sweep,
     close: () => clearInterval(timer),
@@ -162,6 +180,25 @@ export function conversationStorage(database: Database.Database, now: () => numb
         return;
       }
     },
+    list(actorId: string, householdId: string) {
+      if (!enabled) return [];
+      sweep();
+      const rows = database
+        .prepare(`SELECT id, browserBindingId FROM conversation
+        WHERE userId = ? AND householdId = ? ORDER BY expiresAt DESC, id`)
+        .all(actorId, householdId) as { id: string; browserBindingId: string }[];
+      return rows.flatMap((row) => {
+        const state = storage.read(actorId, householdId, row.browserBindingId, row.id);
+        return state ? [state] : [];
+      });
+    },
+    move(actorId: string, householdId: string, id: string, browserBindingId: string) {
+      if (enabled)
+        database
+          .prepare(`UPDATE conversation SET browserBindingId = ?
+          WHERE userId = ? AND householdId = ? AND id = ?`)
+          .run(browserBindingId, actorId, householdId, id);
+    },
     /** A whole-draft discard also retires dependent parts while their conversation is unloaded. */
     discardDraftParts(owner: string, householdId: string, version: number): void {
       if (!enabled) return;
@@ -192,17 +229,50 @@ export function conversationStorage(database: Database.Database, now: () => numb
           .prepare('DELETE FROM conversation WHERE userId = ? AND householdId = ?')
           .run(actorId, householdId);
     },
-    pausedWork(actorId: string, householdId: string, exceptId?: string) {
+    pausedWork(actorId: string, householdId: string, exceptId: string, sequence: number) {
       if (!enabled) return false;
-      return Boolean(
-        database
-          .prepare(`SELECT 1 FROM conversation WHERE userId = ?
-        AND householdId = ? AND id != ? AND expiresAt > ? AND json_extract(state, '$.paused') = 1
-        AND (json_type(state, '$.activeMessage') = 'object' OR json_array_length(state, '$.queue') > 0
-        OR json_array_length(state, '$.unfinishedRequests') > 0)
-        LIMIT 1`)
-          .get(actorId, householdId, exceptId ?? '', now()),
-      );
+      const rows = database
+        .prepare(`SELECT state FROM conversation WHERE userId = ?
+        AND householdId = ? AND id != ? AND expiresAt > ?
+        AND (json_type(state, '$.activeMessage') = 'object'
+        OR json_type(state, '$.failedWork') = 'object'
+        OR (json_extract(state, '$.paused') = 1
+        AND (json_array_length(state, '$.queue') > 0
+        OR json_array_length(state, '$.unfinishedRequests') > 0)))`)
+        .all(actorId, householdId, exceptId, now()) as { state: string }[];
+      return rows.some((row) => {
+        const state = JSON.parse(row.state) as StoredState;
+        if (state.failedWork || !Number.isSafeInteger(sequence) || sequence < 0) return true;
+        const messages = [...state.queue];
+        if (state.activeMessage) messages.push(state.activeMessage);
+        // Missing or ambiguous legacy order cannot authorize passing retained work.
+        if (
+          messages.some(
+            (message) =>
+              !Number.isSafeInteger(message.sequence) ||
+              message.sequence < 0 ||
+              message.sequence <= sequence,
+          )
+        )
+          return true;
+        return state.unfinishedRequests.some((request) => {
+          if (messages.some((message) => message.id === request.id)) return false;
+          const accepted = state.accepted.find(([id]) => id === request.id)?.[1];
+          const parts = state.pendingPartsLedger.parts.filter(
+            (part) => part.messageId === request.id || part.evidence?.messageId === request.id,
+          );
+          // A verified completed task may await a question's answer without
+          // owning the draft executor. Its pending parts still block saving.
+          return !(
+            !request.paused &&
+            accepted?.status === 'completed' &&
+            accepted.result?.view.phase === 'ready' &&
+            !accepted.result.view.error &&
+            parts.some((part) => part.status === 'waiting') &&
+            !parts.some((part) => part.status === 'ready')
+          );
+        });
+      });
     },
   };
   return storage;

@@ -996,6 +996,9 @@ test('restoration isolates actors and households and removed membership cannot r
         await browser.get(`${app.origin}/api/households/${anotherId}/text-assistant/${state.id}`)
       ).status(),
     ).toBe(404);
+    const anotherPath = `${app.origin}/api/households/${anotherId}/text-assistant`;
+    expect((await (await browser.get(`${anotherPath}/retained`)).json()).conversations).toEqual([]);
+    expect((await post(`${anotherPath}/retained/${state.id}/open`)).status()).toBe(404);
     const invitation = await (await post(`${root}/invitations`, { userId: member.id })).json();
     expect(
       (
@@ -1014,6 +1017,15 @@ test('restoration isolates actors and households and removed membership cannot r
     other = await request.newContext({ storageState: cookies });
     expect((await other.get(`${path}/${state.id}`)).status()).toBe(404);
     expect((await (await other.get(`${path}/restore`)).json()).conversation).toBeUndefined();
+    expect((await (await other.get(`${path}/retained`)).json()).conversations).toEqual([]);
+    expect(
+      (
+        await other.post(`${path}/retained/${state.id}/open`, {
+          headers: { origin: app.origin },
+          data: {},
+        })
+      ).status(),
+    ).toBe(404);
     expect((await browser.get(`${path}/${state.id}`)).status()).toBe(200);
     const revoked = await other.post(`${root}/members/${alex.id}/revoke`, {
       headers: { origin: app.origin },
@@ -1021,6 +1033,9 @@ test('restoration isolates actors and households and removed membership cannot r
     });
     expect(revoked.status(), await revoked.text()).toBe(200);
     expect((await browser.get(`${path}/${state.id}`)).status()).toBe(403);
+    expect((await browser.get(`${path}/retained`)).status()).toBe(403);
+    expect((await post(`${path}/retained/${state.id}/open`)).status()).toBe(403);
+    expect((await post(`${path}/${state.id}/resume`, approvedForVisit)).status()).toBe(403);
     const invited = await (
       await other.post(`${root}/invitations`, {
         headers: { origin: app.origin },
@@ -1032,6 +1047,9 @@ test('restoration isolates actors and households and removed membership cannot r
     ).toBe(200);
     expect((await browser.get(`${path}/${state.id}`)).status()).toBe(404);
     expect((await (await browser.get(`${path}/restore`)).json()).conversation).toBeUndefined();
+    expect((await (await browser.get(`${path}/retained`)).json()).conversations).toEqual([]);
+    expect((await post(`${path}/retained/${state.id}/open`)).status()).toBe(404);
+    expect((await post(`${path}/${state.id}/resume`, approvedForVisit)).status()).toBe(404);
     expect(model.requests).toHaveLength(1);
   } finally {
     await other.dispose();
@@ -1251,7 +1269,7 @@ test('spoken instructions and pending parts survive actual restart with voice pa
   expect(live.requests).toHaveLength(1);
 });
 
-test.each(['replace', 'end', 'withdraw'] as const)(
+test.each(['replace', 'end', 'withdraw', 'another device'] as const)(
   'restoration cannot return or recreate a snapshot retired during connection: %s',
   async (action) => {
     let restoring = false;
@@ -1322,9 +1340,38 @@ test.each(['replace', 'end', 'withdraw'] as const)(
       importId = (await uploaded.json()).id;
     }
     restoring = true;
-    const returning = browser.get(`${path}/restore`);
+    const returning =
+      action === 'another device'
+        ? post(`${path}/retained/${state.id}/open`)
+        : browser.get(`${path}/restore`);
     try {
       await connected;
+      if (action === 'another device') {
+        const other = await request.newContext();
+        try {
+          await signIn(other, app.origin);
+          const opened = await other.post(`${path}/retained/${state.id}/open`, {
+            headers: { origin: app.origin },
+            data: {},
+          });
+          expect(opened.status(), await opened.text()).toBe(200);
+          expect(await opened.json()).toMatchObject({ id: state.id, paused: true });
+          release();
+          const superseded = await returning;
+          expect(superseded.status(), await superseded.text()).toBe(409);
+          expect(await superseded.json()).toEqual({ error: 'assistant_turn_changed' });
+          const resumed = await other.post(`${path}/${state.id}/resume`, {
+            headers: { origin: app.origin },
+            data: approvedForVisit,
+          });
+          expect(resumed.status(), await resumed.text()).toBe(200);
+          expect(await resumed.json()).toMatchObject({ id: state.id, paused: false });
+          expect(model.requests).toHaveLength(1);
+        } finally {
+          await other.dispose();
+        }
+        return;
+      }
       const retired =
         action === 'replace'
           ? await post(`${root}/imports/${importId}/confirm`, {

@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useId, useLayoutEffect, useRef } from 'react';
+import { conversationModels, reasoningLabels } from '../shared/conversation-model.js';
 import {
   conversationWidths,
   defaultConversationPreferences,
@@ -68,12 +69,25 @@ export function TextView({
   const stop = working && !computer;
   const stopFocused = useRef(false);
   const endFocused = useRef(false);
+  const retainedOpening = useRef<string | null>(null);
+  const resumeFocused = useRef(false);
+  const resume = useRef<HTMLButtonElement>(null);
   const newConversation = useRef<HTMLButtonElement>(null);
   const id = useId();
   const heading = useRef<HTMLHeadingElement>(null);
   const field = useRef<HTMLTextAreaElement>(null);
   const body = useRef<HTMLDivElement>(null);
   const follow = useRef(true);
+  useLayoutEffect(() => {
+    if (retainedOpening.current === session?.id && session?.paused) {
+      retainedOpening.current = null;
+      resume.current?.focus();
+    }
+    if (resumeFocused.current && !session?.paused) {
+      resumeFocused.current = false;
+      field.current?.focus();
+    }
+  }, [session]);
   const firstMessage = useRef<{ text: string; asked: boolean } | null>(null);
   useEffect(() => {
     const first = firstMessage.current;
@@ -295,6 +309,19 @@ export function TextView({
                       ' Nytt samtal tar bort det tidigare samtalet; utkastet ligger kvar.'}
                   </p>
                 )}
+                {session.paused && conversation.resumeConversation && (
+                  <button
+                    ref={resume}
+                    type="button"
+                    disabled={pending}
+                    onClick={(event) => {
+                      resumeFocused.current = document.activeElement === event.currentTarget;
+                      void conversation.resumeConversation?.();
+                    }}
+                  >
+                    Återuppta samtalet
+                  </button>
+                )}
                 <button
                   type="button"
                   disabled={pending}
@@ -305,6 +332,56 @@ export function TextView({
                 >
                   Avsluta samtalet
                 </button>
+              </div>
+            )}
+            {conversation.listRetained && (
+              <div className="text-view-lifetime">
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => void conversation.listRetained?.()}
+                >
+                  Bevarade samtal
+                </button>
+                {conversation.retainedConversations && (
+                  <section aria-label="Bevarade samtal">
+                    {conversation.retainedConversations.length ? (
+                      <ul>
+                        {conversation.retainedConversations.map((retained) => (
+                          <li key={retained.id}>
+                            <p>
+                              {retained.paused ? 'Pausat samtal.' : 'Pågående samtal.'}{' '}
+                              {
+                                conversationModels.find(
+                                  (model) => model.id === retained.modelChoice.model,
+                                )?.name
+                              }
+                              , {reasoningLabels[retained.modelChoice.effort]}. Löper ut{' '}
+                              <time dateTime={new Date(retained.expiresAt).toISOString()}>
+                                {new Date(retained.expiresAt).toLocaleString('sv-SE')}
+                              </time>
+                              .
+                            </p>
+                            <button
+                              type="button"
+                              disabled={pending}
+                              onClick={() => {
+                                retainedOpening.current = retained.id;
+                                void conversation.openRetained?.(retained.id).then((opened) => {
+                                  if (!opened) retainedOpening.current = null;
+                                });
+                              }}
+                            >
+                              Öppna {retained.title}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>Inga bevarade samtal.</p>
+                    )}
+                  </section>
+                )}
               </div>
             )}
             {children}

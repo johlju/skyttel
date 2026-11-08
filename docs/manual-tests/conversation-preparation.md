@@ -7,6 +7,48 @@ verkliga leverantörsanrop eller fysiska ljudprov ingår här.
 
 ## Utkastbatch och sparande
 
+### Återuppta samtal på två enheter
+
+För KONTEXT-25 används två separata webbläsarprofiler eller enheter,
+inloggade som Alex i samma kontrollerade installation. Börja med ett tomt
+utkast. Lämna installationen igång mellan profilerna.
+
+Efter **Beskriv garaget utan att ändra något.** skickas följande till
+det nya REQUEST som `held` visar:
+
+<!-- markdownlint-disable MD013 -->
+```text
+tool REQUEST ask_questions {"questions":[{"kind":"information","request":"Beskriv garaget utan att ändra något.","question":"Vilket garage?","dependsOnDraft":false}]}
+```
+<!-- markdownlint-enable MD013 -->
+
+Omladdning och **Återuppta samtalet** ska inte skapa ett nytt modelluppdrag
+när bara frågan väntar. Kör `scope-read` innan det andra samtalets
+uppdrag skickas. Efter det uppdraget används dess nya REQUEST:
+
+```text
+reply REQUEST Det andra samtalet gäller cykeln.
+```
+
+Kör `scope-work` när svaret är klart, före garagets förtydligande.
+Efter **Återuppta samtalet** slår användaren på mikrofonen. Ange den
+kontrollerade repliken med `user Det västra garaget.` följt av `delegate`
+i terminalen.
+
+Efter **Det västra garaget.** kopieras PART och REVISION från
+`held.pendingParts` för frågan **Vilket garage?**. MESSAGE är det nya
+meddelandets `messageId`, inte det tidigare uppdragets identitet.
+
+<!-- markdownlint-disable MD013 -->
+```text
+tool REQUEST ask_questions {"questions":[],"updates":[{"id":"PART","revision":REVISION,"action":"clarify","messageId":"MESSAGE","evidence":"Det västra garaget.","answer":"Garaget heter Västra."}],"continueResponse":true}
+```
+<!-- markdownlint-enable MD013 -->
+
+Om ett nytt `held` visas släpps dess slutbesked med
+`reply REQUEST Garaget heter Västra.`. Avsluta båda profilerna och kör
+`quit` efter fallet. Inga verkliga leverantörsanrop eller hörbart tal ingår.
+
 ### Fråga före omladdning
 
 För KONTEXT-24: använd det nya REQUEST från `held` efter meddelandet

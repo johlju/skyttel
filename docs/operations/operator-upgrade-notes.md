@@ -18,8 +18,9 @@ Preserve and protect the installation database and its backups. Consented
 conversation text and unfinished work now remain on the installation for
 seven days after the last user message or explicit resume. Background work
 does not renew this period. Verify the original deadline and expiry after
-a restart with synthetic data. Apply the existing backup deletion limits
-to conversation content as well.
+a restart with synthetic data. After explicit resume, check that earlier
+unfinished work runs before later requests from another device. Apply the
+existing backup deletion limits to conversation content as well.
 
 Restored work is paused. A restart or restored provider access must not
 start new model work or a new save. Logout pauses the conversation; explicit

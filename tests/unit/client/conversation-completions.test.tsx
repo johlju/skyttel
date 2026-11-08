@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
+import { approvedForVisit } from '../../support/conversation.js';
 import { startConversationWithText } from '../../support/conversation-dom.js';
 import { StandaloneConversation } from '../../support/conversation-harness.js';
 
@@ -236,7 +237,7 @@ test.each([
     expect(field().value).toBe('');
     expect(
       commands.filter((request) => request.url.endsWith('/new')).map((request) => request.body),
-    ).toEqual([{ discard }]);
+    ).toEqual([{ discard, ...approvedForVisit }]);
     expect(commands.filter((request) => request.url.endsWith('/messages'))).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: /^Visa utkastet/ }));
     const draft = screen.getByRole('region', { name: 'Utkastet' });

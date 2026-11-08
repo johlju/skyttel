@@ -59,6 +59,13 @@ export type ConversationReply = {
   failed?: boolean;
   saveCheck?: SaveCheck;
 };
+export type RetainedConversation = {
+  id: string;
+  title: string;
+  expiresAt: number;
+  paused: boolean;
+  modelChoice: ConversationModelChoice;
+};
 export interface TextAssistantView {
   /** Restored work never starts automatically. */
   paused?: boolean;

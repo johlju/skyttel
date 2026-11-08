@@ -11,6 +11,7 @@ import type {
 } from '../../../src/shared/map.js';
 import { defaultViewSettings } from '../../../src/shared/personal-view.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
+import { approvedForVisit } from '../../support/conversation.js';
 import {
   closeConversationText,
   findConsentBox,
@@ -99,6 +100,10 @@ test('keyboard focus moves to a surviving control after successfully ending the 
   await userEvent.tab(); // Close text view.
   await userEvent.tab(); // Draft toggle.
   await userEvent.tab(); // End conversation.
+  expect(document.activeElement).toBe(end);
+  await userEvent.tab(); // Retained conversations follow the current session.
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Bevarade samtal' }));
+  await userEvent.tab({ shift: true });
   expect(document.activeElement).toBe(end);
   await userEvent.keyboard('{Enter}');
   expect(screen.getByRole('button', { name: 'Avsluta samtalet' })).toBe(end);
@@ -361,7 +366,10 @@ test('recovery retains the pending operation until its durable receipt replaces 
     'Nästa ändring',
   );
   expect(screen.queryByText('Visa kvittot')).toBeNull();
-  expect(requests.at(-1)).toEqual({ url: `${path}/session/new`, body: { discard: false } });
+  expect(requests.at(-1)).toEqual({
+    url: `${path}/session/new`,
+    body: { discard: false, ...approvedForVisit },
+  });
 });
 
 test.each([

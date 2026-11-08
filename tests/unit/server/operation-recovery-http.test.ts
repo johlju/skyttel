@@ -145,13 +145,31 @@ test.each(['text', 'voice'] as const)(
     let typeId: string;
     const delivery = controlledBatchDelivery();
     delivery.arm();
+    let statusWaiting = false;
+    let releaseStatus!: () => void;
+    const statusHeld = new Promise<void>((resolve) => {
+      releaseStatus = resolve;
+    });
     const model = textModel((body) => submitLo(typeId, body));
     const live = liveProvider();
     app = await createInstallation(undefined, {
       modelFetch: model.provider,
       liveFetch: live.provider,
       liveSideband: live.attach,
-      assistantDispatch: delivery.dispatch,
+      assistantDispatch: async (incoming, dispatch) => {
+        const rpc =
+          incoming.method === 'POST'
+            ? await incoming
+                .clone()
+                .json()
+                .catch(() => null)
+            : null;
+        if (mode === 'text' && rpc?.params?.name === 'read_draft_batch' && !statusWaiting) {
+          statusWaiting = true;
+          await statusHeld;
+        }
+        return delivery.dispatch(incoming, dispatch);
+      },
     });
     await setUpHousehold();
     typeId = (await read()).types[0].id;
@@ -195,6 +213,23 @@ test.each(['text', 'voice'] as const)(
         delegation: { id: 'lo-work', target: 'client' },
       });
     }
+    if (mode === 'text') {
+      try {
+        await expect.poll(() => statusWaiting).toBe(true);
+        // Pause while the original executor still owns the complete batch.
+        // Its retained active identity must not become fresh model work when
+        // resume verifies that the whole original request already finished.
+        expect((await post(`${endpoint}/pause`, {})).status()).toBe(200);
+      } finally {
+        releaseStatus();
+      }
+      const paused = await browser.get(endpoint);
+      expect(paused.status(), await paused.text()).toBe(200);
+      expect(await paused.json()).toMatchObject({ paused: true, phase: 'recovery' });
+      const resumed = await post(`${endpoint}/resume`, approvedForVisit);
+      expect(resumed.status(), await resumed.text()).toBe(200);
+      await expect.poll(() => model.requests.length).toBe(1);
+    } else releaseStatus();
     await expect
       .poll(
         async () => {
@@ -221,6 +256,7 @@ test.each(['text', 'voice'] as const)(
       changes: [{ subject: 'Lo', action: 'lades till' }],
     });
     expect(completed.error).toBeUndefined();
+    expect(completed.unfinishedRequests).toEqual([]);
     expect(model.requests).toHaveLength(1);
     expect((await read()).draft).toMatchObject({ version: 1, changes: [{ id: 'lo' }] });
     browser = await restartWithSession(browser, () => app.restart());

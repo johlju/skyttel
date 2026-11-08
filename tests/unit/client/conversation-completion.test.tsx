@@ -44,6 +44,44 @@ test('one final summary covers every queued update and is not repeated by pollin
   );
 });
 
+test('hydrated completion stays quiet while a continued original request can publish a new revision', () => {
+  const historical: ConversationReply = {
+    id: 'original-request',
+    revision: 1,
+    text: 'Vilket garage?',
+    questionPending: true,
+    questions: ['Vilket garage?'],
+    newQuestions: ['Vilket garage?'],
+  };
+  const hydrated: TextAssistantView = {
+    ...view,
+    paused: true,
+    completedReplies: [historical],
+    questionPending: true,
+    questions: ['Vilket garage?'],
+    newQuestions: ['Vilket garage?'],
+  };
+  const complete = conversationCompletion(hydrated);
+  expect(complete({ ...hydrated, paused: false })).toBeUndefined();
+  const continued: ConversationReply = {
+    ...historical,
+    revision: 2,
+    text: 'Vilken cykel?',
+    questions: ['Vilken cykel?'],
+    newQuestions: ['Vilken cykel?'],
+  };
+  expect(
+    complete({
+      ...view,
+      revision: 2,
+      completedReplies: [historical, continued],
+      questionPending: true,
+      questions: ['Vilken cykel?'],
+      newQuestions: ['Vilken cykel?'],
+    })?.text,
+  ).toBe('Vilken cykel?');
+});
+
 test('partial changes, failed instructions and outstanding questions stay distinct', () => {
   const complete = conversationCompletion();
   const first = updated(1, 'Spotify');

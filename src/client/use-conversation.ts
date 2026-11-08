@@ -10,7 +10,11 @@ import {
 import type { SaveOperation, SaveReceipt } from '../shared/map.js';
 import type { SaveCheck } from '../shared/save-check.js';
 import { deliveryFailureNotice } from '../shared/task-delivery.js';
-import type { MapSelection, TextAssistantView } from '../shared/text-assistant.js';
+import type {
+  MapSelection,
+  RetainedConversation,
+  TextAssistantView,
+} from '../shared/text-assistant.js';
 import type { TranscriptRow } from './ConversationTranscript.js';
 import { conversationCompletion, draftUpdated } from './conversation-completion.js';
 import { MapRequestError, request } from './map-request.js';
@@ -43,6 +47,10 @@ export type ConversationMode = 'voice' | 'text';
  * owns the conversation, so it survives whichever of them is shown.
  */
 export type Conversation = {
+  retainedConversations?: RetainedConversation[];
+  listRetained?: () => Promise<void>;
+  openRetained?: (id: string) => Promise<boolean>;
+  resumeConversation?: () => Promise<void>;
   configureModel?: (choice: ConversationModelChoice) => Promise<boolean>;
   /** Conversation input is stopped; the unsent text remains editable. */
   inputBlocked?: boolean;
@@ -190,6 +198,8 @@ export function useConversation({
   const [savingConsent, setSavingConsent] = useState(false);
   const [consentError, setConsentError] = useState('');
   const [session, setSession] = useState<TextAssistantView | null>(null);
+  const [retainedConversations, setRetainedConversations] = useState<RetainedConversation[]>();
+  const resumeRequested = useRef(false);
   const deliverySessionId = session?.id;
   useEffect(() => {
     if (deliverySessionId) void delivery?.connect(`${path}/${deliverySessionId}`);
@@ -212,6 +222,7 @@ export function useConversation({
   const voiceConnected = useRef(false);
   const active = useRef<TextAssistantView | null>(null);
   const completion = useRef(conversationCompletion());
+  const hydratedReplies = useRef(new Map<string, number | undefined>());
   const showTranscript = useCallback((row: TranscriptRow) => {
     if (!active.current) return;
     setTranscript((rows) =>
@@ -294,6 +305,10 @@ export function useConversation({
       active.current = next;
       setSession(next);
       if (next.paused) {
+        completion.current = conversationCompletion(next);
+        hydratedReplies.current = new Map(
+          (next.completedReplies ?? []).map((reply) => [reply.id, reply.revision]),
+        );
         setTranscript([
           ...(next.conversation ?? []).map((row, index) => ({
             ...row,
@@ -313,6 +328,7 @@ export function useConversation({
         return;
       }
       if ((next.contextRevision ?? 0) > (previous?.contextRevision ?? 0)) {
+        hydratedReplies.current.clear();
         setUnknown(false);
         setError('');
         setTranscript(
@@ -355,6 +371,11 @@ export function useConversation({
       if (next.revision !== previous?.revision || next.error !== previous?.error)
         setTaskFailed(next.phase === 'error' && Boolean(next.error));
       for (const reply of next.completedReplies ?? []) {
+        if (
+          hydratedReplies.current.has(reply.id) &&
+          hydratedReplies.current.get(reply.id) === reply.revision
+        )
+          continue;
         const voiced = reply.source === 'voice' ? true : reply.voiced;
         const voicePending = voiced === undefined && voiceConnected.current;
         const resultReply = conversationResultReply(reply);
@@ -491,7 +512,10 @@ export function useConversation({
   const clear = useCallback(() => {
     active.current = null;
     completion.current = conversationCompletion();
+    hydratedReplies.current.clear();
     setSession(null);
+    setRetainedConversations(undefined);
+    resumeRequested.current = false;
     setText('');
     setTranscript([]);
     setUnknown(false);
@@ -852,8 +876,46 @@ export function useConversation({
     return () => controller.abort();
   }, [enabled, household]);
   const consentValid = visitConsent || savedConsent?.textVersion === conversationConsentTextVersion;
+  const resumeConversation = useCallback(async () => {
+    const current = active.current;
+    if (!current?.paused || pending) return;
+    if (!consentValid) {
+      resumeRequested.current = true;
+      setRequested('text');
+      return;
+    }
+    resumeRequested.current = false;
+    const epoch = ++requestEpoch.current;
+    setPending(true);
+    setError('');
+    try {
+      const next = await request<TextAssistantView>(
+        `${path}/${current.id}/resume`,
+        visitConsent ? { consent: { textVersion: conversationConsentTextVersion } } : {},
+      );
+      if (mounted.current && epoch === requestEpoch.current) {
+        update(next);
+        setUnknown(false);
+      }
+    } catch (failure) {
+      if (epoch === requestEpoch.current) {
+        if (failure instanceof MapRequestError && failure.code === conversationConsentRequired) {
+          setSavedConsent(null);
+          setVisitConsent(false);
+          resumeRequested.current = true;
+          setRequested('text');
+        } else fail(failure);
+      }
+    } finally {
+      if (mounted.current && epoch === requestEpoch.current) setPending(false);
+    }
+  }, [path, visitConsent, consentValid, pending, update, fail]);
   const start = useCallback(
     async (mode: ConversationMode) => {
+      if (resumeRequested.current) {
+        await resumeConversation();
+        return;
+      }
       setStartWithVoice(mode === 'voice');
       const epoch = ++requestEpoch.current;
       setPending(true);
@@ -872,6 +934,7 @@ export function useConversation({
         if (active.current?.paused) {
           active.current = null;
           completion.current = conversationCompletion();
+          hydratedReplies.current.clear();
           setTranscript([]);
         }
         setUnknown(false);
@@ -887,7 +950,7 @@ export function useConversation({
         if (mounted.current && epoch === requestEpoch.current) setPending(false);
       }
     },
-    [path, visitConsent, update, fail, voice.stop],
+    [path, visitConsent, update, fail, voice.stop, resumeConversation],
   );
   // A requested start waits for the server's answers about the conversation
   // and the saved consent. It then starts, or the consent box asks first.
@@ -1131,7 +1194,10 @@ export function useConversation({
     setError('');
     try {
       const result = await voice.newConversation(() =>
-        request<TextAssistantView>(`${path}/${current.id}/new`, { discard }),
+        request<TextAssistantView>(`${path}/${current.id}/new`, {
+          discard,
+          ...(visitConsent ? { consent: { textVersion: conversationConsentTextVersion } } : {}),
+        }),
       );
       if (epoch !== requestEpoch.current) return;
       setUnknown(false);
@@ -1210,6 +1276,53 @@ export function useConversation({
       error: consentError,
     },
     session,
+    retainedConversations,
+    listRetained: async () => {
+      if (pending) return;
+      const epoch = requestEpoch.current;
+      setPending(true);
+      setError('');
+      try {
+        const result = await request<{ conversations: RetainedConversation[] }>(`${path}/retained`);
+        if (mounted.current && epoch === requestEpoch.current)
+          setRetainedConversations(result.conversations);
+      } catch (failure) {
+        if (epoch === requestEpoch.current) fail(failure);
+      } finally {
+        if (mounted.current && epoch === requestEpoch.current) setPending(false);
+      }
+    },
+    openRetained: async (id) => {
+      if (pending) return false;
+      if (text.trim()) {
+        setError('Skicka eller töm meddelandefältet innan du öppnar ett annat samtal.');
+        return false;
+      }
+      const epoch = ++requestEpoch.current;
+      setPending(true);
+      setError('');
+      try {
+        await voice.stop();
+        const current = active.current;
+        if (current && current.id !== id) await request(`${path}/${current.id}/pause`, {});
+        const next = await request<TextAssistantView>(`${path}/retained/${id}/open`, {});
+        if (!mounted.current || epoch !== requestEpoch.current) return false;
+        active.current = null;
+        completion.current = conversationCompletion();
+        hydratedReplies.current.clear();
+        setTranscript([]);
+        setRetainedConversations(undefined);
+        setUnknown(false);
+        update(next);
+        return true;
+      } catch (failure) {
+        if (epoch === requestEpoch.current) fail(failure);
+        return false;
+      } finally {
+        if (mounted.current && epoch === requestEpoch.current) setPending(false);
+      }
+    },
+    resumeConversation,
     transcript,
     configureModel: async (choice: ConversationModelChoice) => {
       const current = active.current;
@@ -1254,6 +1367,7 @@ export function useConversation({
     decline: () => {
       // The user has approved, and the save is on its way: it cannot be taken back here.
       if (savingConsent) return;
+      resumeRequested.current = false;
       void voice.stop();
       setRequested(null);
       setConsentError('');
@@ -1288,6 +1402,7 @@ export function useConversation({
         active.current = null;
         completion.current = conversationCompletion();
         setSession(null);
+        hydratedReplies.current.clear();
         setTranscript([]);
         setUnknown(false);
         setTaskFailed(false);

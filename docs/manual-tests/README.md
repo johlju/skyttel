@@ -501,6 +501,8 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   utgångstid visas och uttryckligt avslut lämnar utkastet kvar.
   Egna talade repliker förnyar tiden från mottagandet; senare modellarbete
   och kontroller flyttar inte gränsen.
+  KONTEXT-25 hittar och återupptar ett valt samtal på samma och annan
+  enhet utan att blanda separata samtal eller skriva över personligt modellval.
   Full kontext sammanfattas automatiskt med kvarvarande samtalstext,
   aktuellt utkast, mikrofonläge och tidigare inspelat tal. Misslyckad
   sammanfattning blockerar nya uppdrag tills Nytt samtal. Pågående

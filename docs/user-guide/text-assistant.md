@@ -138,6 +138,24 @@ automatiskt. **Nytt samtal** tar bort det tidigare samtalet och behåller
 utkastet; ett nytt samtal kan kräva medgivande igen.
 Köade skrivna meddelanden visas ordagrant i den återställda samtalstexten.
 
+Välj **Återuppta samtalet** när du vill fortsätta. Du behöver godkänna
+aktuell information igen om medgivandet bara gällde ett tidigare besök.
+Skyttel kontrollerar aktuellt utkast och tidigare operationers faktiska
+utfall före fortsatt arbete. Bara oavslutat arbete och kvarvarande kö
+fortsätter. Genomförda ändringar upprepas inte, och en tidigare upphävd
+sparbegäran kräver en ny uttrycklig sparbegäran. Ett okänt sparutfall
+måste kontrolleras innan nya ändringar kan börja.
+
+På samma eller en annan enhet väljer du **Bevarade samtal** i textvyn.
+Listan visar dina samtal i det aktuella hushållet, deras modellval och
+utgångstid. Välj **Öppna** vid rätt samtal och läs dess pausade läge innan
+du väljer **Återuppta samtalet**. Om ett annat samtal är öppet pausas det
+separat; texterna slås inte ihop. Skicka eller töm oskickad text innan du
+öppnar ett annat samtal. Vid öppning på en annan enhet stannar den tidigare
+enhetens arbete. Det äldre samtalets modellval ändrar inte ditt senaste
+personliga val för nya samtal. Efter återupptagning kan du skriva eller
+slå på mikrofonen i samma samtal.
+
 **Löper ut** visar den bestämda tidpunkten. Samtalet raderas efter sju
 dygn utan ett meddelande från dig eller uttrycklig återupptagning.
 Modellarbete, visning och statuskontroller förlänger inte tiden.

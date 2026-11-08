@@ -92,6 +92,37 @@ test.each(['known', 'unknown'] as const)(
     expect(registered).toMatchObject([
       { operationId: body.operationId, status: 'pending', draftVersion: 1 },
     ]);
+    // Retained conversation resume must verify this original registered
+    // attempt before enabling any further work, without a replacement save.
+    expect((await post(`text-assistant/${session.id}/pause`, {})).status()).toBe(200);
+    const restored = await browser.get(`${base}/text-assistant/${session.id}`);
+    expect(restored.status(), await restored.text()).toBe(200);
+    expect(await restored.json()).toMatchObject({ paused: true, phase: 'recovery' });
+    const resumed = await post(`text-assistant/${session.id}/resume`, approvedForVisit);
+    expect(resumed.status(), await resumed.text()).toBe(outcome === 'unknown' ? 500 : 200);
+    if (outcome === 'unknown') {
+      const stillPaused = await (await browser.get(`${base}/text-assistant/${session.id}`)).json();
+      expect(stillPaused).toMatchObject({ paused: true, phase: 'recovery' });
+      const refused = await post(`text-assistant/${session.id}/messages`, {
+        requestId: 'blocked-while-save-unknown',
+        revision: stillPaused.revision,
+        draftVersion: stillPaused.review.version,
+        contentVersion: stillPaused.review.contentVersion,
+        text: 'Beskriv bara kartan.',
+      });
+      expect(refused.status(), await refused.text()).toBe(409);
+      expect(await refused.json()).toEqual({ error: 'assistant_work_paused' });
+      expect((await (await browser.get(`${path}/operations`)).json()).operations).toEqual(
+        registered,
+      );
+    } else {
+      expect(await resumed.json()).toMatchObject({
+        id: session.id,
+        paused: false,
+        receipt: { operationId: body.operationId, draftVersion: 1 },
+      });
+    }
+    expect(model.requests).toEqual([]);
     expect((await post(`text-assistant/${session.id}/stop`, {})).status()).toBe(200);
     browser = await restartWithSession(browser, () => app.restart());
     expect((await browser.get(`${base}/text-assistant/${session.id}`)).status()).toBe(404);

@@ -11,12 +11,18 @@ export type ConversationMessage = Partial<ConversationConsentProvenance> & {
   id: string;
   text: string;
   voice: boolean;
+  /** An explicit continuation keeps its original instruction and identity. */
+  continuation?: boolean;
+  /** Verified earlier save by this exact request; never new saving authority. */
+  completedSaveOperationId?: string;
   restate?: boolean;
   /** Server-owned evidence bound at queued admission, never new authority. */
   queuedReference?: QueuedRequestReference | null;
   /** A manual scope change cannot be crossed by an older queued save request. */
   saveScopeChanged?: boolean;
   answerTo?: PendingPartReference[];
+  /** Exact revisions advanced by this request; bounded by its original answers. */
+  answerProgress?: PendingPartReference[];
   contentVersion: number;
   /** Displayed draft version admitted with this request; only verified work advances it. */
   draftVersion: number;
@@ -51,6 +57,8 @@ export type ConversationState = Omit<TextAssistantView, 'conversation' | 'unfini
   householdId: string;
   owner: string;
   activeMessage?: ConversationMessage;
+  /** Failed model work remains separate from later queued instructions. */
+  failedWork?: { message: ConversationMessage; code: string; reference?: string };
   input: ResponseInputItem[];
   conversation: {
     role: 'user' | 'assistant';
@@ -90,7 +98,14 @@ export type ConversationState = Omit<TextAssistantView, 'conversation' | 'unfini
   /** The request's binding survives the browser's deferred voice handoff. */
   pendingSummaryChoice?: ConversationModelChoice;
   previousFailure?: string;
-  pendingSave?: { operationId: string; version: number; contentVersion: number };
+  pendingSave?: {
+    operationId: string;
+    version: number;
+    contentVersion: number;
+    /** Original checked completion verdict, never authority for another save. */
+    messageId?: string;
+    finishesRequest?: boolean;
+  };
   /** Checked work awaiting status only; never a replacement mutation request. */
   pendingBatch?: {
     request: DraftBatchRequest & { operationId: string };

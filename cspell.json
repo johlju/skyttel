@@ -11,6 +11,7 @@
     "kollegafråga",
     "promptcache",
     "batcharbete",
+    "batchsvar",
     "batchintyg",
     "läsbehörighet",
     "läsresultat",
@@ -1091,7 +1092,10 @@
     "mätunderlag",
     "batchutfall",
     "batchunderlaget",
-    "modellbegäranden"
+    "modellbegäranden",
+    "batchsvaret",
+    "delbatch",
+    "förtydligandereplik"
   ],
   "overrides": [
     {

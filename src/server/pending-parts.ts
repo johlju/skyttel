@@ -57,6 +57,7 @@ export type PendingPartsState = {
   applied: Set<string>;
   completedOperations: {
     parts: string[];
+    messageId?: string;
     name: string;
     args: Record<string, unknown>;
     effects: Effect[];
@@ -74,6 +75,41 @@ export function pendingParts(state: PendingPartsState = pendingPartsState()) {
     contentVersion: _contentVersion,
     ...args
   }: Record<string, unknown>) => args;
+  function equivalentArgs(args: Record<string, unknown>, effects: Effect[]) {
+    const normalized = operationArgs(args);
+    const value = normalized.value;
+    const target = effects.find((effect) => effect.id === normalized.id)?.value;
+    if (
+      value &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      target &&
+      typeof target === 'object' &&
+      !Array.isArray(target) &&
+      'properties' in value &&
+      Array.isArray(value.properties) &&
+      !value.properties.length &&
+      (!('properties' in target) || (Array.isArray(target.properties) && !target.properties.length))
+    ) {
+      const { properties: _properties, ...rest } = value;
+      return { ...normalized, value: rest };
+    }
+    return normalized;
+  }
+  function checkEffects(effects: Effect[], latest: Effect[], current: TextAssistantReview) {
+    for (const effect of effects) {
+      const final =
+        latest.findLast((item) => item.collection === effect.collection && item.id === effect.id) ??
+        effect;
+      if (
+        !isDeepStrictEqual(
+          current[effect.collection]?.find((item) => item.id === effect.id)?.after,
+          final.value,
+        )
+      )
+        throw new MapError('assistant_draft_changed');
+    }
+  }
   const active = (part: PendingPart) => part.status === 'waiting' || part.status === 'ready';
   function find(ref: z.infer<typeof partReference>) {
     const part = state.parts.find((part) => part.id === ref.id);
@@ -101,9 +137,20 @@ export function pendingParts(state: PendingPartsState = pendingPartsState()) {
     questions: () =>
       state.parts.filter((part) => part.status === 'waiting').map((part) => part.question),
     blocked: () => state.parts.some((part) => part.kind === 'change' && active(part)),
-    validateReply(refs: z.infer<typeof partReference>[]) {
-      for (const ref of refs)
-        if (find(ref).status !== 'waiting') throw new MapError('assistant_pending_part_changed');
+    validateReply(
+      refs: z.infer<typeof partReference>[],
+      progress: z.infer<typeof partReference>[] = [],
+    ) {
+      for (const ref of refs) {
+        const verified = progress.find(
+          (item) => item.id === ref.id && item.revision > ref.revision,
+        );
+        if (verified) {
+          if (state.parts.find((part) => part.id === ref.id)?.revision !== verified.revision)
+            throw new MapError('assistant_pending_part_changed');
+        } else if (find(ref).status !== 'waiting')
+          throw new MapError('assistant_pending_part_changed');
+      }
     },
     apply(
       questions: z.infer<typeof pendingQuestions>,
@@ -189,31 +236,32 @@ export function pendingParts(state: PendingPartsState = pendingPartsState()) {
       name: string,
       args: Record<string, unknown>,
       current: TextAssistantReview,
+      messageId?: string,
     ) {
+      const belongsToWork = (item: PendingPartsState['completedOperations'][number]) =>
+        (messageId !== undefined && item.messageId === messageId) ||
+        refs.some((ref) => item.parts.includes(ref.id));
       const completed = state.completedOperations.find(
         (item) =>
           item.name === name &&
-          refs.some((ref) => item.parts.includes(ref.id)) &&
-          isDeepStrictEqual(item.args, operationArgs(args)),
+          belongsToWork(item) &&
+          isDeepStrictEqual(
+            equivalentArgs(item.args, item.effects),
+            equivalentArgs(args, item.effects),
+          ),
       );
       if (!completed) return true;
       const latest = state.completedOperations
-        .filter((item) => refs.some((ref) => item.parts.includes(ref.id)))
+        .filter(belongsToWork)
         .flatMap((item) => item.effects);
-      if (
-        !completed.effects.every((effect) => {
-          const final =
-            latest.findLast(
-              (item) => item.collection === effect.collection && item.id === effect.id,
-            ) ?? effect;
-          return isDeepStrictEqual(
-            current[effect.collection]?.find((item) => item.id === effect.id)?.after,
-            final.value,
-          );
-        })
-      )
-        throw new MapError('assistant_draft_changed');
+      checkEffects(completed.effects, latest, current);
       return false;
+    },
+    checkContinuation(messageId: string, current: TextAssistantReview) {
+      const effects = state.completedOperations
+        .filter((operation) => operation.messageId === messageId)
+        .flatMap((operation) => operation.effects);
+      checkEffects(effects, effects, current);
     },
     operation(
       refs: z.infer<typeof partReference>[],
@@ -221,8 +269,9 @@ export function pendingParts(state: PendingPartsState = pendingPartsState()) {
       args: Record<string, unknown>,
       before: TextAssistantReview,
       after: TextAssistantReview,
+      messageId?: string,
     ) {
-      if (!refs.length) return;
+      if (!refs.length && messageId === undefined) return;
       const normalized = operationArgs(args);
       const effects: Effect[] = [];
       for (const collection of collections) {
@@ -237,6 +286,7 @@ export function pendingParts(state: PendingPartsState = pendingPartsState()) {
       }
       state.completedOperations.push({
         parts: refs.map((ref) => ref.id),
+        messageId,
         name,
         args: structuredClone(normalized),
         effects,
