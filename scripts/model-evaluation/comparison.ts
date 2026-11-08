@@ -139,6 +139,7 @@ export function compareApplicationVersions(
   attempts: Attempt[],
   scenarios: Scenario[],
   run: ComparisonRun,
+  separateSegment = false,
 ) {
   const selectedScenarios = scenarios.filter(
     (scenario) => run.plan.modality !== 'voice' || scenario.voice,
@@ -255,6 +256,10 @@ export function compareApplicationVersions(
     status = 'rejected';
     reasons.push('declared_wait_threshold_failed');
   }
+  if (separateSegment) {
+    if (status !== 'rejected') status = 'inconclusive';
+    reasons.push('continuation_segment_requires_aggregation');
+  }
   return {
     contractId: run.contractId,
     plan: run.plan,
@@ -280,7 +285,7 @@ export function compareApplicationVersions(
   };
 }
 
-function validVoicePlayback(attempt: Attempt) {
+export function validVoicePlayback(attempt: Attempt) {
   const proof = attempt.playback;
   const input = proof?.input;
   const end = proof?.renderedEnd;

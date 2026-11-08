@@ -27,7 +27,7 @@ test.each(['Rätta namnet till Slutvärdet.', 'Spara inte.'])(
         String(body.input.findLast((item) => item.role === 'user')?.content),
       );
       const { message } = input;
-      if (message === 'Spara hela utkastet.')
+      if (message === 'Spara mina ändringar.')
         return saveRequests++ === 0
           ? held
           : [
@@ -90,7 +90,7 @@ test.each(['Rätta namnet till Slutvärdet.', 'Spara inte.'])(
         await post(`${path}/messages`, {
           ...envelope,
           requestId: 'save',
-          text: 'Spara hela utkastet.',
+          text: 'Spara mina ändringar.',
         })
       ).status(),
     ).toBe(202);
@@ -136,7 +136,7 @@ test.each(['Rätta namnet till Slutvärdet.', 'Spara inte.'])(
             draftVersion: state.draft.version,
             contentVersion: state.contentVersion,
             requestId: 'renewed-save',
-            text: 'Spara hela utkastet.',
+            text: 'Spara mina ändringar.',
           })
         ).status(),
       ).toBe(202);

@@ -127,6 +127,32 @@ interruptions, reasoning and cache writes. Unknown usage retains its hold and
 stops new calls. Any user-specified ceiling stays fixed within its ledger;
 a changed scope uses a separate ledger.
 
+### Continue unrun text comparisons
+
+After reconciling every unknown charge, use `EvaluationPlan.continuation` for
+an explicitly authorized fresh segment of an application text comparison.
+Supply `sourceDirectories` entries with each retained directory and the SHA-256
+of its original `0001-manifest.json`. Include the complete chain of earlier
+segments. Supply `scenarios` entries with `applicationVersion`, `repetition` and
+`scenario`; each selection starts the entire original dialog from its fixture.
+Only dialogs whose recorded steps are all `not_run` are eligible. Any attempted
+step, including cancellation or failure, prevents replay of that dialog.
+
+Use a new output directory, carry all source charges conservatively in
+`priorUsd`, preserve the ceiling, and run fresh calibration. The preflight reads
+source ledgers without changing them and refuses unsettled charges, omitted
+lineage, changed shared conditions or missing unrun evidence. Keep original
+records and reconciliation evidence available for publication.
+
+Publish every segment's records. Read `continuation.sameContract` before
+interpreting timing: a changed evaluator produces separate supplementary
+evidence. Prior attempts are never imported or relabeled. Each segment leaves
+unselected dialogs `not_run` with `evaluation_continuation_source_segment` and
+reports incomplete comparison coverage. Matching contracts permit a later
+explicit aggregation only after validating coverage, costs and every source;
+the runner does not aggregate segments or establish full comparison acceptance.
+Voice continuation is unsupported.
+
 ## Preserve and publish evidence
 
 Private observations retain request IDs, actual backend text, MCP calls/results
@@ -155,6 +181,14 @@ inconclusive outcomes, except for the declared clarification path below.
 Unrun steps have no judge result.
 
 ### Conditional clarification
+
+The runner assesses declared safe clarifications independently of automatic
+reply execution. A verified necessary question without a uniquely matching
+enabled reply remains valid clarification with untested continuation. Preserve
+its original records and report the assessment separately; no completion time
+or complete qualification follows from the question alone. See
+[qualification](qualification.md#clarification-and-completion) for the waiting
+contract and retained-work requirements.
 
 When requested, set `EvaluationPlan.followUps` to true. The catalog's optional
 replies are shared across models and selected by the meaning of an explicit

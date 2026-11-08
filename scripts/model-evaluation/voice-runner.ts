@@ -4,7 +4,13 @@ import type { createInstallation } from '../../tests/support/installation.js';
 import { assessInability } from './assessment.js';
 import { scenarioHistory } from './catalog.js';
 import { evaluationEnvironment } from './environment.js';
-import { followUpStep, scenarioUtterances, selectFollowUp } from './follow-ups.js';
+import {
+  assistedExchangeTiming,
+  followUpStep,
+  type ScenarioExchange,
+  scenarioUtterances,
+  selectFollowUp,
+} from './follow-ups.js';
 import { evaluationMetrics } from './metrics.js';
 import {
   concludeAttempt,
@@ -23,6 +29,11 @@ import {
   renderedUsefulRequirement,
   voicePlaybackInstrumentation,
 } from './playback.js';
+import {
+  checkedContentVerdicts,
+  contentRequirements,
+  retainWaitingTiming,
+} from './retained-work.js';
 import type { RunOptions } from './runner.js';
 import {
   type ReferenceVoice,
@@ -30,7 +41,14 @@ import {
   type SourcePlayback,
   speechConnection,
 } from './speech.js';
-import type { Attempt, JudgeInput, JudgeResult, Scenario, ScenarioStep } from './types.js';
+import type { Attempt, JudgeInput, JudgeResult, Scenario } from './types.js';
+import {
+  concludeUserStop,
+  executeUserStop,
+  missedUserStop,
+  validateUserStop,
+  validVoiceStopEvidence,
+} from './user-stop.js';
 
 type PlaybackEvidence = NonNullable<Attempt['playback']>;
 type StateObserver = (status: VoiceAssistantResponse) => Promise<void>;
@@ -45,6 +63,7 @@ function inputEvidence(audio: SourcePlayback): NonNullable<PlaybackEvidence['inp
     sourceStartPosition: audio.sourceStartPosition,
     speechPosition: audio.speechPosition,
     ended: audio.ended,
+    started: audio.started,
   };
 }
 
@@ -90,6 +109,7 @@ export async function runVoiceScenario(
     playbackReady?: (connection: Awaited<ReturnType<typeof speechConnection>>) => void;
   },
 ) {
+  scenario.steps.forEach(validateUserStop);
   // Optional branches must have reviewed, matching audio before opening a paid session.
   if (options.followUps)
     await Promise.all(
@@ -129,14 +149,7 @@ export async function runVoiceScenario(
   let sessionTimer: ReturnType<typeof setTimeout> | undefined;
   let closing: Promise<void> | undefined;
   let sessionExpired = false;
-  const queue: {
-    step: ScenarioStep;
-    parent?: string;
-    target?: ScenarioStep;
-    startedAt?: number;
-    previousResponseEndAt?: number;
-    evaluationOverheadMs?: number;
-  }[] = scenario.steps.map((step) => ({ step }));
+  const queue: ScenarioExchange[] = scenario.steps.map((step) => ({ step }));
   async function judgeWithHeartbeat(
     input: JudgeInput,
     retain?: (result: JudgeResult) => void,
@@ -318,6 +331,8 @@ export async function runVoiceScenario(
             observedResponseEndMs: result.observedEndMs,
             successfulCompletionMs: result.elapsedMs,
           };
+          // This times the summary operation, which submits no user request.
+          // Retention above does not certify completion of earlier pending work.
         } else {
           const reference = await referenceSpeech(step.id, step.text, options.referenceVoice);
           if (!connection) {
@@ -475,6 +490,50 @@ export async function runVoiceScenario(
               },
             );
             await observeState(status);
+            if (step.userStop && audioEnd !== undefined) {
+              const request = events
+                .slice(offset)
+                .findLast((event) => event.kind === 'backend_request');
+              const correlatedRequest = (request?.data as { requestId?: string } | undefined)
+                ?.requestId;
+              const task = view.tasks?.find((entry) => entry.id === correlatedRequest);
+              if (
+                task?.status === 'working' &&
+                view.taskSource === 'voice' &&
+                view.taskId === correlatedRequest &&
+                correlatedRequest
+              ) {
+                const stoppedRequest = correlatedRequest;
+                try {
+                  const recording = await connection.recording();
+                  options.recordPlayback?.(recording);
+                  Object.assign(result.playback, recordingEvidence(recording));
+                } catch (error) {
+                  result.playback.error = error instanceof Error ? error.message : String(error);
+                }
+                const stopped = await executeUserStop({
+                  step,
+                  view,
+                  origin: result.playback.input?.ended ?? startedAt,
+                  environment,
+                  requestId: stoppedRequest,
+                  events: () => events.slice(offset),
+                  quiesceAudio: () => closeVoice(true),
+                });
+                result.scriptedStop = stopped.proof;
+                if (stopped.proof.verdict === 'pass' && !validVoiceStopEvidence(result)) {
+                  stopped.proof.verdict = 'inconclusive';
+                  stopped.proof.reason = 'voice_stop_capture_incomplete';
+                  stopped.proof.endpointMs = null;
+                  delete stopped.proof.endpointBounds;
+                }
+                throw new Error('evaluation_scripted_user_stop');
+              }
+              if (task?.status === 'completed') {
+                result.scriptedStop = missedUserStop();
+                throw new Error('evaluation_scripted_user_stop');
+              }
+            }
             const observed = events.slice(offset);
             recognizedRequest =
               observed
@@ -678,20 +737,30 @@ export async function runVoiceScenario(
             observedResponseEndMs: renderedEnd ? renderedEnd.upper - startedAt : null,
             successfulCompletionMs: result.elapsedMs,
           };
-          if (entry.startedAt !== undefined) {
-            const completedAt =
-              completionMs === null ? renderedEnd?.upper : startedAt + completionMs;
-            result.assistedWallElapsedMs =
-              completedAt === undefined ? undefined : completedAt - entry.startedAt;
-            result.assistedEvaluationOverheadMs =
-              (entry.evaluationOverheadMs ?? 0) +
-              Math.max(0, audio.startedAt - (entry.previousResponseEndAt ?? audio.startedAt));
-            result.assistedElapsedMs =
-              result.outcome === 'pass' && result.assistedWallElapsedMs !== undefined
-                ? result.assistedWallElapsedMs - result.assistedEvaluationOverheadMs
-                : null;
-          }
-          if (options.followUps && !options.stopped?.()) {
+          Object.assign(
+            result,
+            assistedExchangeTiming(entry, {
+              submittedAt: audio.startedAt,
+              completedAt: completionMs === null ? renderedEnd?.upper : startedAt + completionMs,
+              outcome: result.outcome,
+            }),
+          );
+          // A completed voice handoff can clear view.taskId before final polling.
+          // Keep the authenticated delegations accepted during this utterance.
+          const requestIds = [
+            ...(entry.requestIds ?? []),
+            ...events
+              .slice(offset)
+              .filter((event) => event.kind === 'backend_request')
+              .map((event) => (event.data as { requestId: string }).requestId),
+          ];
+          retainWaitingTiming(
+            result,
+            (entry.target ?? step).expected,
+            view.pendingParts,
+            requestIds,
+          );
+          if (!options.stopped?.()) {
             const followUp = await selectFollowUp({
               step,
               attempt: result,
@@ -708,12 +777,14 @@ export async function runVoiceScenario(
                 environment.check(step, view, modelActions(events.slice(offset)), waiting),
               waitingContext: () => environment.judgeContext(step, [], '', recognizedRequest),
               judge: options.judge ? judgeWithHeartbeat : undefined,
+              repliesEnabled: options.followUps ?? false,
             });
             if (followUp && !options.stopped?.()) {
               queue.splice(index + 1, 0, {
                 step: followUpStep(step, followUp),
                 parent: step.id,
                 target: step,
+                requestIds,
                 startedAt: entry.startedAt ?? startedAt,
                 previousResponseEndAt: renderedEnd?.upper,
                 evaluationOverheadMs: result.assistedEvaluationOverheadMs ?? 0,
@@ -748,7 +819,10 @@ export async function runVoiceScenario(
         // The stopped state still prevents every later step from starting.
         if (
           options.stopped?.() &&
-          !(result.outcome === 'fail' && (result.followUpSelection || result.assessment))
+          !(
+            ['pass', 'fail'].includes(result.outcome) &&
+            (result.followUpSelection || result.assessment)
+          )
         )
           throw new Error(options.stopReason?.() ?? 'evaluation_stopped');
       } catch (error) {
@@ -762,7 +836,9 @@ export async function runVoiceScenario(
           }
         }
         const partial = [...new Set([...result.fixed, ...partialChecks])];
-        if (
+        if (result.scriptedStop) {
+          concludeUserStop(result, result.scriptedStop, Date.now() - startedAt);
+        } else if (
           error instanceof Error &&
           ['evaluation_application_canceled', 'evaluation_application_expired'].includes(
             error.message,
@@ -778,7 +854,7 @@ export async function runVoiceScenario(
             reason: options.stopReason?.() ?? null,
             attempted: voiceAttempted || (options.providerCalls?.() ?? 0) > callsBefore,
           });
-        result.fixed = partial;
+        if (!result.scriptedStop) result.fixed = partial;
         result.elapsedMs = null;
         if (result.timing) result.timing.successfulCompletionMs = null;
       }
@@ -790,6 +866,7 @@ export async function runVoiceScenario(
         ? options.providerCalls() - callsBefore
         : undefined;
       const observed = events.slice(eventOffset);
+      result.diagnostics ??= observationDiagnostics(observed, startedAt);
       result.metrics = evaluationMetrics(
         options.providerRecords?.().filter((call) => !recordIds.has(call.id)),
         observed,
@@ -810,31 +887,31 @@ export async function runVoiceScenario(
       }
       attempts.push(result);
       await options.record?.(result);
-      if (result.outcome !== 'pass' && !continuing) {
-        blocked = `${step.id}: ${result.outcome}`;
+      if ((result.outcome !== 'pass' || result.elapsedMs === null) && !continuing) {
+        blocked = `${step.id}: ${result.outcome === 'pass' ? 'unfinished' : result.outcome}`;
         await closeVoice(result.outcome === 'error' || result.outcome === 'aborted');
       }
       async function judge(sources: JudgeInput['sources'], requirements: string[]) {
         if (options.stopped?.()) throw new Error(options.stopReason?.() ?? 'evaluation_stopped');
-        if (!requirements.length) return [];
+        const declared = contentRequirements(
+          sources,
+          requirements,
+          (entry.target ?? step).expected,
+        );
+        if (!declared.length) return [];
         const input: JudgeInput = {
           context: environment.judgeContext(step, result.fixed, '', recognizedRequest),
           sources,
-          requirements: Object.keys(sources).flatMap((source) =>
-            requirements.map((text, i) => ({
-              id: `${source}-${i}`,
-              source: source as 'backend' | 'voice',
-              text,
-            })),
-          ),
+          requirements: declared,
         };
-        return options.judge
-          ? judgeWithHeartbeat(input, undefined, observeState)
+        const verdicts = options.judge
+          ? await judgeWithHeartbeat(input, undefined, observeState)
           : input.requirements.map((item) => ({
               id: item.id,
               outcome: 'inconclusive' as const,
               reason: 'No content judge supplied.',
             }));
+        return checkedContentVerdicts(declared, verdicts);
       }
     }
     return { attempts, events, finalMap: await environment.read() };

@@ -60,6 +60,38 @@ test('changed saved revisions invalidate previous reads without fetching content
   expect(load).toHaveBeenCalledTimes(2);
 });
 
+test('context invalidation preserves only successful calls from the current snapshot', async () => {
+  const load = vi.fn(async () => ({ objects: [] }));
+  await cache.read('read_map', { query: 'Lina' }, load, 'shared', 'old-lina');
+  await cache.read('read_map', { query: 'Kajsa' }, load, 'shared', 'old-kajsa');
+  fixture.database
+    .prepare('UPDATE object_type SET revision = revision + 1 WHERE householdId = ?')
+    .run(householdId);
+  await cache.read('read_map', { query: 'Lina' }, load, 'shared', 'fresh-lina');
+  await cache.read('read_map', { query: 'Lina' }, load, 'shared', 'reused-lina');
+  await expect(
+    cache.read(
+      'read_map',
+      { query: 'Kajsa' },
+      async () => {
+        throw new Error('failed');
+      },
+      'shared',
+      'failed-kajsa',
+    ),
+  ).rejects.toThrow('failed');
+  expect(cache.outdated()).toEqual([
+    { name: 'read_map', currentCalls: ['fresh-lina', 'reused-lina'] },
+  ]);
+  expect(load).toHaveBeenCalledTimes(3);
+
+  fixture.database
+    .prepare('UPDATE object_type SET revision = revision + 1 WHERE householdId = ?')
+    .run(householdId);
+  // The formerly fresh calls become obsolete at the next dependency change.
+  expect(cache.outdated()).toEqual([{ name: 'read_map' }]);
+});
+
 test('a read crossing a content change or a new conversation is never installed for later reuse', async () => {
   for (const change of [
     () =>

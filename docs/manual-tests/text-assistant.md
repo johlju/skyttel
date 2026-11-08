@@ -285,8 +285,11 @@ utkast, sparade uppgifter och historik samt loggens begränsade innehåll.
    åter släppa ett felaktigt kastande enligt förberedelsen. En ny stoppnotis
    ska visas med en annan felreferens. Stäng notisen.
 7. Skicka **Prova ett vanligt fel.** Låt operatören neka svaret.
-   Läs modellfelets notis och välj **Avstå från det oavslutade arbetet**.
-   Upprepa en gång; båda felen ska visas trots det tidigare mikrofonhindret.
+   Läs notisen **Modellen är tillfälligt otillgänglig** och kontrollera
+   att den oavslutade begäran visas. Välj **Avstå från det oavslutade
+   arbetet**. Kontrollera att notisen försvinner och att **Lo Exempel**
+   finns kvar i utkastet. Upprepa en gång; båda felen ska visas trots
+   det tidigare mikrofonhindret.
    Avståendet startar inget nytt modellarbete.
 8. Skriv och skicka **Mitt nästa uppdrag**. Låt operatören släppa svaret.
    Läs **Ett nytt svar.** och kontrollera att ingen gammal notis visas.
@@ -294,6 +297,7 @@ utkast, sparade uppgifter och historik samt loggens begränsade innehåll.
 **Förväntat resultat:** Åtgärden stoppas, samma referens finns i notis och
 samtalstext och utkastet finns kvar. Senare fel kan visas på nytt och ett
 nytt textuppdrag kan slutföras.
+Avstående avslutar den oavslutade begäran och bevarar Lo-förslaget.
 Ingen automatisk upprepning eller extra godkännanderuta visas.
 
 ### TEXT-01: familjeärendet sparas samlat med bevarad oskickad formulärtext
@@ -335,10 +339,10 @@ formulärtext”.
 
 1. Börja med det kontrollerade, fullständiga familjeunderlaget. Öppna textvyn,
    godkänn, öppna utkastet och läs Lo-förslaget med samtidig konflikt.
-2. Skicka **Behåll Lo-förslaget, rätta priset till 189 kr och spara.** Håll
-   svaret enligt separat förberedelse. Stäng textvyn och välj **Tabell →
-   Redigera Kim Exempel**. Skriv **Osänd text som ska finnas kvar** i
-   Beskrivning utan att lägga den i utkastet.
+2. Skicka **Behåll Lo-förslaget, rätta priset till 189 kr och spara mina
+   ändringar.** Håll svaret enligt separat förberedelse. Stäng textvyn och
+   välj **Tabell → Redigera Kim Exempel**. Skriv **Osänd text som ska finnas
+   kvar** i Beskrivning utan att lägga den i utkastet.
 3. Låt operatören släppa rättelsen och sparandet. Läs samma oskickade text.
    Tryck Escape, välj **Fortsätt redigera**, läs igen och lämna sedan med
    **Kasta ändringarna och fortsätt**.

@@ -196,6 +196,39 @@ test('an advanced clarification reply with an unauthorized save blocks everyday 
   expect(attempts).toEqual(original);
 });
 
+test('a verified waiting question before requested saving is unfinished without a correctness failure', {
+  tags: ['technical'],
+}, () => {
+  const attempt: Attempt = {
+    scenario: 'save',
+    step: 'save',
+    profile: 'local',
+    repetition: 1,
+    modality: 'text',
+    outcome: 'fail',
+    fixed: ['save_receipts_history', 'save_incomplete'],
+    elapsedMs: null,
+    backendCostUsd: 0,
+    assessment: {
+      kind: 'necessary_clarification',
+      reason: 'A necessary choice remains and the complete no-save waiting state is verified.',
+      stateFailures: [],
+      evidence: [{ id: 'necessary', outcome: 'pass', reason: 'Safe unfinished request.' }],
+    },
+  };
+  const original = structuredClone(attempt);
+  expect(
+    summarizeProfile([attempt], [{ id: 'save', steps: [{ id: 'save' }] }], 'local', 'text', [1]),
+  ).toMatchObject({
+    finalQualified: false,
+    fullCatalogQualified: false,
+    correctnessFailures: [],
+    unresolvedAssessments: [{ scenario: 'save', step: 'save', repetition: 1 }],
+    scenarioTimes: [],
+  });
+  expect(attempt).toEqual(original);
+});
+
 test.each(['inconclusive', 'error', 'aborted', 'not_run'] as const)(
   'a planned advanced %s outcome blocks qualification until correctness is verified',
   { tags: ['technical'] },

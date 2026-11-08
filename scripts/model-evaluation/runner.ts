@@ -6,7 +6,13 @@ import type { ApplicationVersion } from './application.js';
 import { assessInability } from './assessment.js';
 import { scenarioHistory } from './catalog.js';
 import { evaluationEnvironment } from './environment.js';
-import { followUpStep, scenarioUtterances, selectFollowUp } from './follow-ups.js';
+import {
+  assistedExchangeTiming,
+  followUpStep,
+  type ScenarioExchange,
+  scenarioUtterances,
+  selectFollowUp,
+} from './follow-ups.js';
 import { evaluationMetrics } from './metrics.js';
 import {
   concludeAttempt,
@@ -16,7 +22,18 @@ import {
   retainedObservation,
 } from './observations.js';
 import type { ProviderCall } from './provider.js';
-import type { Attempt, JudgeInput, JudgeResult, Scenario, ScenarioStep } from './types.js';
+import {
+  checkedContentVerdicts,
+  contentRequirements,
+  retainWaitingTiming,
+} from './retained-work.js';
+import type { Attempt, JudgeInput, JudgeResult, Scenario } from './types.js';
+import {
+  concludeUserStop,
+  executeUserStop,
+  missedUserStop,
+  validateUserStop,
+} from './user-stop.js';
 
 export type RunOptions = {
   profile: string;
@@ -42,6 +59,7 @@ export async function runTextScenario(
   options: RunOptions,
 ) {
   scenarioUtterances(scenario, options.followUps);
+  scenario.steps.forEach(validateUserStop);
   const events: AssistantObservation[] = [];
   const environment = await evaluationEnvironment(
     scenario,
@@ -76,14 +94,7 @@ export async function runTextScenario(
         }
       : {}),
   });
-  const queue: {
-    step: ScenarioStep;
-    parent?: string;
-    target?: ScenarioStep;
-    startedAt?: number;
-    previousResponseEndAt?: number;
-    evaluationOverheadMs?: number;
-  }[] = scenario.steps.map((step) => ({ step }));
+  const queue: ScenarioExchange[] = scenario.steps.map((step) => ({ step }));
   try {
     for (const [index, entry] of queue.entries()) {
       const { step } = entry;
@@ -151,6 +162,25 @@ export async function runTextScenario(
               view = await environment.get<TextAssistantView>(
                 `${environment.path}/messages/${requestId}`,
               );
+              if (step.userStop && !options.stopped?.()) {
+                if (view.taskStatus === 'working') {
+                  const stopped = await executeUserStop({
+                    step,
+                    view,
+                    origin: startedAt,
+                    environment,
+                    requestId,
+                    events: () => events.slice(offset),
+                  });
+                  result.scriptedStop = stopped.proof;
+                  view = stopped.view;
+                  throw new Error('evaluation_scripted_user_stop');
+                }
+                if (view.taskStatus === 'completed') {
+                  result.scriptedStop = missedUserStop();
+                  throw new Error('evaluation_scripted_user_stop');
+                }
+              }
               if (view.taskStatus === 'canceled' || view.taskStatus === 'expired') {
                 applicationTerminalStatus = view.taskStatus;
                 throw new Error(`evaluation_application_${view.taskStatus}`);
@@ -202,27 +232,30 @@ export async function runTextScenario(
           result.diagnostics = observationDiagnostics(observed, startedAt);
           const stateFailures = await environment.check(entry.target ?? step, view, actions);
           result.fixed.push(...stateFailures);
-          if (step.expected.requirements.length) {
-            result.content = options.judge
+          const sources: JudgeInput['sources'] = {
+            backend: {
+              text: responseText,
+              complete: !view.error && view.taskStatus !== 'canceled',
+            },
+          };
+          const requirements = contentRequirements(
+            sources,
+            step.expected.requirements,
+            (entry.target ?? step).expected,
+          );
+          if (requirements.length) {
+            const verdicts: JudgeResult = options.judge
               ? await options.judge({
                   context: environment.judgeContext(step, result.fixed, summaryText),
-                  sources: {
-                    backend: {
-                      text: responseText,
-                      complete: !view.error && view.taskStatus !== 'canceled',
-                    },
-                  },
-                  requirements: step.expected.requirements.map((text, index) => ({
-                    id: `backend-${index}`,
-                    source: 'backend',
-                    text,
-                  })),
+                  sources,
+                  requirements,
                 })
-              : step.expected.requirements.map((_text, index) => ({
-                  id: `backend-${index}`,
+              : requirements.map(({ id }) => ({
+                  id,
                   outcome: 'inconclusive',
                   reason: 'No content judge supplied.',
                 }));
+            result.content = checkedContentVerdicts(requirements, verdicts);
           }
           if (options.stopped?.()) throw new Error(options.stopReason?.() ?? 'evaluation_stopped');
           concludeAttempt(result, finishedAt - startedAt);
@@ -241,17 +274,19 @@ export async function runTextScenario(
             observedResponseEndMs: finishedAt - startedAt,
             successfulCompletionMs: result.elapsedMs,
           };
-          if (entry.startedAt !== undefined) {
-            result.assistedWallElapsedMs = finishedAt - entry.startedAt;
-            result.assistedEvaluationOverheadMs =
-              (entry.evaluationOverheadMs ?? 0) +
-              Math.max(0, startedAt - (entry.previousResponseEndAt ?? startedAt));
-            result.assistedElapsedMs =
-              result.outcome === 'pass'
-                ? result.assistedWallElapsedMs - result.assistedEvaluationOverheadMs
-                : null;
-          }
-          if (options.followUps && !options.stopped?.()) {
+          Object.assign(
+            result,
+            assistedExchangeTiming(entry, {
+              submittedAt: startedAt,
+              completedAt: finishedAt,
+              outcome: result.outcome,
+            }),
+          );
+          retainWaitingTiming(result, (entry.target ?? step).expected, view.pendingParts, [
+            ...(entry.requestIds ?? []),
+            ...(requestId ? [requestId] : []),
+          ]);
+          if (!options.stopped?.()) {
             const followUp = await selectFollowUp({
               step,
               attempt: result,
@@ -266,12 +301,14 @@ export async function runTextScenario(
               checkWaiting: (waiting) => environment.check(step, view, actions, waiting),
               waitingContext: () => environment.judgeContext(step, [], summaryText),
               judge: options.judge,
+              repliesEnabled: options.followUps ?? false,
             });
             if (followUp && !options.stopped?.()) {
               queue.splice(index + 1, 0, {
                 step: followUpStep(step, followUp),
                 parent: step.id,
                 target: step,
+                requestIds: [...(entry.requestIds ?? []), ...(requestId ? [requestId] : [])],
                 startedAt: entry.startedAt ?? startedAt,
                 previousResponseEndAt: finishedAt,
                 evaluationOverheadMs: result.assistedEvaluationOverheadMs ?? 0,
@@ -310,7 +347,10 @@ export async function runTextScenario(
               : (options.judgeCosts() ?? 0) - judgeBefore
             : 0;
         } catch (error) {
-          if (applicationTerminalStatus) {
+          if (result.scriptedStop) {
+            concludeUserStop(result, result.scriptedStop, Date.now() - startedAt);
+            result.diagnostics = observationDiagnostics(events.slice(offset), startedAt);
+          } else if (applicationTerminalStatus) {
             result.outcome = applicationTerminalStatus === 'canceled' ? 'aborted' : 'error';
             result.reason = `evaluation_application_${applicationTerminalStatus}`;
             result.observedEndMs = Date.now() - startedAt;
@@ -350,7 +390,8 @@ export async function runTextScenario(
             .find((event) => event.kind === 'task_started' && event.taskId === requestId);
           result.timing.queueMs = taskStarted ? Math.max(0, taskStarted.at - startedAt) : null;
         }
-        if (result.outcome !== 'pass' && !continuing) blocked = `${step.id}: ${result.outcome}`;
+        if ((result.outcome !== 'pass' || result.elapsedMs === null) && !continuing)
+          blocked = `${step.id}: ${result.outcome === 'pass' ? 'unfinished' : result.outcome}`;
         result.providerCalls = options.providerCalls
           ? options.providerCalls() - callsBefore
           : undefined;

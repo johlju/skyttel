@@ -49,7 +49,8 @@ export function summarizeProfile(
   const baseValues = values.filter((attempt) => !attempt.followUpFor);
   const followUps = values.filter((attempt) => attempt.followUpFor);
   const assessed = (attempt: Attempt, kind: NonNullable<Attempt['assessment']>['kind']) =>
-    attempt.outcome === 'fail' &&
+    (attempt.outcome === 'fail' ||
+      (attempt.outcome === 'pass' && kind === 'necessary_clarification')) &&
     attempt.assessment?.kind === kind &&
     Boolean(attempt.assessment.reason.trim()) &&
     !attempt.assessment.stateFailures.length &&
@@ -74,9 +75,11 @@ export function summarizeProfile(
       : undefined;
   };
   const completionTime = (attempt: Attempt) =>
-    attempt.outcome === 'pass'
-      ? attempt.elapsedMs
-      : (completedReply(attempt)?.assistedElapsedMs ?? null);
+    assessed(attempt, 'necessary_clarification')
+      ? (completedReply(attempt)?.assistedElapsedMs ?? null)
+      : attempt.outcome === 'pass'
+        ? attempt.elapsedMs
+        : null;
   const plannedValues = values.filter(
     (attempt) =>
       repetitions.includes(attempt.repetition) &&
@@ -143,14 +146,16 @@ export function summarizeProfile(
     .filter((attempt) => {
       const hardFailure = attempt.fixed.some(
         (failure) =>
-          ['unrequested_save_attempt', 'save_receipts_history', 'saved_map_changed'].includes(
-            failure,
-          ) || failure.startsWith('changed_type_'),
+          ['unrequested_save_attempt', 'saved_map_changed'].includes(failure) ||
+          (failure === 'save_receipts_history' && !assessed(attempt, 'necessary_clarification')) ||
+          failure.startsWith('changed_type_'),
       );
       const group =
         scenarios.find((scenario) => scenario.id === attempt.scenario)?.group ?? 'everyday';
       return (
         hardFailure ||
+        attempt.assessment?.kind === 'correctness_failure' ||
+        attempt.assessment?.kind === 'unnecessary_clarification' ||
         (attempt.outcome === 'fail' &&
           !(
             attempt.assessment?.kind === 'inconclusive' &&
@@ -223,7 +228,9 @@ export function summarizeProfile(
           ? scenarioTimes.reduce((sum, item) => sum + item.medianMs, 0) / scenarioTimes.length
           : null,
       outcomes: outcomeCounts(groupValues),
-      directSteps: groupValues.filter((attempt) => attempt.outcome === 'pass').length,
+      directSteps: groupValues.filter(
+        (attempt) => attempt.outcome === 'pass' && attempt.elapsedMs !== null,
+      ).length,
       assistedSteps: groupValues.filter((attempt) => completedReply(attempt)).length,
       unresolvedAssessments: unresolvedAssessments.filter((attempt) =>
         groupIds.has(attempt.scenario),

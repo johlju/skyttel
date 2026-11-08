@@ -201,7 +201,13 @@ test.each(['preserved', 'missing', 'judge-error'] as const)(
             throw new Error('assessment_provider_failed');
           return input.requirements.map(({ id }) => ({
             id,
-            outcome: id.includes('-inability-') ? 'pass' : 'fail',
+            outcome: id.endsWith('-retention')
+              ? retention === 'missing'
+                ? 'fail'
+                : 'pass'
+              : id.includes('-inability-')
+                ? 'pass'
+                : 'fail',
             reason: id.includes('-inability-')
               ? 'Explained limit and retained request verified.'
               : 'No completed change.',

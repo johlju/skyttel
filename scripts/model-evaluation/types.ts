@@ -7,24 +7,66 @@ export type FixtureProperty = {
   value?: string | number | boolean;
 };
 export type NamedRelationship = {
+  id?: string;
   source: string;
   type: string;
   target: string;
   properties?: FixtureProperty[];
+  lifecycle?: 'active' | 'ended';
 };
 export type FixtureObject = {
   id: string;
   type: string;
   name: string;
   properties?: FixtureProperty[];
+  lifecycle?: 'active' | 'ended';
+};
+export type ScenarioFixture = {
+  objects: FixtureObject[];
+  relationships: NamedRelationship[];
+  relationshipTypes: {
+    name: string;
+    description: string;
+    forwardLabel: string;
+    reverseLabel: string;
+  }[];
+  draft: { objects: Record<string, Record<string, unknown>> };
+};
+export type SemanticPropertyRule = {
+  kinds?: PropertyKind[];
+  value?: string | number | boolean;
+  values?: Partial<Record<PropertyKind, string | number | boolean>>;
+  id?: string;
+  empty?: true;
+};
+export type SemanticProperties = {
+  /** Independently stated meaning, carried forward across later requests. */
+  meaning?: string;
+  /** Existing property identities and complete values that must survive. */
+  preserve: string[];
+  /** Exactly this many additional properties, with bounded kinds/values. */
+  additions?: SemanticPropertyRule[];
+  anyOf?: SemanticPropertyRule[][];
 };
 export type Expected = {
   objects?: Record<string, Record<string, unknown>>;
+  /** Only explicitly listed fields vary; independent requirements judge their
+   * meaning using the complete observed map, never a success claim. */
+  semanticObjects?: Record<string, { name?: true; properties?: SemanticProperties }>;
+  semanticRelationships?: (Omit<NamedRelationship, 'properties'> & {
+    properties: SemanticProperties;
+  })[];
+  /** Bounded alternative deltas on the same pre-step state. Exactly one whole
+   * state must match; neither the prompt nor model output generates a branch. */
+  anyOf?: Expected[];
+  removeObjects?: string[];
   addRelationships?: NamedRelationship[];
   removeRelationships?: NamedRelationship[];
   objectTypes?: { name: string }[];
   saveAttempts?: number;
   saves?: number;
+  /** Independently declared requests whose unfinished meaning must remain in
+   * active pending work. Presence is fixed-checked; preservation is judged. */
   preservedRequests?: string[];
   requirements: string[];
 };
@@ -46,8 +88,18 @@ export type ScenarioStep = {
   transition?: string;
   expected: Expected;
   followUps?: FollowUp[];
+  /** Safe waiting contract for a valid question without a scripted answer.
+   * Preserve the original remaining meaning; never establishes task completion. */
+  clarification?: Expected & { preservedRequests: string[] };
   /** Alternate safe state, never a successful completion of this step. */
   safeInability?: Expected;
+  /** A declared public Stop experiment, never an ordinary successful mutation. */
+  userStop?: {
+    trigger: 'first-working-after-input';
+    maximumObservationMs: number;
+    /** Complete independently permitted atomic effects before cancellation. */
+    allowedStates: Expected[];
+  };
 };
 export const scenarioGroups = ['everyday', 'long_conversation', 'complex'] as const;
 export type ScenarioGroup = (typeof scenarioGroups)[number];
@@ -60,20 +112,12 @@ export type Scenario = {
   history?: string;
   startVariant?: string;
   selection?: string;
+  /** Complete independent starting facts; never an extension inferred from output. */
+  fixture?: ScenarioFixture;
   steps: ScenarioStep[];
 };
 export type Catalog = {
-  base: {
-    objects: FixtureObject[];
-    relationships: NamedRelationship[];
-    relationshipTypes: {
-      name: string;
-      description: string;
-      forwardLabel: string;
-      reverseLabel: string;
-    }[];
-    draft: { objects: Record<string, Record<string, unknown>> };
-  };
+  base: ScenarioFixture;
   variants: Record<
     string,
     {
@@ -126,6 +170,34 @@ export type Attempt = {
     successfulCompletionMs: number | null;
   };
   observedEndMs?: number;
+  scriptedStop?: {
+    contract: 'public-user-stop-v1';
+    verdict: 'pass' | 'fail' | 'inconclusive';
+    trigger: 'first-working-after-input';
+    requestedAt?: number;
+    acknowledgedAt?: number;
+    terminalAt?: number;
+    audioQuiescedAt?: number;
+    settledAt?: number;
+    terminalStatus?: string;
+    matchedState?: number;
+    pendingAtStop?: { batch: boolean; save: boolean; operationIds: string[] };
+    pendingAtAcknowledgment?: { batch: boolean; save: boolean };
+    stateCapturedAt?: number;
+    admittedMutationSpans?: {
+      spanId: string | null;
+      tool: string;
+      endedBeforeAcknowledgment: boolean;
+    }[];
+    stateFailures: string[];
+    /** Conservative upper input-to-Stop duration, including renderer retirement.
+     * Device uncertainty stays in endpointBounds; never successfulCompletionMs. */
+    endpointMs: number | null;
+    endpointBounds?: import('./playback.js').TimeInterval;
+    controlMs?: number | null;
+    reason?: string;
+    limitation: string;
+  };
   playback?: {
     contract: 'voice-rendered-v1';
     input?: {
@@ -137,6 +209,7 @@ export type Attempt = {
       sourceStartPosition?: number;
       speechPosition?: number;
       ended: import('./playback.js').TimeInterval;
+      started?: import('./playback.js').TimeInterval;
     };
     recordingSha256?: string;
     sampleRate?: number;
@@ -181,6 +254,7 @@ export type Attempt = {
       | 'necessary_clarification'
       | 'unnecessary_clarification'
       | 'safe_inability'
+      | 'correctness_failure'
       | 'inconclusive';
     reason: string;
     stateFailures: string[];

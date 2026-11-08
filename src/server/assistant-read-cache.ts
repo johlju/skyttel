@@ -35,6 +35,9 @@ export function assistantReadCache(
   // be present in the model's context.
   const sources = new Map<string, string>();
   const invalidated = new Set<string>();
+  // Calls completed since the last invalidation check can already contain the
+  // replacement facts. Older calls need no exemption from the next change.
+  const completedCalls = new Map<string, { name: string; stamp: string }>();
   let bytes = 0;
   let generation = 0;
   const saved = ['object_type', 'relationship_type', 'map_object', 'map_relationship'].map(
@@ -116,8 +119,14 @@ export function assistantReadCache(
         const current = snapshot(name);
         if (current !== undefined) track(name, current);
       }
-      const changed = [...invalidated].map((name) => ({ name }));
+      const changed = [...invalidated].map((name) => {
+        const currentCalls = [...completedCalls]
+          .filter(([, read]) => read.name === name && read.stamp === sources.get(name))
+          .map(([id]) => id);
+        return { name, ...(currentCalls.length ? { currentCalls } : {}) };
+      });
       invalidated.clear();
+      completedCalls.clear();
       return changed;
     },
     clear() {
@@ -126,6 +135,7 @@ export function assistantReadCache(
       pending.clear();
       sources.clear();
       invalidated.clear();
+      completedCalls.clear();
       bytes = 0;
     },
     async read<T>(
@@ -133,6 +143,7 @@ export function assistantReadCache(
       args: Record<string, unknown>,
       load: () => Promise<T>,
       policy: 'shared' | 'lifecycle' = 'shared',
+      contextCallId?: string,
     ): Promise<T> {
       // Lifecycle requests can retire the work that owns an outstanding read.
       // Reuse completed facts, but never wait for that work's transport response.
@@ -144,7 +155,10 @@ export function assistantReadCache(
         const epoch = generation;
         const key = assistantReadKey(name, args);
         const cached = entries.get(key);
-        if (cached?.stamp === before) return structuredClone(cached.value) as T;
+        if (cached?.stamp === before) {
+          if (contextCallId) completedCalls.set(contextCallId, { name, stamp: before });
+          return structuredClone(cached.value) as T;
+        }
         // Errors and reads that straddle a content change never become cached facts.
         let loading = policy === 'lifecycle' ? undefined : pending.get(key);
         if (loading?.stamp !== before || loading.epoch !== epoch) {
@@ -161,6 +175,10 @@ export function assistantReadCache(
           if (policy === 'lifecycle' && attempt === 0) continue;
           throw new MapError('assistant_draft_changed', 409);
         }
+        // Only a successful, snapshot-checked result can replace old context
+        // facts. Keep its call identity until the next invalidation check, even
+        // when the result is too large to cache or is subsequently evicted.
+        if (contextCallId) completedCalls.set(contextCallId, { name, stamp: before });
         const size =
           Buffer.byteLength(JSON.stringify(value)) +
           Buffer.byteLength(before) +

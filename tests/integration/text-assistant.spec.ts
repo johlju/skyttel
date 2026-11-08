@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import type { Page } from '@playwright/test';
 import type { SaveOperation, SaveReceipt } from '../../src/shared/map.js';
-import type { TextAssistantReview, TextAssistantView } from '../../src/shared/text-assistant.js';
+import type { TextAssistantView } from '../../src/shared/text-assistant.js';
 import { controlledBatchDelivery } from '../support/batch-response-delivery.js';
 import {
   closeSupportDialog,
@@ -742,7 +742,7 @@ test('TEXT-01: familjeärendet sparas samlat med bevarad oskickad formulärtext'
     await page.goto(app.origin);
     await consent(page);
     await expect(await showDraft(page)).toContainText('Lo Lind');
-    await send(page, 'Behåll Lo-förslaget, rätta priset till 189 kr och spara.');
+    await send(page, 'Behåll Lo-förslaget, rätta priset till 189 kr och spara mina ändringar.');
     await expect.poll(() => model.requests.length).toBe(1);
     await closeTextView(page);
     await editTableObject(page, 'Kim Exempel');

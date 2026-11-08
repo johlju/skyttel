@@ -1,0 +1,174 @@
+{
+  "format": "skyttel-optimization-profiles-v1",
+  "checkedAt": "2026-11-04",
+  "backendProfiles": [
+    {
+      "id": "terra-6.1-high-668",
+      "provider": "openai",
+      "model": "gpt-6.1-terra",
+      "role": "backend",
+      "effort": "high",
+      "tokens": 1050000,
+      "maxInputTokens": 922000,
+      "modelMaxOutputTokens": 128000,
+      "maxOutputTokens": 128000,
+      "serviceTier": "default",
+      "checkedAt": "2026-11-04",
+      "prices": {
+        "input": 1,
+        "cached": 0.05,
+        "cacheWrite": 1.25,
+        "output": 5,
+        "longContextThreshold": 272000,
+        "longInputMultiplier": 2,
+        "longOutputMultiplier": 1.5
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-6.1-terra",
+        "https://developers.openai.com/api/docs/pricing"
+      ]
+    },
+    {
+      "id": "sol-6.1-high-668",
+      "provider": "openai",
+      "model": "gpt-6.1-sol",
+      "role": "backend",
+      "effort": "high",
+      "tokens": 1050000,
+      "maxInputTokens": 922000,
+      "modelMaxOutputTokens": 128000,
+      "maxOutputTokens": 128000,
+      "serviceTier": "default",
+      "checkedAt": "2026-11-04",
+      "prices": {
+        "input": 2,
+        "cached": 0.1,
+        "cacheWrite": 2.5,
+        "output": 10,
+        "longContextThreshold": 272000,
+        "longInputMultiplier": 2,
+        "longOutputMultiplier": 1.5
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+        "https://developers.openai.com/api/docs/pricing"
+      ]
+    }
+  ],
+  "judgeProfile": {
+    "id": "judge-sol-high",
+    "provider": "openai",
+    "model": "gpt-6.1-sol",
+    "role": "judge",
+    "effort": "high",
+    "tokens": 1050000,
+    "maxInputTokens": 922000,
+    "modelMaxOutputTokens": 128000,
+    "maxOutputTokens": 4096,
+    "serviceTier": "default",
+    "checkedAt": "2026-11-04",
+    "prices": {
+      "input": 2,
+      "cached": 0.1,
+      "cacheWrite": 2.5,
+      "output": 10,
+      "longContextThreshold": 272000,
+      "longInputMultiplier": 2,
+      "longOutputMultiplier": 1.5
+    },
+    "sources": [
+      "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+      "https://developers.openai.com/api/docs/pricing"
+    ]
+  },
+  "voiceProfiles": [
+    {
+      "id": "live-terra-6.1-high-668",
+      "provider": "openai",
+      "model": "gpt-live-1",
+      "tokens": 128000,
+      "usdPerMinute": 0.05,
+      "checkedAt": "2026-11-04",
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-live-1",
+        "https://developers.openai.com/api/docs/guides/voice-latency-cost"
+      ],
+      "backend": "terra-6.1-high-668"
+    },
+    {
+      "id": "live-sol-6.1-high-668",
+      "provider": "openai",
+      "model": "gpt-live-1",
+      "tokens": 128000,
+      "usdPerMinute": 0.05,
+      "checkedAt": "2026-11-04",
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-live-1",
+        "https://developers.openai.com/api/docs/guides/voice-latency-cost"
+      ],
+      "backend": "sol-6.1-high-668"
+    }
+  ],
+  "playbackAssessor": {
+    "id": "whisper-1-sv-668",
+    "model": "whisper-1",
+    "language": "sv",
+    "usdPerMinute": 0.006,
+    "billingQuantumSeconds": null,
+    "alignmentMarginMs": 100,
+    "minimumAverageLogProbability": -1,
+    "maximumNoSpeechProbability": 0.5,
+    "maximumCandidates": 8,
+    "checkedAt": "2026-11-04",
+    "sources": [
+      "https://developers.openai.com/api/docs/models/whisper-1",
+      "https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create"
+    ],
+    "status": "blocked_billing_quantum_unverified",
+    "thresholdStatus": "requires_calibration_not_provider_facts"
+  },
+  "voiceAccounting": {
+    "status": "blocked_short_session_usage_semantics",
+    "creationSeconds": 15,
+    "credit": "Credited against running duration; never add 15 seconds to established running duration.",
+    "source": "https://developers.openai.com/api/docs/guides/voice-latency-cost"
+  },
+  "counting": {
+    "enabled": false,
+    "reason": "No verified counting fee. Conservative whole-context reservation; no counting API request."
+  },
+  "cachePolicy": {
+    "requestTtl": "30m",
+    "originalApplication": "Omits prompt_cache_options and explicit breakpoint TTL; provider default 30m applies.",
+    "proposedApplication": "Explicit prompt_cache_options.ttl=30m.",
+    "judge": "Omits prompt_cache_options and explicit breakpoint TTL; provider default 30m applies.",
+    "source": "https://developers.openai.com/api/docs/guides/prompt-caching",
+    "comparison": "Record actual cached_tokens/cache_write_tokens; never assume a cache hit."
+  },
+  "sources": [
+    {
+      "url": "https://developers.openai.com/api/docs/guides/prompt-caching.md",
+      "sha256": "8c672dafd6a332d4b9ad7464aefa3ca4f6b0fffa8bf66bb5ee087e1b39152711"
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/models/gpt-6.1-terra.md",
+      "sha256": "cd34faa8904d85961ab5fe270f079b8be45a9c876af6c809b38b2c069f687a7a"
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/models/gpt-6.1-sol.md",
+      "sha256": "ebcc1b0ae6c729a64411dacf303c0ae8b91b11a9be176dc8997b2652bec4b9b0"
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/pricing.md",
+      "sha256": "50c07fca566eacf03589f01047338aa350905b319d15e5f908de3997c542677b"
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/guides/voice-latency-cost.md",
+      "sha256": "db4feb30fa3fc1c1dc65861b948cc03c44f5b35e0dd15d11195820f745d2ca49"
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/models/whisper-1.md",
+      "sha256": "66f897ed8b79fcffa1b02bdf35fc5c681bcc6b0623d4fc6dee4ad0e72500db9f"
+    }
+  ]
+}

@@ -6,7 +6,7 @@ import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation, type Identity } from '../../support/installation.js';
 import { liveProvider } from '../../support/live-provider.js';
-import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
+import { lastToolResult, modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
 let browser: APIRequestContext;
@@ -37,7 +37,11 @@ async function setup(provider: typeof fetch, live?: ReturnType<typeof liveProvid
   ).json() as Promise<TextAssistantView>;
 }
 
-async function send(session: TextAssistantView, text: string) {
+async function send(
+  session: TextAssistantView,
+  text: string,
+  answerTo?: { id: string; revision: number }[],
+) {
   const response = await browser.post(`${path}/${session.id}/messages`, {
     headers: { origin: app.origin },
     data: {
@@ -46,6 +50,7 @@ async function send(session: TextAssistantView, text: string) {
       draftVersion: session.review.version,
       contentVersion: session.review.contentVersion,
       text,
+      answerTo,
     },
   });
   expect(response.status()).toBe(202);
@@ -365,6 +370,15 @@ test.each(['clarify', 'malformed', 'tool', 'stale', 'invalid'] as const)(
     expect(events.mock.calls).toEqual([]);
     if (kind === 'clarify') {
       expect(ended.questions).toEqual(['Vilka uppgifter menar du?']);
+      expect(ended.pendingParts).toEqual([
+        expect.objectContaining({
+          kind: 'change',
+          request: 'Det där.',
+          question: 'Vilka uppgifter menar du?',
+          status: 'waiting',
+          dependsOnDraft: true,
+        }),
+      ]);
       expect(model.requests).toEqual([]);
     } else
       expect(ended.error).toBe(
@@ -387,11 +401,35 @@ test('literal instruction text, mixed edits, clarification and a later save pres
         String(input.input.findLast((item) => item.role === 'user')?.content),
       );
       if (current.message === 'Spara hela utkastet.') return [modelMessage('Sparar utkastet.')];
+      const parts = lastToolResult(input)?.pendingParts ?? current.pendingParts;
+      const waiting = parts.find((part: { status: string }) => part.status === 'waiting');
+      if (waiting)
+        return [
+          modelTool('ask_questions', {
+            questions: [],
+            updates: [
+              {
+                id: waiting.id,
+                revision: waiting.revision,
+                action: 'clarify',
+                messageId: current.messageId,
+                evidence: current.message,
+              },
+            ],
+            continueResponse: true,
+          }),
+        ];
       return [
         modelTool('submit_changes', {
           version: current.draft.version,
           contentVersion: current.draft.contentVersion,
           completion: 'draft',
+          resolves: parts
+            .filter((part: { status: string }) => part.status === 'ready')
+            .map((part: { id: string; revision: number }) => ({
+              id: part.id,
+              revision: part.revision,
+            })),
           operations: [
             {
               name: 'propose_object',
@@ -754,22 +792,448 @@ test('the automatic save fallback cannot expand a literal-name edit into saving'
   expect(map.objects).toEqual([]);
 });
 
-test('answering a scope clarification with a read request clears the transient question', async () => {
-  let interpreted = false;
+test('answering a scope clarification with a read request completes its retained information part', async () => {
+  let interpreted = 0;
   const model = textModel(
-    () => [modelMessage('Cykeln finns i kartan.')],
+    (input) => {
+      const current = JSON.parse(
+        String(input.input.findLast((item) => item.role === 'user')?.content),
+      );
+      const part = current.pendingParts[0];
+      return [
+        modelTool('ask_questions', {
+          questions: [],
+          updates: [
+            {
+              id: part.id,
+              revision: part.revision,
+              action: 'clarify',
+              messageId: current.messageId,
+              evidence: current.message,
+              answer: 'Cykeln finns i kartan.',
+            },
+          ],
+        }),
+      ];
+    },
     () => {
-      const scope = interpreted
-        ? { mode: 'read', request: 'Read the bicycle.' }
-        : { mode: 'clarify', request: 'Vilket objekt vill du läsa?' };
-      interpreted = true;
+      const scope =
+        interpreted > 1
+          ? { mode: 'read', request: 'Read the bicycle.' }
+          : {
+              mode: 'clarify',
+              request: interpreted ? 'Vilken cykel vill du läsa?' : 'Vilket objekt vill du läsa?',
+              clarificationKind: 'information',
+            };
+      interpreted++;
       return [modelMessage(JSON.stringify(scope))];
     },
   );
   const asked = await send(await setup(model.provider), 'Läs det där.');
   expect(asked.questionPending).toBe(true);
-  const answered = await send(asked, 'Läs cykeln.');
+  expect(asked.pendingParts?.[0]).toMatchObject({
+    kind: 'information',
+    request: 'Läs det där.',
+    status: 'waiting',
+  });
+  const originalPart = asked.pendingParts?.[0];
+  if (!originalPart) throw new Error('Expected the original pending information request.');
+  const rephrased = await send(asked, 'Cykeln.', [
+    { id: originalPart.id, revision: originalPart.revision },
+  ]);
+  expect(rephrased.pendingParts).toHaveLength(1);
+  expect(rephrased.questions).toEqual(['Vilken cykel vill du läsa?']);
+  const currentPart = rephrased.pendingParts?.[0];
+  if (!currentPart) throw new Error('Expected the rephrased pending information request.');
+  const answered = await send(rephrased, 'Läs den blå cykeln.', [
+    { id: currentPart.id, revision: currentPart.revision },
+  ]);
   expect(answered.error).toBeUndefined();
   expect(answered.questionPending).toBe(false);
   expect(answered.questions).toBeUndefined();
+  expect(answered.pendingParts?.[0]).toMatchObject({
+    id: asked.pendingParts?.[0].id,
+    status: 'completed',
+  });
+});
+
+test('ordinary text clarification retains the selected task and leaves unrelated work separate', {
+  tags: ['technical'],
+}, async () => {
+  let interpreted = 0;
+  const model = textModel(
+    () => {
+      throw new Error('An unresolved scope question must not execute work.');
+    },
+    (input) => {
+      if (input.instructions.startsWith('SKYTTEL_TURN_CLARIFICATION')) {
+        const { current, untrusted } = JSON.parse(String(input.input[0].content));
+        if (current === 'Den andra.') {
+          const part = untrusted.parts.find(
+            (part: { request: string }) => part.request === 'Läs den där.',
+          );
+          return [
+            modelMessage(
+              JSON.stringify({
+                decision: 'rephrase',
+                parts: [{ id: part.id, revision: part.revision }],
+              }),
+            ),
+          ];
+        }
+        return [modelMessage('{"decision":"new"}')];
+      }
+      return [
+        modelMessage(
+          JSON.stringify({
+            mode: 'clarify',
+            request: [
+              'Vilket objekt vill du läsa?',
+              'Vilken uppgift vill du ändra?',
+              'Vilken av de två vill du läsa?',
+            ][interpreted++],
+            clarificationKind: interpreted === 1 ? 'information' : 'change',
+          }),
+        ),
+      ];
+    },
+  );
+  const first = await send(await setup(model.provider), 'Läs den där.');
+  const original = first.pendingParts?.[0];
+  if (!original) throw new Error('Expected a retained information request.');
+  const separate = await send(first, 'Ändra den där andra uppgiften.');
+  expect(separate.pendingParts).toHaveLength(2);
+  const unrelated = separate.pendingParts?.[1];
+  const repeated = await send(separate, 'Den andra.');
+  expect(repeated.error).toBeUndefined();
+  expect(repeated.pendingParts).toHaveLength(2);
+  expect(repeated.pendingParts?.[0]).toMatchObject({
+    id: original.id,
+    revision: original.revision + 1,
+    messageId: original.messageId,
+    request: 'Läs den där.',
+    kind: 'information',
+    dependsOnDraft: original.dependsOnDraft,
+    question: 'Vilken av de två vill du läsa?',
+    status: 'waiting',
+  });
+  expect(repeated.pendingParts?.[1]).toEqual(unrelated);
+  expect(repeated.questions).toEqual([
+    'Vilken av de två vill du läsa?',
+    'Vilken uppgift vill du ändra?',
+  ]);
+  expect(repeated.review).toEqual(first.review);
+  expect(repeated.operations).toEqual([]);
+});
+
+test('an ambiguous ordinary text reply preserves pending identities and asks which request is meant', {
+  tags: ['technical'],
+}, async () => {
+  let interpreted = 0;
+  let beginMatching!: () => void;
+  const matching = new Promise<void>((resolve) => {
+    beginMatching = resolve;
+  });
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const model = textModel(
+    () => {
+      throw new Error('An unresolved question must not execute work.');
+    },
+    (input) => {
+      if (input.instructions.startsWith('SKYTTEL_TURN_CLARIFICATION')) {
+        beginMatching();
+        return held.then(() => [
+          modelMessage(
+            '{"decision":"unclear","question":"Vilken av dina väntande uppgifter menar du?"}',
+          ),
+        ]);
+      }
+      return [
+        modelMessage(
+          JSON.stringify({
+            mode: 'clarify',
+            request: interpreted++ ? 'Vilken menar du?' : 'Vilket objekt vill du läsa?',
+            clarificationKind: 'information',
+          }),
+        ),
+      ];
+    },
+  );
+  const first = await send(await setup(model.provider), 'Läs den där.');
+  const followup = send(first, 'Den andra.');
+  await matching;
+  const working = await (await browser.get(`${path}/${first.id}`)).json();
+  release();
+  expect(working.phase).toBe('working');
+  expect(working.pendingParts).toEqual(first.pendingParts);
+  const second = await followup;
+  expect(second.error).toBeUndefined();
+  expect(second.pendingParts).toEqual(first.pendingParts);
+  expect(second.reply).toContain('Vilken av dina väntande uppgifter menar du?');
+  expect(second.questionPending).toBe(true);
+  expect(second.review).toEqual(first.review);
+});
+
+test.each(['malformed', 'stale', 'missing', 'duplicate', 'empty'] as const)(
+  'an invalid %s clarification association leaves existing pending work unchanged',
+  { tags: ['technical'] },
+  async (failure) => {
+    const model = textModel(
+      () => {
+        throw new Error('An unresolved question must not execute work.');
+      },
+      (input) => {
+        if (input.instructions.startsWith('SKYTTEL_TURN_CLARIFICATION')) {
+          if (failure === 'malformed') return [modelMessage('{"decision":"complete"}')];
+          const { untrusted } = JSON.parse(String(input.input[0].content));
+          const { id, revision } = untrusted.parts[0];
+          const valid = { id, revision };
+          const parts =
+            failure === 'stale'
+              ? [{ id, revision: revision + 1 }]
+              : failure === 'missing'
+                ? [{ id: 'missing', revision }]
+                : failure === 'duplicate'
+                  ? [valid, valid]
+                  : [];
+          return [modelMessage(JSON.stringify({ decision: 'rephrase', parts }))];
+        }
+        return [modelMessage('{"mode":"clarify","request":"Vilket objekt menar du?"}')];
+      },
+    );
+    const first = await send(await setup(model.provider), 'Ändra den där.');
+    const second = await send(first, 'Den andra.');
+    expect(second.error).toBe(
+      ['malformed', 'empty'].includes(failure)
+        ? 'assistant_scope_unavailable'
+        : 'assistant_pending_part_changed',
+    );
+    expect(second.pendingParts).toEqual(first.pendingParts);
+    expect(second.review).toEqual(first.review);
+    expect(second.saveBlocked).toBe(true);
+    expect(second.operations).toEqual([]);
+  },
+);
+
+test.each(['change', 'information'] as const)(
+  'a repeated scope %s clarification preserves the original pending identity and rejects stale replies',
+  { tags: ['technical'] },
+  async (kind) => {
+    const original = `Hantera den uppgift som jag menar. ${'Bevara tidigare uppgifter. '.repeat(45)}`;
+    let interpreted = 0;
+    const model = textModel(
+      () => {
+        throw new Error('An unresolved scope question must not execute work.');
+      },
+      () => [
+        modelMessage(
+          JSON.stringify({
+            mode: 'clarify',
+            request:
+              interpreted++ === 0 ? 'Vilken uppgift menar du?' : 'Vilken av de två menar du?',
+            clarificationKind:
+              interpreted === 1 ? kind : kind === 'change' ? 'information' : 'change',
+          }),
+        ),
+      ],
+    );
+    const first = await send(await setup(model.provider), original);
+    const part = first.pendingParts?.[0];
+    if (!part) throw new Error('Expected the original pending request.');
+    const second = await send(first, 'Den andra.', [{ id: part.id, revision: part.revision }]);
+    expect(second.error).toBeUndefined();
+    expect(second.pendingParts).toHaveLength(1);
+    expect(second.pendingParts?.[0]).toMatchObject({
+      id: part.id,
+      revision: part.revision + 1,
+      messageId: part.messageId,
+      kind,
+      request: original,
+      question: 'Vilken av de två menar du?',
+      dependsOnDraft: part.dependsOnDraft,
+      status: 'waiting',
+    });
+    expect(second.questions).toEqual(['Vilken av de två menar du?']);
+    expect(second.saveBlocked).toBe(kind === 'change');
+    expect(second.review).toEqual(first.review);
+    expect(second.operations).toEqual([]);
+    for (const reference of [
+      { id: part.id, revision: part.revision },
+      { id: 'missing-part', revision: 0 },
+    ]) {
+      const response = await browser.post(`${path}/${second.id}/messages`, {
+        headers: { origin: app.origin },
+        data: {
+          requestId: crypto.randomUUID(),
+          revision: second.revision,
+          draftVersion: second.review.version,
+          contentVersion: second.review.contentVersion,
+          text: 'Den här.',
+          answerTo: [reference],
+        },
+      });
+      expect(response.status()).toBe(409);
+      expect(await response.json()).toMatchObject({ error: 'assistant_pending_part_changed' });
+    }
+    const retained = await (await browser.get(`${path}/${second.id}`)).json();
+    expect(retained.pendingParts).toEqual(second.pendingParts);
+    expect(interpreted).toBe(2);
+  },
+);
+
+test.each(['change', 'information'] as const)(
+  'a retained scope %s clarification preserves the exact long request and enforces its save boundary',
+  { tags: ['technical'] },
+  async (kind) => {
+    const original = `Hantera uppgiften när rätt objekt är identifierat. ${'Behåll uppgifterna och deras historik. '.repeat(35)}`;
+    const model = textModel(
+      (input) => {
+        const current = JSON.parse(
+          String(input.input.findLast((item) => item.role === 'user')?.content),
+        );
+        return [
+          modelTool('save_draft', {
+            version: current.draft.version,
+            contentVersion: current.draft.contentVersion,
+          }),
+        ];
+      },
+      (input) => {
+        if (!input.instructions.startsWith('SKYTTEL_TURN_SCOPE'))
+          return [modelMessage('{"decision":"allow","complete":true,"fulfillsRequest":true}')];
+        const { current } = JSON.parse(String(input.input[0].content));
+        return [
+          modelMessage(
+            JSON.stringify(
+              current === original
+                ? { mode: 'clarify', request: 'Vilket objekt menar du?', clarificationKind: kind }
+                : { mode: 'work', request: current, responseRequired: false },
+            ),
+          ),
+        ];
+      },
+    );
+    const started = await setup(model.provider);
+    await proposal(browser, 'manual', 'Manuellt utkast');
+    const before = await (await browser.get(`${path}/${started.id}`)).json();
+    const asked = await send(before, original);
+    expect(asked.pendingParts?.[0]).toMatchObject({
+      kind,
+      request: original,
+      question: 'Vilket objekt menar du?',
+      status: 'waiting',
+    });
+    expect(asked.saveBlocked).toBe(kind === 'change');
+    expect(asked.review).toEqual(before.review);
+    const saved = await send(asked, 'Spara hela utkastet.');
+    expect(saved.pendingParts?.[0]).toMatchObject({
+      id: asked.pendingParts?.[0].id,
+      status: 'waiting',
+    });
+    if (kind === 'information') {
+      expect(saved.receipt?.changes).toHaveLength(1);
+      expect(saved.review.changes).toEqual([]);
+    } else {
+      expect(saved.receipt).toBeUndefined();
+      expect(saved.review.changes).toEqual(asked.review.changes);
+      expect(saved.operations).toEqual([]);
+    }
+  },
+);
+
+test('a requested relationship can use a saved type that no existing relationship uses', async () => {
+  const typeId = 'unused-delivery';
+  const model = textModel(
+    (request) => {
+      const current = JSON.parse(
+        String(request.input.findLast((item) => item.role === 'user')?.content),
+      );
+      return [
+        modelTool('submit_changes', {
+          version: current.draft.version,
+          contentVersion: current.draft.contentVersion,
+          completion: 'draft',
+          operations: [
+            {
+              name: 'propose_relationship',
+              arguments: {
+                id: 'delivery',
+                baseRevision: null,
+                typeRevision: 1,
+                value: { typeId, sourceId: 'source', targetId: 'target' },
+              },
+            },
+          ],
+        }),
+      ];
+    },
+    (request) => {
+      if (request.instructions.startsWith('SKYTTEL_TURN_SCOPE'))
+        return [
+          modelMessage(
+            JSON.stringify({
+              mode: 'work',
+              request: 'Skapa Levererar till från Tjänsten till Motparten.',
+              responseRequired: false,
+            }),
+          ),
+        ];
+      const data = JSON.parse(String(request.input[0].content)).untrusted.data;
+      const definition = data.map.relationshipTypes.find(
+        (type: { id: string }) => type.id === typeId,
+      );
+      return [
+        modelMessage(
+          JSON.stringify(
+            definition?.name === 'Levererar till' &&
+              definition.forwardLabel === 'levererar till' &&
+              definition.reverseLabel === 'levereras av' &&
+              data.map.relationshipTypes.length === 1
+              ? { decision: 'allow', complete: true, fulfillsRequest: true }
+              : { decision: 'incomplete' },
+          ),
+        ),
+      ];
+    },
+  );
+  let session = await setup(model.provider);
+  await proposal(browser, 'source', 'Tjänsten');
+  await proposal(browser, 'target', 'Motparten');
+  const mapPath = path.replace('/text-assistant', '/map');
+  let state = await (await browser.get(mapPath)).json();
+  const type = await browser.post(`${mapPath}/relationship-type`, {
+    headers: { origin: app.origin },
+    data: {
+      version: state.draft.version,
+      contentVersion: state.contentVersion,
+      id: typeId,
+      baseRevision: null,
+      value: {
+        name: 'Levererar till',
+        description: 'En tjänst levererar till en annan.',
+        forwardLabel: 'levererar till',
+        reverseLabel: 'levereras av',
+      },
+    },
+  });
+  expect(type.status(), await type.text()).toBe(200);
+  state = await (await browser.get(mapPath)).json();
+  const saved = await browser.post(`${mapPath}/save`, {
+    headers: { origin: app.origin },
+    data: {
+      version: state.draft.version,
+      contentVersion: state.contentVersion,
+      operationId: 'relationship-fixture',
+    },
+  });
+  expect(saved.status(), await saved.text()).toBe(200);
+  session = await (await browser.get(`${path}/${session.id}`)).json();
+  const result = await send(session, 'Tjänsten ska leverera till Motparten.');
+  expect(result.error).toBeUndefined();
+  expect(result.review.relationships).toMatchObject([
+    { id: 'delivery', after: { typeId, sourceId: 'source', targetId: 'target' } },
+  ]);
 });

@@ -56,7 +56,13 @@ export function failAttempt(
   observedEndMs: number,
   stop: { stopped: boolean; reason: string | null; attempted: boolean },
 ) {
-  result.outcome = stop.stopped ? (stop.attempted ? 'aborted' : 'not_run') : 'error';
+  result.outcome = stop.stopped
+    ? stop.attempted
+      ? 'aborted'
+      : 'not_run'
+    : error instanceof Error && error.message === 'evaluation_state_identity_ambiguous'
+      ? 'inconclusive'
+      : 'error';
   result.reason = stop.stopped
     ? (stop.reason ?? 'evaluation_stopped')
     : error instanceof Error

@@ -34,6 +34,17 @@ recognized speech and available facts. Record the reason and judgment evidence
 separately from the original automated outcome. A question may be correct
 handling while the task remains unfinished. Unnecessary questions fail.
 
+Assess question validity separately from scripted-reply coverage. A necessary
+safe clarification without a matching reply is valid handling with untested
+continuation. Preserve the raw outcome and publish the verified assessment;
+assign no successful completion time or full qualification. Use a declared
+safe waiting contract that checks retained work and independent obligations.
+For a question without reply branches, declare `clarification` on the step,
+including nonempty response requirements and the exact original request in
+`preservedRequests`. Wrong changes, unauthorized saves, missing independent
+answers and unnecessary questions remain failures. A missing reply alone
+establishes neither validity nor a model error.
+
 Use the declared conditional reply and verify the original target before
 counting assisted completion. Report direct and assisted completion separately.
 Include the full exchange's additional waiting, calls and costs. Preserve

@@ -1,0 +1,36 @@
+{
+  "id": "overlap-public-stop-v1",
+  "modality": "text",
+  "models": ["gpt-6.1-terra", "gpt-6.1-sol"],
+  "effort": "high",
+  "repetitions": [1, 2, 3, 4, 5],
+  "targetScenarios": ["overlap-success"],
+  "targetMaximumRatio": 0.8,
+  "otherMaximumRatio": 1.1,
+  "maximumRelativeRange": 0.2,
+  "applicationCommit": "2f4dd4ad694aa0030ef2b1d6f64b00e8abacc073",
+  "variants": ["sequential", "overlap"],
+  "outcomes": {
+    "overlap-success": "success",
+    "overlap-clarification": "clarification",
+    "overlap-early-stop": "early_stop"
+  },
+  "stopContract": "public-user-stop-v1",
+  "dialogTimingContract": "scripted-dialog-wait-v1",
+  "dialogTiming": "First input-end/submission through final correct state and complete delivered/rendered response, minus individually measured harness judging/routing/bookkeeping gaps. Required later spoken reply durations remain inside wait. Preserve wall, gap, reply-input and application-wait intervals plus cumulative response wait as a separate diagnostic. Use the conservative upper application-wait bound; retain lower/upper ratio bounds and mark threshold-crossing uncertainty inconclusive. Missing, incompatible or out-of-order clocks never permit a sum-of-turns substitution.",
+  "stopMaximumRatio": 1.1,
+  "authorization": "unrun; explicit separate authorization required for every paid layer",
+  "defaultDecision": "retain sequential; any later change requires executed comparable correctness, timing and cost evidence and separate review",
+  "accounting": "Shared per-run ledger includes all 43 calibration controls, backend, independent scope/checking, summaries, Live creations/reconnects, rendered-recording recognition, semantic judgments and optional counting. Unknown usage retains holds and stops new paid work. No user ceiling is assumed.",
+  "limits": "Stop after the first observed correlated working status following full input drain. No held real provider, no fixed processing deadline, no implicit retry. Missed trigger, unresolved registered effects, unknown charges or incomplete rendering remain visible and inconclusive. Paid execution may stop at the first canceled request if final provider usage is unavailable.",
+  "execution": {
+    "configuration": "Copy overlap-execution-template.json to a private absolute path. Supply the final clean common evaluator commit, immutable application path, exact profile, modality and local evidence. Root supplies the result issue only after authorization. Omit limitUsd unless the user supplies a ceiling.",
+    "commonProfiles": "run-overlap.ts consumes campaign.ts from the separate optimization preparation after reviewed composition; no old registry Terra alias is used.",
+    "prepareCommand": "npm_config_cache=/workspace/tmp/npm-cache npm run test:env -- tsx scripts/model-evaluation/run-overlap.ts prepare /absolute/private/overlap-run.json",
+    "executeCommand": "npm_config_cache=/workspace/tmp/npm-cache npm run test:env -- tsx scripts/model-evaluation/run-overlap.ts execute /absolute/private/overlap-run.json",
+    "executePrerequisites": "Separate explicit user payment authorization for overlap, all final local gates, root-created result issue, readable OPENAI_API_KEY in the private process environment and reconciled prior spending/holds. Credentials and configuration never grant permission.",
+    "runs": "Four separate configs and ledgers: Terra/high text, Sol/high text, Terra/high voice, Sol/high voice. Each includes 43 calibration controls, 30 scenario attempts and 50 ordinary step attempts before optional replies. Alternate sequential/overlap and overlap/sequential over the same five repetitions.",
+    "voiceBlockers": "Shared campaign optimizationPlaybackAssessor refuses construction until Whisper billing quantum and short Live creation-credit accounting have primary verified evidence and controlled checks. Do not bypass it or infer zero cost.",
+    "reporting": "Publish every sanitized versioned attempt, separate overlapComparison outcome rows and the shared ledger including calibration. Generic ordinary qualification remains incomplete for canceled tasks; only the explicit Stop contract can assess Stop behavior. Root owns issue creation/publication; all real results are currently not_run."
+  }
+}

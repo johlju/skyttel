@@ -1001,8 +1001,17 @@ for (const mode of ['sequential', 'overlap'] as const) {
         expect(model.authorizationRequests).toHaveLength(2);
       } else {
         expect(current.review).toEqual(flow.session.review);
-        if (outcome === 'clarify')
+        if (outcome === 'clarify') {
           await expect.poll(() => voiceAnswerParts(live.sent).join(' ')).toContain('Vem menar du?');
+          expect(current.pendingParts).toEqual([
+            expect.objectContaining({
+              kind: 'change',
+              request: 'Lägg till Kim Lind utan att spara.',
+              question: 'Vem menar du?',
+              status: 'waiting',
+            }),
+          ]);
+        }
         if (outcome === 'rejected') expect(current.error).toBe('assistant_scope_unclear');
         if (outcome === 'stop') expect(current.canceled).toBe(true);
       }

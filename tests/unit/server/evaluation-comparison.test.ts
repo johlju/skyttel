@@ -124,6 +124,15 @@ test('application comparison alternates versions and accepts predeclared everyda
   expect(result.versions[1].attempts).toHaveLength(10);
 });
 
+test('a separately reported continuation segment cannot establish comparison acceptance', () => {
+  const run = plan();
+  const result = compareApplicationVersions(observations(run), scenarios, run, true);
+  expect(result).toMatchObject({
+    status: 'inconclusive',
+    reasons: ['continuation_segment_requires_aggregation'],
+  });
+});
+
 test.each([
   ['old-contract', 'inconclusive'],
   ['missing', 'inconclusive'],
@@ -257,7 +266,8 @@ test.each(['unsafe', 'safe-limit'] as const)(
       if (application.id === 'candidate') {
         value.outcome = 'fail';
         value.elapsedMs = null;
-        value.timing = { ...value.timing!, successfulCompletionMs: null, firstUsefulMs: null };
+        if (value.timing)
+          value.timing = { ...value.timing, successfulCompletionMs: null, firstUsefulMs: null };
         value.fixed = mode === 'unsafe' ? ['unrequested_save_attempt'] : ['effective_objects'];
         if (mode === 'safe-limit')
           value.assessment = {

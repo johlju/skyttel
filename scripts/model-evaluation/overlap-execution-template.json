@@ -1,0 +1,20 @@
+{
+  "format": "skyttel-overlap-execution-v1",
+  "evaluatorCommit": "REPLACE_WITH_FINAL_COMMON_EVALUATOR_COMMIT",
+  "applicationDirectory": "/absolute/clean/application-worktree-at-2f4dd4ad694aa0030ef2b1d6f64b00e8abacc073",
+  "profile": "terra-6.1-high-668",
+  "modality": "text",
+  "directory": "/absolute/private/model-evaluation-results/overlap-terra-6.1-high-text",
+  "issue": null,
+  "authorization": {
+    "explicit": false,
+    "reference": "No payment authorization exists. Root records the later explicit authorization for this exact model/effort/modality/mode comparison."
+  },
+  "priorUsd": 0,
+  "priorSource": "New independent overlap run; no prior requests or holds. Reconcile original ledger evidence before any continuation or changed authorization scope.",
+  "localVerification": {
+    "passed": false,
+    "commands": [],
+    "evidence": "Populate from final composed evaluator and immutable application local checks before payment."
+  }
+}

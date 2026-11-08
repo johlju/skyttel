@@ -1,0 +1,337 @@
+{
+  "contract": "approved-everyday-source-v1",
+  "approvedPromptTextSha256": "73f92626d732e6e2c0a1ac9333e8a72811857866acf82a7ab510786ecc317459",
+  "entries": [
+    {
+      "number": 1,
+      "scenario": "everyday-01",
+      "prompts": ["Vi har skaffat Disney+. Lägg till det."]
+    },
+    {
+      "number": 2,
+      "scenario": "everyday-02",
+      "prompts": ["Lägg till mitt sparkonto hos Nordea."]
+    },
+    {
+      "number": 3,
+      "scenario": "everyday-03",
+      "prompts": ["Lägg till vår Volvo V60."]
+    },
+    {
+      "number": 4,
+      "scenario": "everyday-04",
+      "prompts": ["Lägg till Nora som en person i kartan."]
+    },
+    {
+      "number": 5,
+      "scenario": "everyday-05",
+      "prompts": ["Ta bort Viaplay från kartan."]
+    },
+    {
+      "number": 6,
+      "scenario": "everyday-06",
+      "prompts": ["Ta bort mitt gamla Dropbox-konto."]
+    },
+    {
+      "number": 7,
+      "scenario": "everyday-07",
+      "prompts": ["Vi har sagt upp Netflix. Markera abonnemanget som avslutat."]
+    },
+    {
+      "number": 8,
+      "scenario": "everyday-08",
+      "prompts": ["Lo använder inte Spotify längre."]
+    },
+    {
+      "number": 9,
+      "scenario": "everyday-09",
+      "prompts": ["Alex använder Spotify."]
+    },
+    {
+      "number": 10,
+      "scenario": "everyday-10",
+      "prompts": ["Mira använder också Netflix."]
+    },
+    {
+      "number": 11,
+      "scenario": "everyday-11",
+      "prompts": ["Koppla mitt Spotify-konto till Spotify."]
+    },
+    {
+      "number": 12,
+      "scenario": "everyday-12",
+      "prompts": ["Koppla vårt Netflix-abonnemang till Netflix."]
+    },
+    {
+      "number": 13,
+      "scenario": "everyday-13",
+      "prompts": ["Det är Mira som betalar Disney+."]
+    },
+    {
+      "number": 14,
+      "scenario": "everyday-14",
+      "prompts": ["Netflix ska betalas med Hushållskortet."]
+    },
+    {
+      "number": 15,
+      "scenario": "everyday-15",
+      "prompts": ["Koppla Hushållskortet till vårt gemensamma bankkonto."]
+    },
+    {
+      "number": 16,
+      "scenario": "everyday-16",
+      "prompts": ["Telias bredband hör till lägenheten på Storgatan 12."]
+    },
+    {
+      "number": 17,
+      "scenario": "everyday-17",
+      "prompts": ["Det är Alex som äger vår Volvo V60."]
+    },
+    {
+      "number": 18,
+      "scenario": "everyday-18",
+      "prompts": ["Bilförsäkringen hos Folksam gäller vår Volvo V60."]
+    },
+    {
+      "number": 19,
+      "scenario": "everyday-19",
+      "prompts": ["Ändra priset på Netflix till 179 kronor i månaden."]
+    },
+    {
+      "number": 20,
+      "scenario": "everyday-20",
+      "prompts": ["Disney+ betalas årsvis."]
+    },
+    {
+      "number": 21,
+      "scenario": "everyday-21",
+      "prompts": ["Byt namn på Hushållskortet till Gemensamma kortet."]
+    },
+    {
+      "number": 22,
+      "scenario": "everyday-22",
+      "prompts": ["Skriv att Lo spelar schack i beskrivningen."]
+    },
+    {
+      "number": 23,
+      "scenario": "everyday-23",
+      "prompts": ["Bindningstiden för Telias bredband går ut den 31 mars 2027."]
+    },
+    {
+      "number": 24,
+      "scenario": "everyday-24",
+      "prompts": ["Jag tror att Mira använder Dropbox."]
+    },
+    {
+      "number": 25,
+      "scenario": "everyday-25",
+      "prompts": ["Vad kostar Spotify?"]
+    },
+    {
+      "number": 26,
+      "scenario": "everyday-26",
+      "prompts": ["Vilka tjänster använder Alex?"]
+    },
+    {
+      "number": 27,
+      "scenario": "everyday-27",
+      "prompts": ["Vilka abonnemang betalas med Hushållskortet?"]
+    },
+    {
+      "number": 28,
+      "scenario": "everyday-28",
+      "prompts": ["Vad kostar Netflix?", "Ändra det till 189 kronor."]
+    },
+    {
+      "number": 29,
+      "scenario": "everyday-29",
+      "prompts": ["Ångra den senaste ändringen."]
+    },
+    {
+      "number": 30,
+      "scenario": "everyday-30",
+      "prompts": ["Spara mina ändringar."]
+    },
+    {
+      "number": 31,
+      "scenario": "everyday-31",
+      "prompts": ["Jag vill lägga till tjänsten Spotify som Johan, Lo och Sonja använder."]
+    },
+    {
+      "number": 32,
+      "scenario": "everyday-32",
+      "prompts": [
+        "Vi har skaffat Disney+ för 99 kronor i månaden. Lägg till abonnemanget och ange att Sonja betalar."
+      ]
+    },
+    {
+      "number": 33,
+      "scenario": "everyday-33",
+      "prompts": ["Johan och Sonja använder Spotify, men Lo har slutat. Uppdatera det."]
+    },
+    {
+      "number": 34,
+      "scenario": "everyday-34",
+      "prompts": ["Lägg till Johans Spotify-konto. Johan använder kontot och det hör till Spotify."]
+    },
+    {
+      "number": 35,
+      "scenario": "everyday-35",
+      "prompts": [
+        "På Johans Spotify-konto är johan@example.com inloggningsadress och sonja@example.com kontaktadress."
+      ]
+    },
+    {
+      "number": 36,
+      "scenario": "everyday-36",
+      "prompts": ["Lägg till vårt nya Visa-kort och koppla det till bankkontot hos Nordea."]
+    },
+    {
+      "number": 37,
+      "scenario": "everyday-37",
+      "prompts": ["Netflix betalas numera med Visa-kortet, inte med Hushållskortet. Ändra det."]
+    },
+    {
+      "number": 38,
+      "scenario": "everyday-38",
+      "prompts": ["Lägg till vår Volvo V60. Johan äger den och den är försäkrad hos Folksam."]
+    },
+    {
+      "number": 39,
+      "scenario": "everyday-39",
+      "prompts": [
+        "Vi har flyttat till Storgatan 12. Lägg till bostaden och koppla vårt bredband från Telia till den."
+      ]
+    },
+    {
+      "number": 40,
+      "scenario": "everyday-40",
+      "prompts": [
+        "Johan har sagt upp sitt gymkort hos Nordic Wellness. Markera abonnemanget som avslutat, men behåll uppgifterna om det."
+      ]
+    },
+    {
+      "number": 41,
+      "scenario": "everyday-41",
+      "prompts": ["Ta bort NordVPN och mitt gamla NordVPN-konto. Vi använder dem inte längre."]
+    },
+    {
+      "number": 42,
+      "scenario": "everyday-42",
+      "prompts": [
+        "Markera Spotify-abonnemanget som avslutat. Lägg till tjänsten Apple Music och ange att Johan och Sonja använder den."
+      ]
+    },
+    {
+      "number": 43,
+      "scenario": "everyday-43",
+      "prompts": ["Ändra priset på Netflix till 199 kronor. Nej, jag menar 189 kronor i månaden."]
+    },
+    {
+      "number": 44,
+      "scenario": "everyday-44",
+      "prompts": ["Vad kostar Netflix i dag? Ändra sedan priset till 189 kronor i månaden."]
+    },
+    {
+      "number": 45,
+      "scenario": "everyday-45",
+      "prompts": ["Visa vår Volvo V60 och skriv i beskrivningen att vinterdäcken ligger i garaget."]
+    },
+    {
+      "number": 46,
+      "scenario": "everyday-46",
+      "prompts": [
+        "Lägg till vårt nya bredband från Bahnhof och koppla det till Storgatan 12. Jag vet inte priset än."
+      ]
+    },
+    {
+      "number": 47,
+      "scenario": "everyday-47",
+      "prompts": [
+        "Alex använder inte Dropbox längre. Jag tror att Mira har tagit över det, men jag är inte säker."
+      ]
+    },
+    {
+      "number": 48,
+      "scenario": "everyday-48",
+      "prompts": ["Koppla Alex till Microsoft 365."],
+      "conditionalPrompts": ["Jag menar Alex Lind. Han använder Microsoft 365."]
+    },
+    {
+      "number": 49,
+      "scenario": "everyday-49",
+      "prompts": ["Lägg till Disney+.", "Sonja använder det.", "Det kostar 99 kronor i månaden."]
+    },
+    {
+      "number": 50,
+      "scenario": "everyday-50",
+      "prompts": [
+        "Ändra Netflix till 189 kronor och Disney+ till 109 kronor i månaden.",
+        "Jag menade 119 för Disney+."
+      ]
+    },
+    {
+      "number": 51,
+      "scenario": "everyday-51",
+      "prompts": ["Ändra priset på Netflix till 189 kronor i månaden och spara hela utkastet."]
+    },
+    {
+      "number": 52,
+      "scenario": "everyday-question",
+      "prompts": ["Vad kostar Spotify Premium Family?"]
+    },
+    {
+      "number": 53,
+      "scenario": "everyday-change",
+      "prompts": ["Ändra Lo Bergs beskrivning till Spelar schack. Spara inte."]
+    },
+    {
+      "number": 54,
+      "scenario": "everyday-follow-up",
+      "prompts": ["Vad kostar Molnlagring Plus?", "Vilket betalningsintervall har det?"]
+    },
+    {
+      "number": 55,
+      "scenario": "read-price-draft",
+      "prompts": [
+        "Vad kostar Spotify Premium Family? Berätta vilka ändringar som ligger i mitt utkast."
+      ]
+    },
+    {
+      "number": 56,
+      "scenario": "change-price-payment",
+      "prompts": [
+        "Ändra priset för Molnlagring Plus till 229 kronor per månad och låt Spotify Premium Family betalas med Hushållskortet."
+      ]
+    },
+    {
+      "number": 57,
+      "scenario": "two-ambiguities",
+      "prompts": [
+        "Lo Berg använder Spotify. Priset för Molnlagring Plus ska vara 229 kronor per månad. Alex använder Microsoft 365 och Spotify Premium Family ska betalas från bankkontot. Spara hela utkastet.",
+        "Jag menar Alex Lind och Bankkonto Reserv.",
+        "Spara hela utkastet."
+      ]
+    },
+    {
+      "number": 58,
+      "scenario": "hypothetical-save",
+      "prompts": [
+        "Ändra priset för Molnlagring Plus till 229 kronor. Vad händer om vi sparar hela utkastet?"
+      ]
+    },
+    {
+      "number": 59,
+      "scenario": "undo-price",
+      "prompts": ["Ångra den senaste osparade prisändringen."]
+    },
+    {
+      "number": 60,
+      "scenario": "everyday-stop",
+      "prompts": [
+        "Ändra priset för Molnlagring Plus till 229 kronor per månad och låt Spotify Premium Family betalas med Hushållskortet."
+      ],
+      "interaction": "Press the public Stop control at first observed working status."
+    }
+  ]
+}

@@ -40,10 +40,13 @@ test('voice comparison prepares its own five-round plan using approved voice sce
   expect(run.plan).toMatchObject({
     modality: 'voice',
     repetitions: [1, 2, 3, 4, 5],
-    targetScenarios: ['change-price-payment', 'relationship-direction'],
+    targetScenarios: ['change-price-payment'],
     targetMaximumRatio: 0.8,
     otherMaximumRatio: 1.1,
   });
+  expect(
+    catalog.scenarios.find((scenario) => scenario.id === 'relationship-direction')?.group,
+  ).toBe('complex');
   expect(run.order.map(({ application }) => application.id)).toEqual([
     'baseline',
     'candidate',

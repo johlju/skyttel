@@ -309,7 +309,9 @@ test.each([false, true])(
         reason: 'evaluation_budget_exceeded',
         reservedUsd: 0,
       });
-      expect(run.attempts).toHaveLength(26);
+      expect(run.attempts).toHaveLength(
+        catalog.scenarios.reduce((sum, scenario) => sum + scenario.steps.length, 0),
+      );
       for (const [index, attempt] of run.attempts.entries()) {
         const paid = counting && index === 0;
         expect(attempt).toMatchObject({

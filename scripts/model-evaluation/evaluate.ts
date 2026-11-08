@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
+import type { LiveUsageAttempt } from '../../src/server/live-provider.js';
 import { type ApplicationVersion, applicationAdapter, evaluatorVersion } from './application.js';
 import audioManifest from './audio/manifest.json' with { type: 'json' };
 import { EvaluationBudget } from './budget.js';
@@ -11,6 +12,7 @@ import {
   compareApplicationVersions,
   prepareComparison,
 } from './comparison.js';
+import { type EvaluationContinuation, prepareContinuation } from './continuation.js';
 import { scenarioUtterances } from './follow-ups.js';
 import { contentJudge, judgeInstructions, verifyJudge } from './judge.js';
 import controls from './judge-controls.json' with { type: 'json' };
@@ -21,6 +23,7 @@ import {
   verifiedLiveProfile,
 } from './live.js';
 import { modelMetrics } from './metrics.js';
+import { compareOverlap, type ScenarioVoiceUsage } from './overlap.js';
 import { voicePlaybackInstrumentation } from './playback.js';
 import {
   type PlaybackAssessorProfile,
@@ -45,6 +48,7 @@ import {
 import { runTextScenario } from './runner.js';
 import { type ReferenceVoice, referenceSpeech } from './speech.js';
 import { type Attempt, type Catalog, type Scenario, scenarioGroups } from './types.js';
+import { validateUserStop } from './user-stop.js';
 import { runVoiceScenario } from './voice-runner.js';
 
 export type EvaluationPlan = {
@@ -70,6 +74,12 @@ export type EvaluationPlan = {
   followUps?: boolean;
   repetitions?: number[];
   references?: RecordedReference[];
+  /** Versioned explicit experiment scope. The full catalog's fixture remains
+   * unchanged; this selection never establishes full-catalog qualification. */
+  scenarioSet?: Scenario[];
+  /** Explicit fresh segment for whole comparison dialogs left entirely unrun.
+   * Include every earlier segment; original records and contracts stay separate. */
+  continuation?: EvaluationContinuation;
   // Exact counting, including its verified billing, is supplied only by an
   // agent after checking the official endpoint/model/pricing documentation.
   counting?: {
@@ -149,7 +159,19 @@ export async function evaluateModels(plan: EvaluationPlan) {
       }),
     )
     .digest('hex');
-  const catalog = rawCatalog as Catalog;
+  const catalog = { ...rawCatalog, scenarios: plan.scenarioSet ?? rawCatalog.scenarios } as Catalog;
+  if (
+    !catalog.scenarios.length ||
+    new Set(catalog.scenarios.map((scenario) => scenario.id)).size !== catalog.scenarios.length ||
+    catalog.scenarios.some(
+      (scenario) =>
+        !scenario.id ||
+        !scenario.steps.length ||
+        new Set(scenario.steps.map((step) => step.id)).size !== scenario.steps.length,
+    )
+  )
+    throw new Error('evaluation_scenario_set_invalid');
+  for (const scenario of catalog.scenarios) scenario.steps.forEach(validateUserStop);
   const evaluator = plan.applicationComparison ? await evaluatorVersion(plan.commit) : undefined;
   const comparisonRun = plan.applicationComparison
     ? prepareComparison(
@@ -157,7 +179,7 @@ export async function evaluateModels(plan: EvaluationPlan) {
         catalog.scenarios,
         backendProfile(voiceSelection ? voiceSelection.profile.backend : plan.textProfiles[0]),
         {
-          catalog: rawCatalog,
+          catalog,
           audio: { manifest: audioManifest, referenceVoice: plan.referenceVoice ?? 'marin' },
           judge: { sha256: judgeSha256, profile: judgeProfile },
           followUps: plan.followUps ?? false,
@@ -190,7 +212,11 @@ export async function evaluateModels(plan: EvaluationPlan) {
     ? {
         contractId: comparisonRun.contractId,
         plan: comparisonRun.plan,
-        versions: comparisonRun.versions.map(({ id, commit }) => ({ id, commit })),
+        versions: comparisonRun.versions.map(({ id, commit, conversationWorkMode }) => ({
+          id,
+          commit,
+          conversationWorkMode,
+        })),
         order: comparisonRun.order.map(({ repetition, application }) => ({
           repetition,
           applicationVersion: application.id,
@@ -206,6 +232,61 @@ export async function evaluateModels(plan: EvaluationPlan) {
       )
     : [];
   const directory = plan.directory;
+  if (plan.continuation && (!comparisonRun || plan.voice))
+    throw new Error('evaluation_continuation_text_comparison_required');
+  const sharedManifest = {
+    applicationComparison: comparisonManifest,
+    catalog: {
+      source: rawCatalog.source,
+      decision: rawCatalog.decision,
+      sha256: createHash('sha256').update(JSON.stringify(catalog)).digest('hex'),
+      scope: plan.scenarioSet ? 'explicit_scenario_set' : 'full_catalog',
+      scenarioSet: plan.scenarioSet,
+      scenarios: catalog.scenarios.map((scenario) => ({
+        id: scenario.id,
+        title: scenario.title,
+        group: scenario.group,
+        dimensions: scenario.dimensions,
+        history: scenario.history
+          ? { id: scenario.history, posts: catalog.histories?.[scenario.history]?.length }
+          : null,
+        steps: scenario.steps.map((step) => step.id),
+        voice: scenario.voice,
+      })),
+      fixtureObjects: catalog.base.objects.length,
+      fixtureRelationships: catalog.base.relationships.length,
+    },
+    measurementContracts: {
+      text: 'text-delivery-v2',
+      voice: 'voice-rendered-v1',
+      summary: 'summary-execution-v1',
+    },
+    assistanceTimingPolicy: 'immediate-scripted-reply-excluding-evaluator-gaps-v1',
+    textProfiles: plan.textProfiles,
+    selectedBackendProfiles: [
+      ...plan.textProfiles,
+      ...(plan.voiceProfile ? [plan.voiceProfile.backend] : []),
+    ].map(backendProfile),
+    judgeProfile,
+    judgeSha256,
+    repetitions,
+    voice: plan.voice ?? false,
+    followUps: plan.followUps ?? false,
+    referenceVoice: plan.referenceVoice ?? 'marin',
+    audio: audioManifest,
+    counting: plan.counting
+      ? { source: plan.counting.source, feeUsd: plan.counting.feeUsd }
+      : registry.counting,
+  };
+  const continuation = plan.continuation
+    ? await prepareContinuation(
+        plan.continuation,
+        sharedManifest,
+        plan.priorUsd,
+        directory,
+        plan.limitUsd,
+      )
+    : undefined;
   await mkdir(directory, { recursive: true });
   const db = new Database(join(directory, 'budget.sqlite'));
   const budget = new EvaluationBudget(db, plan);
@@ -224,6 +305,7 @@ export async function evaluateModels(plan: EvaluationPlan) {
       request: {},
       response: call.response
         ? {
+            id: call.response.id,
             model: call.response.model,
             status: call.response.status,
             usage: call.response.usage,
@@ -275,6 +357,7 @@ export async function evaluateModels(plan: EvaluationPlan) {
       )
     : undefined;
   const attempts: Attempt[] = [];
+  const scenarioVoiceUsage: ScenarioVoiceUsage[] = [];
   const profiles = [...plan.textProfiles];
   const voiceProfile = plan.voiceProfile;
   const plannedUtterances = catalog.scenarios.reduce(
@@ -286,7 +369,7 @@ export async function evaluateModels(plan: EvaluationPlan) {
   const maximumFollowUpCandidates = Math.max(
     0,
     ...catalog.scenarios.flatMap((scenario) =>
-      scenario.steps.map((step) => step.followUps?.length ?? 0),
+      scenario.steps.map((step) => (step.followUps?.length ?? 0) + (step.clarification ? 1 : 0)),
     ),
   );
   const judgeMaximumCalls =
@@ -299,14 +382,10 @@ export async function evaluateModels(plan: EvaluationPlan) {
     : 0;
   try {
     await emit('manifest', 'Utvärderingskörning', {
+      ...sharedManifest,
       commit: plan.commit,
-      applicationComparison: comparisonManifest,
       evaluator,
-      measurementContracts: {
-        text: 'text-delivery-v2',
-        voice: 'voice-rendered-v1',
-        summary: 'summary-execution-v1',
-      },
+      continuation: continuation?.manifest,
       playback: voiceSelection
         ? {
             assessor: voiceSelection.assessor,
@@ -334,54 +413,21 @@ export async function evaluateModels(plan: EvaluationPlan) {
         assistedEvaluationOverheadMs:
           'Measured gaps between response delivery and the next scripted submission, including scoring and harness bookkeeping.',
       },
-      assistanceTimingPolicy: 'immediate-scripted-reply-excluding-evaluator-gaps-v1',
-      catalog: {
-        source: rawCatalog.source,
-        decision: rawCatalog.decision,
-        sha256: createHash('sha256').update(JSON.stringify(rawCatalog)).digest('hex'),
-        scenarios: catalog.scenarios.map((scenario) => ({
-          id: scenario.id,
-          title: scenario.title,
-          group: scenario.group,
-          dimensions: scenario.dimensions,
-          history: scenario.history
-            ? { id: scenario.history, posts: catalog.histories?.[scenario.history]?.length }
-            : null,
-          steps: scenario.steps.map((step) => step.id),
-          voice: scenario.voice,
-        })),
-        fixtureObjects: catalog.base.objects.length,
-        fixtureRelationships: catalog.base.relationships.length,
-      },
       controls: controls.source,
       profiles: registry,
-      repetitions,
       qualification: {
         minimumRepetitions: 1,
         allPlannedChecksRequired: true,
         policy: 'scenario-groups-v1',
-        scope: 'everyday',
+        scope: plan.scenarioSet ? 'explicit_scenario_set' : 'everyday',
         groups: scenarioGroups,
         correctnessRequiredAcrossAllGroups: true,
       },
-      textProfiles: profiles,
-      selectedBackendProfiles: [...profiles, ...(voiceProfile ? [voiceProfile.backend] : [])].map(
-        backendProfile,
-      ),
-      judgeProfile,
-      judgeSha256,
       baselineProfiles: plan.baselineProfiles,
-      voice: plan.voice ?? false,
       voiceProfile,
-      referenceVoice: plan.referenceVoice ?? 'marin',
-      followUps: plan.followUps ?? false,
-      audio: audioManifest,
       frames: audio.reduce((sum, item) => sum + item.clip.frames, 0),
       budget: budget.snapshot(),
       priorSource: plan.priorSource,
-      counting: plan.counting
-        ? { source: plan.counting.source, feeUsd: plan.counting.feeUsd }
-        : registry.counting,
       maxima: {
         backendPerStep: 48,
         backendOutput: Object.fromEntries(
@@ -461,6 +507,25 @@ export async function evaluateModels(plan: EvaluationPlan) {
           const profile = backendProfile(id);
           const provider = budgetedProvider(profile, budget, { record, countInput: counted });
           for (const scenario of catalog.scenarios) {
+            if (
+              continuation &&
+              application &&
+              !continuation.includes({
+                applicationVersion: application.id,
+                repetition,
+                scenario: scenario.id,
+              })
+            ) {
+              await missing(
+                scenario,
+                id,
+                repetition,
+                'text',
+                'evaluation_continuation_source_segment',
+                application,
+              );
+              continue;
+            }
             if (budget.snapshot().stopped) {
               await missing(
                 scenario,
@@ -553,7 +618,7 @@ export async function evaluateModels(plan: EvaluationPlan) {
             const maximumSeconds = Math.ceil(
               audioSeconds + utterances * 180 + 32 + (utterances - 1) * 120,
             );
-            const liveUsage: unknown[] = [];
+            const liveUsage: LiveUsageAttempt[] = [];
             const live = budgetedLive(
               budget,
               maximumSeconds,
@@ -646,6 +711,29 @@ export async function evaluateModels(plan: EvaluationPlan) {
               stepCost: 'Estimated allocations are not used to rank models.',
               observation: voicePlaybackInstrumentation,
             });
+            const finalUsage = [
+              ...new Map(liveUsage.map((usage) => [usage.attemptId, usage])).values(),
+            ];
+            scenarioVoiceUsage.push({
+              scenario: scenario.id,
+              applicationVersion: application?.id,
+              repetition,
+              sessions: finalUsage,
+              costUsd:
+                finalUsage.length &&
+                finalUsage.every(
+                  (usage) =>
+                    usage.final &&
+                    usage.endedAt &&
+                    usage.model === voiceProfile.model &&
+                    usage.seconds !== null,
+                )
+                  ? finalUsage.reduce(
+                      (sum, usage) => sum + ((usage.seconds ?? 0) * voiceProfile.usdPerMinute) / 60,
+                      0,
+                    )
+                  : null,
+            });
             privateRecords.observation({
               scenario: scenario.id,
               applicationVersion: application?.id,
@@ -678,10 +766,26 @@ export async function evaluateModels(plan: EvaluationPlan) {
       'voice',
       repetitions,
     );
-    const catalogSha256 = createHash('sha256').update(JSON.stringify(rawCatalog)).digest('hex');
+    const catalogSha256 = createHash('sha256').update(JSON.stringify(catalog)).digest('hex');
     const applicationResult = comparisonRun
-      ? compareApplicationVersions(attempts, catalog.scenarios, comparisonRun)
+      ? compareApplicationVersions(
+          attempts,
+          catalog.scenarios,
+          comparisonRun,
+          Boolean(continuation),
+        )
       : undefined;
+    const overlapResult =
+      comparisonRun &&
+      comparisonRun.plan.id === `overlap-public-stop-v1-${comparisonRun.plan.modality}`
+        ? compareOverlap(
+            attempts,
+            comparisonRun,
+            scenarioVoiceUsage,
+            [...calls.values()],
+            Boolean(continuation),
+          )
+        : undefined;
     const { comparisons, historicalComparisons, recommendation, recommendationBasis } =
       comparisonRun
         ? {
@@ -743,19 +847,24 @@ export async function evaluateModels(plan: EvaluationPlan) {
       comparisons,
       historicalComparisons,
       applicationComparison: applicationResult,
+      overlapComparison: overlapResult,
     });
     await emit('recommendation', 'Rekommendation', {
       recommendation,
       recommendationBasis,
+      overlapComparison: overlapResult,
       preliminary: Boolean(comparisonRun),
-      qualificationScope: 'everyday',
+      qualificationScope: plan.scenarioSet ? 'explicit_scenario_set' : 'everyday',
       fullCatalogQualified:
+        !continuation &&
+        !plan.scenarioSet &&
         calibrated &&
         (applicationResult
           ? applicationResult.versions.every((version) => version.summary.fullCatalogQualified)
           : summaries.every((candidate) => candidate.fullCatalogQualified)) &&
         (!plan.voice || voice.fullCatalogQualified),
       qualificationComplete:
+        !continuation &&
         calibrated &&
         (applicationResult
           ? applicationResult.versions.every((version) => version.summary.finalQualified)
@@ -813,6 +922,7 @@ export async function evaluateModels(plan: EvaluationPlan) {
       attempts,
       budget: budget.snapshot(),
       applicationComparison: applicationResult,
+      overlapComparison: overlapResult,
     };
   } catch (error) {
     budget.stop(error instanceof Error ? error.message : 'evaluation_failed');
@@ -845,7 +955,12 @@ export async function evaluateModels(plan: EvaluationPlan) {
       attempts,
       budget: budget.snapshot(),
       applicationComparison: comparisonRun
-        ? compareApplicationVersions(attempts, catalog.scenarios, comparisonRun)
+        ? compareApplicationVersions(
+            attempts,
+            catalog.scenarios,
+            comparisonRun,
+            Boolean(continuation),
+          )
         : undefined,
     };
   } finally {

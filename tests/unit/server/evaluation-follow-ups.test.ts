@@ -1,4 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest';
+import catalog from '../../../scripts/model-evaluation/catalog.json' with { type: 'json' };
 import * as environments from '../../../scripts/model-evaluation/environment.js';
 import {
   scenarioUtterances,
@@ -9,7 +10,9 @@ import { summarizeProfile } from '../../../scripts/model-evaluation/report.js';
 import { runTextScenario } from '../../../scripts/model-evaluation/runner.js';
 import * as speech from '../../../scripts/model-evaluation/speech.js';
 import type { Attempt, JudgeInput, Scenario } from '../../../scripts/model-evaluation/types.js';
+import { scenarioGroups } from '../../../scripts/model-evaluation/types.js';
 import { runVoiceScenario } from '../../../scripts/model-evaluation/voice-runner.js';
+import type { MapState } from '../../../src/shared/map.js';
 import type { TextAssistantReview, TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { liveProvider, voiceAnswerParts } from '../../support/live-provider.js';
 import {
@@ -69,6 +72,467 @@ const passingJudge = async (input: JudgeInput) =>
     outcome: 'pass' as const,
     reason: 'Verified by local fixture.',
   }));
+
+test('the catalog ordinary two-ambiguities exchange reaches its answer and requested save', {
+  tags: ['technical'],
+}, async () => {
+  const ordinary = catalog.scenarios.find(({ id }) => id === 'two-ambiguities') as Scenario;
+  const questions = ['Vilken Alex menar du?', 'Vilket bankkonto menar du?'];
+  let stage = 0;
+  let map: MapState;
+  let types: MapState;
+  const model = textModel((request) => {
+    const turn = JSON.parse(
+      String(request.input.findLast((item) => item.role === 'user')?.content),
+    );
+    switch (stage++) {
+      case 0:
+        return [modelTool('read_map', {})];
+      case 1:
+        map = lastToolResult(request);
+        return [modelTool('read_type_catalog', {})];
+      case 2: {
+        types = lastToolResult(request);
+        const cloud = map.objects.find(({ id }) => id === 'cloud-sub');
+        const uses = types.relationshipTypes.find(({ name }) => name === 'Använder');
+        if (!cloud || !uses) throw new Error('Missing catalog object or relationship type');
+        const { id, revision, householdId: _household, ...value } = cloud;
+        return [
+          modelTool('submit_changes', {
+            version: turn.draft.version,
+            contentVersion: turn.draft.contentVersion,
+            completion: 'draft',
+            questions: questions.map((question) => ({
+              kind: 'change',
+              request: ordinary.steps[0].text,
+              question,
+              dependsOnDraft: true,
+            })),
+            operations: [
+              {
+                name: 'propose_object',
+                arguments: {
+                  id,
+                  baseRevision: revision,
+                  value: {
+                    ...value,
+                    properties: value.properties?.map((property) =>
+                      property.id === 'price' ? { ...property, value: 229 } : property,
+                    ),
+                  },
+                },
+              },
+              {
+                name: 'propose_relationship',
+                arguments: {
+                  id: 'lo-spotify',
+                  baseRevision: null,
+                  value: { typeId: uses.id, sourceId: 'lo', targetId: 'spotify' },
+                },
+              },
+            ],
+          }),
+        ];
+      }
+      case 3:
+        expect(turn.message).toBe(ordinary.steps[1].text);
+        return [
+          modelTool('ask_questions', {
+            questions: [],
+            updates: questions.map((question) => pendingUpdate(request, question)),
+            continueResponse: true,
+          }),
+        ];
+      case 4: {
+        const parts = lastToolResult(request).pendingParts;
+        const uses = types.relationshipTypes.find(({ name }) => name === 'Använder');
+        const pays = types.relationshipTypes.find(({ name }) => name === 'Betalas med');
+        const card = map.relationships.find(
+          (edge) => edge.sourceId === 'spotify-sub' && edge.targetId === 'card',
+        );
+        if (!uses || !pays || !card) throw new Error('Missing catalog relationships');
+        return [
+          modelTool('submit_changes', {
+            version: turn.draft.version,
+            contentVersion: turn.draft.contentVersion,
+            completion: 'draft',
+            resolves: parts
+              .filter((part: { status: string }) => part.status === 'ready')
+              .map(({ id, revision }: { id: string; revision: number }) => ({ id, revision })),
+            operations: [
+              {
+                name: 'propose_relationship',
+                arguments: {
+                  id: 'alex-m365',
+                  baseRevision: null,
+                  value: { typeId: uses.id, sourceId: 'alex', targetId: 'm365' },
+                },
+              },
+              {
+                name: 'propose_relationship',
+                arguments: {
+                  id: card.id,
+                  baseRevision: card.revision,
+                  value: null,
+                },
+              },
+              {
+                name: 'propose_relationship',
+                arguments: {
+                  id: 'spotify-reserve',
+                  baseRevision: null,
+                  value: { typeId: pays.id, sourceId: 'spotify-sub', targetId: 'reserve' },
+                },
+              },
+            ],
+          }),
+        ];
+      }
+      case 5:
+        expect(turn.message).toBe(ordinary.steps[2].text);
+        return [
+          modelTool('save_draft', {
+            version: turn.draft.version,
+            contentVersion: turn.draft.contentVersion,
+          }),
+        ];
+      default:
+        throw new Error('Unexpected provider turn');
+    }
+  });
+  const result = await runTextScenario(
+    ordinary,
+    { modelFetch: model.provider },
+    {
+      profile: 'local',
+      repetition: 1,
+      followUps: true,
+      judge: passingJudge,
+    },
+  );
+  expect(result.attempts.map(({ step, outcome, fixed }) => ({ step, outcome, fixed }))).toEqual([
+    { step: 'oklarheter-med-sparbegaran', outcome: 'pass', fixed: [] },
+    { step: 'oklarheter-foljdsvar', outcome: 'pass', fixed: [] },
+    { step: 'spara-hela-utkastet', outcome: 'pass', fixed: [] },
+  ]);
+  expect(result.attempts[0].assessment).toBeUndefined();
+  expect(result.finalMap.draft.changes).toEqual([]);
+  expect(summarizeProfile(result.attempts, [ordinary], 'local', 'text', [1])).toMatchObject({
+    fullCatalogQualified: true,
+    correctnessFailures: [],
+    unresolvedAssessments: [],
+    groups: {
+      everyday: {
+        completedScenarios: 1,
+        scenarioTimes: [{ scenario: 'two-ambiguities', medianMs: expect.any(Number) }],
+      },
+    },
+  });
+});
+
+test.each(
+  scenarioGroups.flatMap((group) =>
+    ['disabled', 'unmatched', 'ambiguous'].flatMap((replyMode) =>
+      [false, true].map((retained) => ({ group, replyMode, retained })),
+    ),
+  ),
+)(
+  'an unanswered conditional question requires retained meaning: $group, replies=$replyMode, retained=$retained',
+  {
+    tags: ['technical'],
+  },
+  async ({ group, replyMode, retained }) => {
+    const request =
+      'Lägg till ett separat Används av-samband från Norrsken Molnlagring som anger att ingen använder tjänsten. Behåll befintliga samband.';
+    const conditional: Scenario = {
+      id: 'conditional-alternative',
+      title: 'A necessary alternative outside the supported scripted reply',
+      group,
+      voice: false,
+      steps: [
+        {
+          id: 'no-user',
+          text: request,
+          expected: { requirements: ['Confirm the requested new relationship.'] },
+          followUps: [
+            {
+              id: 'name-person',
+              text: 'Jag menar Lo Berg.',
+              when: 'The question asks which person uses the service.',
+              waiting: {
+                requirements: [
+                  'Explain why the relationship needs a person and ask permission for an alternative representation without changing the map.',
+                ],
+              },
+              requirements: ['Confirm the completed relationship.'],
+            },
+          ],
+        },
+      ],
+    };
+    const reply = conditional.steps[0].followUps?.[0];
+    if (replyMode === 'ambiguous' && reply)
+      conditional.steps[0].followUps?.push({ ...reply, id: 'another-person-reply' });
+    const model = textModel(() => [
+      modelTool('ask_questions', {
+        questions: [
+          {
+            kind: 'change',
+            request: retained ? request : 'Lägg till ett samband.',
+            question:
+              'Ett Används av-samband kräver en person. Vill du lägga Ingen använder tjänsten som en egenskap och behålla sambanden?',
+            dependsOnDraft: true,
+          },
+        ],
+      }),
+    ]);
+    const result = await runTextScenario(
+      conditional,
+      { modelFetch: model.provider },
+      {
+        profile: 'local',
+        repetition: 1,
+        followUps: replyMode !== 'disabled',
+        judge: async (input) =>
+          (await passingJudge(input)).map((item) => ({
+            ...item,
+            outcome:
+              item.id === 'backend-0' ||
+              (!retained && item.id.endsWith('-retention')) ||
+              (replyMode === 'unmatched' && item.id.endsWith('-follow-up'))
+                ? 'fail'
+                : 'pass',
+          })),
+      },
+    );
+    expect(result.attempts).toHaveLength(1);
+    expect(result.attempts[0]).toMatchObject({ outcome: 'fail', fixed: [], elapsedMs: null });
+    expect(result.attempts[0].followUpSelection?.selected).toBeUndefined();
+    expect(result.attempts[0].assessment?.kind).toBe(
+      retained ? 'necessary_clarification' : 'correctness_failure',
+    );
+    if (!retained)
+      expect(result.attempts[0].followUpSelection?.candidates[0].fixed).toContain(
+        'unfinished_instructions',
+      );
+    const summary = summarizeProfile(result.attempts, [conditional], 'local', 'text', [1]);
+    expect(summary).toMatchObject({
+      fullCatalogQualified: false,
+      correctnessFailures: retained
+        ? []
+        : [{ scenario: conditional.id, step: 'no-user', repetition: 1 }],
+      unresolvedAssessments: retained
+        ? [{ scenario: conditional.id, step: 'no-user', repetition: 1 }]
+        : [],
+    });
+    expect(summary.groups[group].scenarioTimes).toEqual([]);
+  },
+);
+
+test.each(
+  (
+    [
+      { rawOutcome: 'fail', evidence: 'necessary' },
+      { rawOutcome: 'pass', evidence: 'necessary' },
+      { rawOutcome: 'pass', evidence: 'missing-retention' },
+      { rawOutcome: 'pass', evidence: 'missing-contract' },
+      { rawOutcome: 'pass', evidence: 'inconclusive' },
+      { rawOutcome: 'pass', evidence: 'unnecessary' },
+      { rawOutcome: 'pass', evidence: 'completed-answer' },
+    ] as const
+  ).flatMap((entry) => scenarioGroups.map((group) => ({ ...entry, group }))),
+)(
+  'a declared clarification preserves raw $rawOutcome and separates completion ($evidence, $group)',
+  {
+    tags: ['technical'],
+  },
+  async ({ rawOutcome, evidence, group }) => {
+    const completed = evidence === 'completed-answer';
+    const request = completed
+      ? 'Förklara varför Används av-samband kräver en person.'
+      : 'Lägg till ett separat Används av-samband från Norrsken Molnlagring som anger att ingen använder tjänsten. Behåll befintliga samband.';
+    const question =
+      'Ett Används av-samband kräver en person. Vill du i stället lägga texten Ingen använder tjänsten som en egenskap och behålla sambanden?';
+    const step = {
+      id: 'no-user',
+      text: request,
+      expected: {
+        requirements: [
+          completed
+            ? 'Explain why the relationship needs a person.'
+            : 'Ask for the missing relationship endpoint.',
+        ],
+      },
+      clarification: {
+        preservedRequests: evidence === 'missing-contract' ? [] : [request],
+        requirements: [
+          'Explain that the relationship needs a person and ask a relevant safe clarification or permission for an alternative representation. Do not change the map or claim completion.',
+        ],
+      },
+    };
+    const clarificationScenario: Scenario = {
+      id: 'no-user',
+      title: 'A safe alternative that has no scripted reply',
+      group,
+      voice: false,
+      steps: [step],
+    };
+    const model = textModel(() =>
+      completed
+        ? [modelMessage('Ett Används av-samband kopplar en tjänst till en person.')]
+        : [
+            modelTool('ask_questions', {
+              questions: [
+                {
+                  kind: 'change',
+                  request: evidence === 'missing-retention' ? 'Lägg till ett samband.' : request,
+                  question,
+                  dependsOnDraft: true,
+                },
+              ],
+            }),
+          ],
+    );
+    const result = await runTextScenario(
+      clarificationScenario,
+      { modelFetch: model.provider },
+      {
+        profile: 'local',
+        repetition: 1,
+        followUps: false,
+        judge: async (input) =>
+          (await passingJudge(input)).map((item) => ({
+            ...item,
+            outcome:
+              item.id === 'backend-0'
+                ? rawOutcome
+                : evidence === 'missing-retention' && item.id.endsWith('-retention')
+                  ? 'fail'
+                  : evidence === 'unnecessary' && item.id.endsWith('-necessary')
+                    ? 'fail'
+                    : evidence === 'inconclusive' && item.id.endsWith('-necessary')
+                      ? 'inconclusive'
+                      : item.outcome,
+          })),
+      },
+    );
+    expect(result.attempts).toHaveLength(1);
+    expect(result.attempts[0]).toMatchObject({
+      outcome: rawOutcome,
+      fixed: [],
+      content: [{ id: 'backend-0', outcome: rawOutcome }],
+      elapsedMs: completed ? expect.any(Number) : null,
+      timing: { successfulCompletionMs: completed ? expect.any(Number) : null },
+    });
+    expect(result.attempts[0].observedEndMs).toEqual(expect.any(Number));
+    expect(result.attempts[0].assessment?.kind).toBe(
+      completed
+        ? undefined
+        : evidence === 'missing-retention'
+          ? 'correctness_failure'
+          : evidence === 'missing-contract' || evidence === 'inconclusive'
+            ? 'inconclusive'
+            : evidence === 'unnecessary'
+              ? 'unnecessary_clarification'
+              : 'necessary_clarification',
+    );
+    if (evidence === 'missing-retention') {
+      expect(result.attempts[0].assessment?.stateFailures).toEqual(['unfinished_instructions']);
+      expect(result.attempts[0].followUpSelection?.candidates[0].fixed).toContain(
+        'unfinished_instructions',
+      );
+    }
+    expect(result.attempts[0].followUpSelection?.selected).toBeUndefined();
+    expect(
+      summarizeProfile(result.attempts, [clarificationScenario], 'local', 'text', [1]),
+    ).toMatchObject({
+      finalQualified: completed && group === 'everyday',
+      fullCatalogQualified: completed,
+      correctnessFailures:
+        evidence === 'unnecessary' || evidence === 'missing-retention'
+          ? [{ scenario: 'no-user', step: 'no-user', repetition: 1 }]
+          : [],
+      unresolvedAssessments:
+        completed || evidence === 'unnecessary' || evidence === 'missing-retention'
+          ? []
+          : [{ scenario: 'no-user', step: 'no-user', repetition: 1 }],
+      groups: {
+        [group]: { directSteps: completed ? 1 : 0, completedScenarios: completed ? 1 : 0 },
+      },
+      outcomes: { [rawOutcome]: 1 },
+      scenarioTimes:
+        completed && group === 'everyday'
+          ? [
+              {
+                scenario: 'no-user',
+                medianMs: expect.any(Number),
+                minMs: expect.any(Number),
+                maxMs: expect.any(Number),
+              },
+            ]
+          : [],
+    });
+  },
+);
+
+test('an unanswered declared question does not submit the next dependent operation', {
+  tags: ['technical'],
+}, async () => {
+  const request = 'Lägg till ett samband som anger att ingen använder tjänsten.';
+  const waitingScenario: Scenario = {
+    id: 'dependent-work',
+    title: 'Dependent work waits for a real answer',
+    voice: false,
+    steps: [
+      {
+        id: 'question',
+        text: request,
+        expected: { requirements: ['Ask for a safe alternative.'] },
+        clarification: {
+          preservedRequests: [request],
+          requirements: ['Ask permission for an alternative without changing the map.'],
+        },
+      },
+      {
+        id: 'dependent-save',
+        text: 'Spara det färdiga sambandet.',
+        expected: { requirements: [] },
+      },
+    ],
+  };
+  const model = textModel(() => [
+    modelTool('ask_questions', {
+      questions: [
+        {
+          kind: 'change',
+          request,
+          question: 'Vill du lägga uppgiften som en egenskap i stället?',
+          dependsOnDraft: true,
+        },
+      ],
+    }),
+  ]);
+  const result = await runTextScenario(
+    waitingScenario,
+    { modelFetch: model.provider },
+    {
+      profile: 'local',
+      repetition: 1,
+      followUps: false,
+      judge: passingJudge,
+    },
+  );
+  expect(result.attempts).toMatchObject([
+    {
+      step: 'question',
+      outcome: 'pass',
+      elapsedMs: null,
+      assessment: { kind: 'necessary_clarification' },
+    },
+    { step: 'dependent-save', outcome: 'not_run', elapsedMs: null },
+  ]);
+  expect(model.requests).toHaveLength(1);
+});
 
 // These existing fixtures test state, clarification and connection lifecycle.
 // Actual rendered-audio evidence is covered by evaluation-playback.spec.ts.
@@ -182,19 +646,42 @@ test.each([
         ];
       return [
         modelTool('ask_questions', {
-          questions: [
-            {
-              kind: 'change',
-              request: first
-                ? request
-                : evidence === 'lost-constraints'
-                  ? 'Ändra beskrivningen.'
-                  : continued,
-              question: first ? question : 'Uppdraget ryms inte. Kan du avgränsa det?',
-              dependsOnDraft: true,
-            },
-          ],
-          ...(first ? {} : { updates: [pendingUpdate(body, question)] }),
+          questions:
+            !first && evidence === 'lost-constraints'
+              ? []
+              : [
+                  {
+                    kind: 'change',
+                    request: first
+                      ? request
+                      : evidence === 'lost-constraints'
+                        ? 'Ändra beskrivningen.'
+                        : continued,
+                    question: first ? question : 'Uppdraget ryms inte. Kan du avgränsa det?',
+                    dependsOnDraft: true,
+                  },
+                ],
+          ...(first
+            ? {}
+            : {
+                updates: [
+                  pendingUpdate(
+                    body,
+                    question,
+                    evidence === 'lost-constraints'
+                      ? {
+                          action: 'replace',
+                          replacement: {
+                            kind: 'change',
+                            request: 'Ändra beskrivningen.',
+                            question: 'Uppdraget ryms inte. Kan du avgränsa det?',
+                            dependsOnDraft: true,
+                          },
+                        }
+                      : {},
+                  ),
+                ],
+              }),
         }),
       ];
     });
@@ -303,12 +790,16 @@ test.each([
           }
           return input.requirements.map(({ id }) => ({
             id,
-            outcome:
-              id === 'voice-rendered-response' ||
-              id.includes('-inability-') ||
-              id.includes('-follow-up') ||
-              id.includes('-necessary') ||
-              id.includes('-waiting-')
+            outcome: id.endsWith('-retention')
+              ? evidence === 'lost-constraints' &&
+                input.requirements.some(({ id }) => id.includes('-inability-'))
+                ? 'fail'
+                : 'pass'
+              : id === 'voice-rendered-response' ||
+                  id.includes('-inability-') ||
+                  id.includes('-follow-up') ||
+                  id.includes('-necessary') ||
+                  id.includes('-waiting-')
                 ? 'pass'
                 : 'fail',
             reason: 'Controlled observation of incomplete work and retained intent.',
@@ -393,6 +884,77 @@ test('an unnecessary clarification cannot qualify merely because a catalog reply
     },
   });
 });
+
+test.each(['necessary', 'unnecessary', 'unsafe-state', 'missing-answer', 'inconclusive'] as const)(
+  'an unmatched scripted reply keeps question validity separate from completion: %s',
+  { tags: ['technical'] },
+  async (mode) => {
+    const step = structuredClone(scenario.steps[0]);
+    const reply = step.followUps?.[0];
+    if (!reply) throw new Error('Missing reply fixture');
+    reply.waiting.requirements = ['Answer the independent price question.'];
+    const attempt: Attempt = {
+      scenario: scenario.id,
+      step: step.id,
+      profile: 'local',
+      repetition: 1,
+      modality: 'text',
+      outcome: 'fail',
+      fixed: ['effective_objects'],
+      elapsedMs: null,
+      backendCostUsd: 0,
+      content: [{ id: 'backend-0', outcome: 'fail', reason: 'The change remains unfinished.' }],
+    };
+    const original = structuredClone(attempt);
+    const selected = await selectFollowUp({
+      step,
+      attempt,
+      stateFailures: ['effective_objects'],
+      questionPending: true,
+      sources: {
+        backend: {
+          text: 'The price is 179. Which other subscription do you mean?',
+          complete: true,
+        },
+      },
+      checkWaiting: async () => (mode === 'unsafe-state' ? ['effective_relationships'] : []),
+      waitingContext: () => 'Complete safe waiting state and current request.',
+      judge: async (input) =>
+        input.requirements.map(({ id }) => ({
+          id,
+          outcome:
+            id.endsWith('-follow-up') ||
+            (mode === 'unnecessary' && id.endsWith('-necessary')) ||
+            (mode === 'missing-answer' && id.includes('-waiting-'))
+              ? 'fail'
+              : mode === 'inconclusive'
+                ? 'inconclusive'
+                : 'pass',
+          reason: id.endsWith('-follow-up')
+            ? 'The catalog reply answers a different question.'
+            : mode === 'unnecessary'
+              ? 'The target is already unambiguous.'
+              : 'Verified question and independent answer.',
+        })),
+    });
+    expect(selected).toBeUndefined();
+    expect(attempt).toMatchObject(original);
+    expect(attempt.followUpSelection?.selected).toBeUndefined();
+    expect(attempt.assessment?.kind).toBe(
+      mode === 'necessary'
+        ? 'necessary_clarification'
+        : mode === 'unnecessary'
+          ? 'unnecessary_clarification'
+          : undefined,
+    );
+    const summary = summarizeProfile([attempt], [scenario], 'local', 'text', [1]);
+    expect(summary.finalQualified).toBe(false);
+    expect(summary.scenarioTimes).toEqual([]);
+    expect(summary.correctnessFailures.some((failure) => failure.step === step.id)).toBe(
+      mode !== 'necessary',
+    );
+  },
+);
 
 test('waiting checks retain the original target and reject unrelated draft damage', {
   tags: ['technical'],
@@ -562,6 +1124,7 @@ test.each([
       ...(mode === 'voice-omission' ? { voice: { text: 'No question.', complete: true } } : {}),
     },
     checkWaiting: async () => (mode === 'unsafe-state' ? ['unrequested_save_attempt'] : []),
+    waitingContext: () => 'Independently verified current state and active pending request.',
     judge,
   });
   expect(selected).toBeUndefined();

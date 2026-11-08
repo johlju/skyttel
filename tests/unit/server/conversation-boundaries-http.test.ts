@@ -193,13 +193,19 @@ test.each([
   ['mixed batch', [modelTool('submit_changes', {}), modelTool('read_map', {})], 'invalid_request'],
   ['malformed batch', [modelTool('submit_changes', { operations: [] })], 'invalid_request'],
   [
-    'mixed questions',
-    [modelTool('ask_questions', { questions: ['Vem?'] }), modelTool('read_map', {})],
+    'multiple question commands',
+    [
+      modelTool('ask_questions', { questions: ['Vem?'] }),
+      modelTool('ask_questions', { questions: ['Vilken?'] }),
+    ],
     'invalid_request',
   ],
   [
-    'mixed report',
-    [modelTool('report_result', { source: 'draft' }), modelTool('read_map', {})],
+    'multiple result reports',
+    [
+      modelTool('report_result', { source: 'draft' }),
+      modelTool('report_result', { source: 'draft' }),
+    ],
     'invalid_request',
   ],
   [
@@ -242,6 +248,53 @@ test.each([
     expect(await map()).toEqual(before);
     expect((await (await client.get(`${path}/map/history`)).json()).history).toEqual([]);
     expect(model.requests).toHaveLength(1);
+  },
+);
+
+test.each(['ask_questions', 'report_result'])(
+  '%s can accompany a trusted read without mutating the household or inventing a save',
+  async (terminal) => {
+    const calls = [
+      modelTool(terminal, {
+        ...(terminal === 'ask_questions' ? { questions: ['Vem?'] } : { source: 'draft' }),
+        continueResponse: true,
+      }),
+      modelTool('read_map', {}),
+    ];
+    const model = textModel((request) => {
+      if (model.requests.length === 1) return calls;
+      for (const call of calls)
+        expect(
+          request.input.filter(
+            (item) => item.type === 'function_call_output' && item.call_id === call.call_id,
+          ),
+        ).toHaveLength(1);
+      const readOutput = request.input.find(
+        (item) => item.type === 'function_call_output' && item.call_id === calls[1].call_id,
+      );
+      expect(JSON.parse(String(readOutput?.output)).objects).toEqual([]);
+      return [modelMessage('Läsningen är klar.')];
+    }, readOnlyScope);
+    await setup(model.provider);
+    await object();
+    const before = await map();
+    const result = await message('Läs mitt utkast.');
+    expect(result.phase).toBe('ready');
+    expect(result.error).toBeUndefined();
+    expect(result.modelReply).toBe(
+      terminal === 'ask_questions' ? 'Läsningen är klar.\nVem?' : 'Läsningen är klar.',
+    );
+    if (terminal === 'ask_questions') expect(result.questions).toEqual(['Vem?']);
+    else {
+      expect(result.result).toMatchObject({ kind: 'draft' });
+      expect(result.reply).toContain('Lampan');
+    }
+    expect(result.receipt).toBeUndefined();
+    expect(result.selection).toBeUndefined();
+    expect(result.operations).toEqual([]);
+    expect(await map()).toEqual(before);
+    expect((await (await client.get(`${path}/map/history`)).json()).history).toEqual([]);
+    expect(model.requests).toHaveLength(2);
   },
 );
 
@@ -1139,7 +1192,7 @@ test.each(['object', 'relationship', 'objectType', 'relationshipType'] as const)
   },
 );
 
-test('a mutation followed by a historical failure request retains only its verified draft change and never invents a failure report', async () => {
+test('a mutation followed by a historical failure request is rejected before changing the draft or inventing a failure report', async () => {
   let typeId = '';
   const model = textModel((request) => {
     const input = request.input.findLast((item) => item.role === 'user');
@@ -1162,13 +1215,11 @@ test('a mutation followed by a historical failure request retains only its verif
   const result = await message('Lägg till mitt förslag och berätta om ett tidigare fel.');
   expect(result).toMatchObject({ phase: 'error', error: 'invalid_request' });
   expect(result.reply).toBe(assistantFailureMessage(result.error ?? 'assistant_provider_failed'));
-  const after = await map();
-  expect(after.objects).toEqual(before.objects);
-  expect(after.draft.changes[0]).toEqual(before.draft.changes[0]);
-  expect(after.draft.changes[1]).toMatchObject({
-    id: 'new-object',
-    after: { name: 'Nytt förslag' },
-  });
-  expect(after.draft.version).toBe(before.draft.version + 1);
+  expect(result.result?.kind).not.toBe('failure');
+  expect(result.receipt).toBeUndefined();
+  expect(result.operations).toEqual([]);
+  expect(result.selection).toBeUndefined();
+  expect(await map()).toEqual(before);
   expect((await (await client.get(`${path}/map/history`)).json()).history).toEqual([]);
+  expect(model.requests).toHaveLength(1);
 });

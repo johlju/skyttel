@@ -1,0 +1,15 @@
+{
+  "authorized": false,
+  "authorizationSource": "",
+  "profile": "terra-6.1-high-668",
+  "modality": "text",
+  "issue": null,
+  "directory": "model-evaluation-results/optimization-terra-high-text",
+  "priorUsd": 0,
+  "priorSource": "Verify prior consumption and scope before execution; no paid execution is authorized.",
+  "localVerification": {
+    "passed": false,
+    "commands": [],
+    "evidence": "Populate with final common-evaluator verification evidence."
+  }
+}
