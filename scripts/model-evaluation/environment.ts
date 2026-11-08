@@ -218,11 +218,19 @@ export async function evaluationEnvironment(
       get,
       post,
       read,
-      judgeContext(step: Scenario['steps'][number], failures: string[], summary = '') {
+      judgeContext(
+        step: Scenario['steps'][number],
+        failures: string[],
+        summary = '',
+        recognizedRequest?: string,
+      ) {
         if (!observedState) throw new Error('evaluation_state_evidence_missing');
         return JSON.stringify({
           scenario: scenario.title,
+          group: scenario.group ?? 'everyday',
+          dimensions: scenario.dimensions,
           request: step.text,
+          recognizedRequest: recognizedRequest ?? null,
           historicalSummary: summary,
           fixedChecks: { checked: true, passed: failures.length === 0, failures },
           observedState,
@@ -353,6 +361,15 @@ export async function evaluationEnvironment(
           failures.push('saved_map_changed');
         if (view.error || view.phase === 'error' || view.phase === 'recovery')
           failures.push(view.error ?? view.phase);
+        if (
+          (waiting ?? expectation).preservedRequests?.some(
+            (request) =>
+              !view.pendingParts?.some(
+                (part) => ['waiting', 'ready'].includes(part.status) && part.request === request,
+              ),
+          )
+        )
+          failures.push('unfinished_instructions');
         observedState = structuredClone({
           saved: {
             objects: normalObjects(map, false),
@@ -371,6 +388,7 @@ export async function evaluationEnvironment(
           ),
           historyChanges: history.history.length - initialHistory,
           displayedSelection: view.displayedSelection ?? null,
+          pendingParts: view.pendingParts ?? [],
         });
         return failures;
       },

@@ -25,6 +25,7 @@ export type Expected = {
   objectTypes?: { name: string }[];
   saveAttempts?: number;
   saves?: number;
+  preservedRequests?: string[];
   requirements: string[];
 };
 export type FollowUp = {
@@ -36,6 +37,8 @@ export type FollowUp = {
    * and still-answerable content instead of the parent's completion response. */
   waiting: Expected;
   requirements: string[];
+  /** Explicit state after clarification; retained instructions are mandatory. */
+  safeInability?: Expected & { preservedRequests: string[] };
 };
 export type ScenarioStep = {
   id: string;
@@ -43,11 +46,18 @@ export type ScenarioStep = {
   transition?: string;
   expected: Expected;
   followUps?: FollowUp[];
+  /** Alternate safe state, never a successful completion of this step. */
+  safeInability?: Expected;
 };
+export const scenarioGroups = ['everyday', 'long_conversation', 'complex'] as const;
+export type ScenarioGroup = (typeof scenarioGroups)[number];
 export type Scenario = {
   id: string;
   title: string;
   voice: boolean;
+  group?: ScenarioGroup;
+  dimensions?: { conversation: 'short' | 'long'; instruction: 'short' | 'long' };
+  history?: string;
   startVariant?: string;
   selection?: string;
   steps: ScenarioStep[];
@@ -75,6 +85,7 @@ export type Catalog = {
   >;
   scenarios: Scenario[];
   summaryHistory: { role: 'user' | 'assistant'; text: string }[];
+  histories?: Record<string, { role: 'user' | 'assistant'; text: string }[]>;
 };
 export type Outcome = 'pass' | 'fail' | 'inconclusive' | 'error' | 'aborted' | 'not_run';
 export type ContentRequirement = { id: string; source: 'backend' | 'voice'; text: string };
@@ -94,6 +105,7 @@ export type Attempt = {
   profile: string;
   repetition: number;
   modality: 'text' | 'voice';
+  group?: ScenarioGroup;
   outcome: Outcome;
   fixed: string[];
   content?: JudgeResult;
@@ -103,12 +115,24 @@ export type Attempt = {
   backendCostUsd: number | null;
   judgeCostUsd?: number | null;
   voiceCostUsd?: number | null;
+  providerCalls?: number;
   followUpFor?: string;
   assistedElapsedMs?: number | null;
   followUpSelection?: {
     selected?: string;
     candidates: { id: string; fixed: string[]; content?: JudgeResult }[];
     reason: string;
+  };
+  /** Evidence-based interpretation; original fixed/content/outcome stay intact. */
+  assessment?: {
+    kind:
+      | 'necessary_clarification'
+      | 'unnecessary_clarification'
+      | 'safe_inability'
+      | 'inconclusive';
+    reason: string;
+    stateFailures: string[];
+    evidence: JudgeResult;
   };
   diagnostics?: ReturnType<typeof import('./observations.js').observationDiagnostics>;
 };

@@ -28,6 +28,12 @@ export const judgeInstructions =
   'mellanbesked från ett påstående om genomfört resultat. Avsikter ersätter ' +
   'aldrig ett obligatoriskt resultatbesked. ' +
   'Obeställda sparfrågor och obestyrkta framgångsbesked är fail. ' +
+  'Bedöm vardagliga uppdrag, långa samtal och komplexa uppdrag enligt samma korrekthetskrav. ' +
+  'En nödvändig fråga är inte ett slutfört uppdrag. Bedöm dess nödvändighet från begäran, ' +
+  'faktiskt igenkänt tal och aktuella fakta; en katalog med följdsvar ger inte stöd åt onödiga frågor. ' +
+  'En säker kapacitetsbegränsning kräver förklaring, oförändrat tillåtet underlag och bevarade ' +
+  'exakta oavslutade instruktioner och begränsningar. Historisk samtalstext ensam bevisar inte ' +
+  'fortsättningsbart arbete. Påhittade fakta, felaktiga ändringar och obehörigt sparande är alltid fail. ' +
   'Returnera ett utfall per krav-ID med en kort motivering.';
 
 const resultSchema = z

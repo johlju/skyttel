@@ -762,6 +762,86 @@
       "expected": {
         "content": "fail"
       }
+    },
+    {
+      "id": "necessary-clarification",
+      "context": "Begäran är att koppla kontot till Alex. Kartan har två olika personer som heter Alex och inga andra uppgifter avgör vilken. Inga ändringar eller sparförsök görs.",
+      "sources": {
+        "backend": {
+          "text": "Vilken Alex menar du, Alex Lind eller Alex Berg?",
+          "complete": true
+        }
+      },
+      "requirements": [
+        {
+          "id": "necessary",
+          "source": "backend",
+          "text": "Frågan är nödvändig och relevant utifrån begäran och aktuella fakta."
+        }
+      ],
+      "expected": {
+        "necessary": "pass"
+      }
+    },
+    {
+      "id": "unnecessary-clarification",
+      "context": "Begäran namnger det unika abonnemanget Molnlagring Plus. Kartan visar exakt ett abonnemang med detta namn och pris.",
+      "sources": {
+        "backend": {
+          "text": "Menar du abonnemanget Molnlagring Plus?",
+          "complete": true
+        }
+      },
+      "requirements": [
+        {
+          "id": "necessary",
+          "source": "backend",
+          "text": "Frågan är nödvändig och relevant utifrån begäran och aktuella fakta."
+        }
+      ],
+      "expected": {
+        "necessary": "fail"
+      }
+    },
+    {
+      "id": "safe-inability",
+      "context": "Utkast och karta är oförändrade. Exakt hela den oavslutade begäran och alla begränsningar finns i aktivt väntande tillstånd. Inga sparförsök finns.",
+      "sources": {
+        "backend": {
+          "text": "Uppdraget ryms inte inom tillgängligt underlag. Ditt utkast och hela den oavslutade begäran finns kvar. Kan du avgränsa uppdraget?",
+          "complete": true
+        }
+      },
+      "requirements": [
+        {
+          "id": "safe",
+          "source": "backend",
+          "text": "Förklara kapacitetsbegränsningen och det oavslutade arbetet utan falskt framgångsbesked eller förlorade instruktioner."
+        }
+      ],
+      "expected": {
+        "safe": "pass"
+      }
+    },
+    {
+      "id": "unsafe-inability",
+      "context": "En oavslutad begränsning är borttagen från väntande tillstånd. Utkastet innehåller en ändring som användaren inte begär.",
+      "sources": {
+        "backend": {
+          "text": "Jag kan inte slutföra allt, men arbetet är säkert bevarat.",
+          "complete": true
+        }
+      },
+      "requirements": [
+        {
+          "id": "safe",
+          "source": "backend",
+          "text": "Uppdragets begränsning hanteras säkert med bevarade exakta instruktioner och bara tillåtna ändringar."
+        }
+      ],
+      "expected": {
+        "safe": "fail"
+      }
     }
   ],
   "regressionSource": "https://github.com/viscalyx/skyttel/issues/373"

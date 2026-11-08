@@ -168,10 +168,9 @@ for a later run.
 Report unassisted outcomes and assisted completion separately, including the
 question, selected reply, additional calls, elapsed time and costs. A successful
 reply does not erase an unnecessary question or an independent failure.
-For justified voice clarification, apply the acceptance policy in
-[voice evaluation](voice-evaluation.md#behavioral-assessment). The runner's raw
-qualification remains the unassisted result; publish the evidence-based
-behavioral assessment alongside it, including accepted limitations and gaps.
+Apply [qualification by scenario group](qualification.md) to text and voice.
+Keep the runner's unassisted outcomes separate from evidence-based behavioral
+assessment, including accepted limitations and gaps.
 An accepted voice question does not require an optional reply; continuation
 testing and its existing safety gates remain separate from that assessment.
 Assess question necessity from recognized input and available facts. Include
@@ -225,11 +224,11 @@ records and charges for diagnosis and spending reconciliation. Report the
 required correction; start a new run only after the cause is resolved.
 Keep valid candidate failures in evaluation history.
 
-Present correctness first. Use one repetition by default. Qualification requires
-every required outcome to be verified in the complete selected catalog under
-the modality's acceptance policy; all
-repetitions requested by the user must pass. Report equally weighted scenario
-medians, min/max, each repetition's total, costs and regressions. Label
+Present correctness first. Use one repetition by default; apply every planned
+repetition within the explicit group qualification scope. Report everyday,
+long-conversation and complex-task results separately using the
+[group policy](qualification.md). Report equally weighted scenario medians,
+min/max, each repetition's total, costs and regressions within each group. Label
 comparisons in text as well as red/yellow/green. Show response-time differences
 and their costs so the user can decide whether the improvement warrants a switch.
 A failed reference and qualified candidate may support a correctness

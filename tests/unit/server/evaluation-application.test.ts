@@ -6,6 +6,83 @@ import type { Scenario } from '../../../scripts/model-evaluation/types.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
+test.each(['preserved', 'missing', 'judge-error'] as const)(
+  'advanced inability needs explicit retained unfinished instructions: %s',
+  { tags: ['technical'] },
+  async (retention) => {
+    const text =
+      'Ändra Lo Bergs beskrivning till Läser poesi och bevara alla andra uppgifter. Spara inte.';
+    const model = textModel(() => [
+      modelTool('ask_questions', {
+        questions: [
+          {
+            kind: 'change',
+            request: retention !== 'missing' ? text : 'Ändra beskrivningen.',
+            question: 'Uppdraget ryms inte. Kan du avgränsa det?',
+            dependsOnDraft: true,
+          },
+        ],
+      }),
+    ]);
+    const run = await runTextScenario(
+      {
+        id: 'advanced-limit',
+        title: 'Safe capability limit',
+        group: 'complex',
+        voice: false,
+        steps: [
+          {
+            id: 'change',
+            text,
+            expected: {
+              objects: {
+                lo: {
+                  properties: [
+                    { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Läser poesi' },
+                  ],
+                },
+              },
+              requirements: ['Bekräfta genomförd ändring.'],
+            },
+            safeInability: {
+              requirements: [
+                'Förklara kapacitetsbegränsningen utan påstådd framgång och bevara hela uppdraget.',
+              ],
+            },
+          },
+        ],
+      },
+      { modelFetch: model.provider },
+      {
+        profile: 'local',
+        repetition: 1,
+        judge: async (input) => {
+          if (
+            retention === 'judge-error' &&
+            input.requirements.some(({ id }) => id.includes('-inability-'))
+          )
+            throw new Error('assessment_provider_failed');
+          return input.requirements.map(({ id }) => ({
+            id,
+            outcome: id.includes('-inability-') ? 'pass' : 'fail',
+            reason: id.includes('-inability-')
+              ? 'Explained limit and retained request verified.'
+              : 'No completed change.',
+          }));
+        },
+      },
+    );
+    expect(run.attempts[0]).toMatchObject({
+      outcome: 'fail',
+      elapsedMs: null,
+      fixed: ['effective_objects'],
+      assessment: { kind: retention === 'preserved' ? 'safe_inability' : 'inconclusive' },
+    });
+    if (retention === 'missing')
+      expect(run.attempts[0].assessment?.stateFailures).toContain('unfinished_instructions');
+  },
+);
+
 test('text evaluation waits for a slow accepted task and records its full response time', {
   tags: ['technical'],
 }, async () => {

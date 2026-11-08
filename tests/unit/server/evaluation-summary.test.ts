@@ -6,6 +6,44 @@ import type { Catalog } from '../../../scripts/model-evaluation/types.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
+test('a short request after extensive conversation uses the declared history and keeps its group', {
+  tags: ['technical'],
+}, async () => {
+  const scenario = rawCatalog.scenarios.find(
+    (item) => item.id === 'long-conversation-question',
+  ) as Catalog['scenarios'][number];
+  const model = textModel((body) => {
+    if (!body.tools.length) {
+      const source = JSON.parse(String(body.input[0].content)).source;
+      expect(source).toContain('Vandringsanteckning 1:');
+      expect(source).toContain('Vandringsanteckning 40:');
+      return [
+        modelMessage('Den avslutade diskussionen gäller en påhittad vandring utan kartändringar.'),
+      ];
+    }
+    return [modelMessage('Spotify Premium Family kostar 179 kronor per månad.')];
+  });
+  const result = await runTextScenario(
+    scenario,
+    { modelFetch: model.provider },
+    {
+      profile: 'local',
+      repetition: 1,
+      judge: async (input) =>
+        input.requirements.map(({ id }) => ({
+          id,
+          outcome: 'pass',
+          reason: 'Controlled answer verified.',
+        })),
+    },
+  );
+  expect(result.attempts.map(({ group, outcome }) => ({ group, outcome }))).toEqual([
+    { group: 'long_conversation', outcome: 'pass' },
+    { group: 'long_conversation', outcome: 'pass' },
+  ]);
+  expect(scenario.dimensions).toEqual({ conversation: 'long', instruction: 'short' });
+});
+
 test('the scenario runner executes an ordinary summary without a counting adapter', {
   tags: ['technical'],
 }, async () => {

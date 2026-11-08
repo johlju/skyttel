@@ -20,6 +20,7 @@ export function evaluationPublication(markdown: string): string[] {
       ? {
           profile: value.data.profile,
           scenario: value.data.scenario,
+          group: value.data.group,
           step: value.data.step,
           modality: value.data.modality,
           repetition: value.data.repetition,
@@ -30,6 +31,7 @@ export function evaluationPublication(markdown: string): string[] {
           backendCostUsd: value.data.backendCostUsd,
           judgeCostUsd: value.data.judgeCostUsd,
           voiceCostUsd: value.data.voiceCostUsd,
+          assessment: value.data.assessment,
         }
       : {}),
   };

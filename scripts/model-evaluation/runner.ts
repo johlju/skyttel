@@ -2,9 +2,10 @@ import { randomUUID } from 'node:crypto';
 import type { AssistantObservation } from '../../src/server/assistant-observation.js';
 import type { TextAssistantView } from '../../src/shared/text-assistant.js';
 import type { createInstallation } from '../../tests/support/installation.js';
-import rawCatalog from './catalog.json' with { type: 'json' };
+import { assessInability } from './assessment.js';
+import { scenarioHistory } from './catalog.js';
 import { evaluationEnvironment } from './environment.js';
-import { scenarioUtterances, selectFollowUp } from './follow-ups.js';
+import { followUpStep, scenarioUtterances, selectFollowUp } from './follow-ups.js';
 import {
   concludeAttempt,
   failAttempt,
@@ -13,9 +14,8 @@ import {
   retainedObservation,
 } from './observations.js';
 import type { ProviderCall } from './provider.js';
-import type { Attempt, Catalog, JudgeInput, JudgeResult, Scenario, ScenarioStep } from './types.js';
+import type { Attempt, JudgeInput, JudgeResult, Scenario, ScenarioStep } from './types.js';
 
-const catalog = rawCatalog as Catalog;
 export type RunOptions = {
   profile: string;
   repetition: number;
@@ -50,6 +50,7 @@ export async function runTextScenario(
   let summaryText = '';
   const attempt = (step: string): Attempt => ({
     scenario: scenario.id,
+    group: scenario.group ?? 'everyday',
     step,
     profile: options.profile,
     repetition: options.repetition,
@@ -89,16 +90,19 @@ export async function runTextScenario(
           let view: TextAssistantView;
           let responseText: string;
           if (step.transition === 'summary') {
+            const history = scenarioHistory(scenario);
             const summarized = await environment.installation.summarizeForEvaluation(
               environment.assistant.id,
-              catalog.summaryHistory,
+              history,
             );
             if (!summarized.installed || !summarized.summary)
               throw new Error('evaluation_summary_installation_failed');
             if (
               summarized.retained.length !== 8 ||
               summarized.retained.some(
-                (row) => !catalog.summaryHistory.some((fixture) => fixture.text === row.text),
+                (row, index) =>
+                  row.text !== history.at(index - 8)?.text ||
+                  row.role !== history.at(index - 8)?.role,
               )
             )
               throw new Error('evaluation_summary_tail_invalid');
@@ -199,11 +203,7 @@ export async function runTextScenario(
             });
             if (followUp && !options.stopped?.()) {
               queue.splice(index + 1, 0, {
-                step: {
-                  id: followUp.id,
-                  text: followUp.text,
-                  expected: { requirements: followUp.requirements },
-                },
+                step: followUpStep(step, followUp),
                 parent: step.id,
                 target: step,
                 startedAt,
@@ -211,6 +211,22 @@ export async function runTextScenario(
               continuing = true;
             }
           }
+          await assessInability({
+            scenario,
+            step,
+            attempt: result,
+            sources: {
+              backend: {
+                text: responseText,
+                complete: !view.error && view.taskStatus !== 'canceled',
+              },
+            },
+            check: (expected) => environment.check(entry.target ?? step, view, actions, expected),
+            context: () =>
+              environment.judgeContext(entry.target ?? step, result.fixed, summaryText) +
+              (entry.parent ? `\nCurrent clarification: ${JSON.stringify(step.text)}` : ''),
+            judge: options.judge,
+          });
           result.backendCostUsd = options.costs
             ? options.costs() === null
               ? null
@@ -233,6 +249,9 @@ export async function runTextScenario(
           result.judgeCostUsd = judgeAfter == null ? null : judgeAfter - judgeBefore;
         }
         if (result.outcome !== 'pass' && !continuing) blocked = `${step.id}: ${result.outcome}`;
+        result.providerCalls = options.providerCalls
+          ? options.providerCalls() - callsBefore
+          : undefined;
       }
       attempts.push(result);
       await options.record?.(result);

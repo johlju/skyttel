@@ -1,8 +1,9 @@
 # Voice evaluation
 
 Evaluate the voice model with a selected backend model and effort against the
-complete voice catalog, using approved recordings. Apply the shared execution
-and reporting rules in [run support](run-support.md).
+voice catalog, using approved recordings. Apply
+[qualification by scenario group](qualification.md) and the shared execution
+rules in [run support](run-support.md).
 
 ## Select the backend
 
@@ -25,8 +26,9 @@ Verify support for the voice provider's adapter and credentials; record its mode
 limits and pricing in the profile. Include the supporting text result or the
 user's explicit backend selection in the issue description.
 
-Run all eight voice scenarios. Before payment, run focused audio and voice
-integrity tests through npm and include their evidence in `localVerification`.
+Run every selected scenario marked for voice. Before payment, run focused audio
+and voice integrity tests through npm and include their evidence in
+`localVerification`.
 Record the selected `referenceVoice` and verify its checked-in audio's SHA-256,
 frame count, reference text and PCM mono 16-bit format. Confirm that listening
 approval covers those exact audio hashes and that no known audio defects remain.
@@ -59,11 +61,12 @@ backend answer, spoken answer and resulting state. Report these outcomes:
   clarification already written into its ordinary steps, without extra
   clarification. For step counts, identify these as passing steps rather than
   claiming that their whole scenario passed.
-- **Accepted — correct clarification:** an extra question is necessary,
-  relevant and answerable; clear independent changes and factual answers are
+- **Accepted — correct clarification, unfinished:** an extra question is
+  necessary, relevant and answerable; clear independent changes and factual answers are
   complete, state and save safety hold, and required guidance reaches both
   backend and speech. Identify the unresolved work and the question that
-  enables it. A matching recorded answer is optional for this assessment.
+  enables it. A matching recorded answer is optional for assessing this
+  response; completion remains unverified until the full exchange succeeds.
 - **Completed after extra clarification:** an approved additional reply leads
   to verified completion. Retain the accepted clarification and its cost;
   distinguish this assisted result from a scenario that passed directly.
@@ -103,10 +106,10 @@ step stays unrun, even when the preceding question is accepted.
 
 Preserve raw catalog checks and automated qualification separately from this
 behavioral assessment. Report counts for complete scenarios and individual
-steps separately. A fully passing run completes every prescribed scenario
-without extra clarification. Report acceptance with clarifications separately,
-with explicit scope and any unverified continuation; all designated dialog
-tests must still complete before claiming full qualification. Link evidence
+steps separately. Report unassisted catalog qualification, completed assisted
+dialogs and safe advanced inability separately. State everyday and advanced
+qualification scopes using the shared group policy; every designated dialog
+in that scope must complete. Link evidence
 for each interpretation and date policy corrections to earlier results.
 
 ## Evidence and timing

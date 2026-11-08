@@ -26,7 +26,7 @@ import {
 } from './report.js';
 import { runTextScenario } from './runner.js';
 import { type ReferenceVoice, referenceSpeech } from './speech.js';
-import type { Attempt, Catalog, Scenario } from './types.js';
+import { type Attempt, type Catalog, type Scenario, scenarioGroups } from './types.js';
 import { runVoiceScenario } from './voice-runner.js';
 
 export type EvaluationPlan = {
@@ -195,6 +195,11 @@ export async function evaluateModels(plan: EvaluationPlan) {
         scenarios: catalog.scenarios.map((scenario) => ({
           id: scenario.id,
           title: scenario.title,
+          group: scenario.group,
+          dimensions: scenario.dimensions,
+          history: scenario.history
+            ? { id: scenario.history, posts: catalog.histories?.[scenario.history]?.length }
+            : null,
           steps: scenario.steps.map((step) => step.id),
           voice: scenario.voice,
         })),
@@ -204,7 +209,14 @@ export async function evaluateModels(plan: EvaluationPlan) {
       controls: controls.source,
       profiles: registry,
       repetitions,
-      qualification: { minimumRepetitions: 1, allPlannedChecksRequired: true },
+      qualification: {
+        minimumRepetitions: 1,
+        allPlannedChecksRequired: true,
+        policy: 'scenario-groups-v1',
+        scope: 'everyday',
+        groups: scenarioGroups,
+        correctnessRequiredAcrossAllGroups: true,
+      },
       textProfiles: profiles,
       judgeProfile,
       judgeSha256,
@@ -465,6 +477,11 @@ export async function evaluateModels(plan: EvaluationPlan) {
       recommendation,
       recommendationBasis,
       preliminary: false,
+      qualificationScope: 'everyday',
+      fullCatalogQualified:
+        calibrated &&
+        summaries.every((candidate) => candidate.fullCatalogQualified) &&
+        (!plan.voice || voice.fullCatalogQualified),
       qualificationComplete:
         calibrated &&
         summaries.every((candidate) => candidate.finalQualified) &&
@@ -528,6 +545,7 @@ export async function evaluateModels(plan: EvaluationPlan) {
     for (const step of scenario.steps) {
       const attempt: Attempt = {
         scenario: scenario.id,
+        group: scenario.group ?? 'everyday',
         step: step.id,
         profile,
         repetition,

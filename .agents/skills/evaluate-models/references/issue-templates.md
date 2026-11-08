@@ -92,9 +92,10 @@ with the application's recorded model. Correctness comes before time and cost.
   reference and recognized wording, actual backend/spoken question, blocked
   work, justification, selected reply and outcome; recurring questions and
   potential additional replies>
-- Qualification: <qualified, accepted with clarifications, failed or incomplete;
-  one fully verified round qualifies under the modality's acceptance policy,
-  every explicitly requested round must meet it>
+- Qualification scope: <everyday, long conversation and complex tasks;
+  raw unassisted outcome, completed assisted dialogs, safe capability limits,
+  correctness failures, incomplete or untested parts per group>
+- Full catalog qualification: <all required dialogs complete, or explicit gaps>
 - Response time and costs: <comparable results and regressions, or unavailable>
 - Recommendation: pending
 - Evidence: <links to versioned records in comments>
