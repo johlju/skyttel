@@ -797,6 +797,14 @@ test('one supplied candidate can be recommended using a recorded text or voice r
       label: 'Ej jämförbart',
       changed: { followUps: true },
     });
+    const changedMeasurement = compareEvaluationProfiles([candidate], [reference], {
+      ...current,
+      measurementContracts: { [modality]: 'controlled-delivery-v2' },
+    });
+    expect(changedMeasurement.historicalComparisons[0]).toMatchObject({
+      label: 'Ej jämförbart',
+      changed: { measurement: true },
+    });
     expect(result.comparisons).toEqual([]);
     expect(result.historicalComparisons).toHaveLength(1);
     expect(result.recommendation).toContain('Bedöm redovisad svarstid och kostnad');

@@ -3,8 +3,8 @@ import { type APIRequestContext, request } from '@playwright/test';
 import type { MapState, ObjectValue, RelationshipValue } from '../../src/shared/map.js';
 import type { TextAssistantView } from '../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../../tests/support/client.js';
-import { approvedForVisit } from '../../tests/support/conversation.js';
-import { createInstallation } from '../../tests/support/installation.js';
+import type { createInstallation } from '../../tests/support/installation.js';
+import { type ApplicationVersion, applicationAdapter } from './application.js';
 import rawCatalog from './catalog.json' with { type: 'json' };
 import type { Catalog, Expected, FixtureProperty, NamedRelationship, Scenario } from './types.js';
 
@@ -17,8 +17,10 @@ const sorted = <T>(values: T[]) =>
 export async function evaluationEnvironment(
   scenario: Scenario,
   options: Parameters<typeof createInstallation>[1],
+  application?: ApplicationVersion,
 ) {
-  const installation = await createInstallation(undefined, options);
+  const adapter = await applicationAdapter(application);
+  const installation = await adapter.create(options);
   let client: APIRequestContext | undefined;
   try {
     client = await request.newContext();
@@ -117,7 +119,7 @@ export async function evaluationEnvironment(
       await propose('draft', { id, baseRevision: revision, value: { ...value, ...changes } });
     }
     state = await read();
-    const assistant = await post<TextAssistantView>('text-assistant', approvedForVisit);
+    const assistant = await post<TextAssistantView>('text-assistant', adapter.approval);
     const path = `text-assistant/${assistant.id}`;
     const expectedObjects = new Map(
       initialObjects.map((object) => {
@@ -209,6 +211,7 @@ export async function evaluationEnvironment(
       );
     }
     return {
+      application: adapter.version,
       installation,
       client: active,
       base,

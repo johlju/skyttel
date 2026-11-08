@@ -59,6 +59,7 @@ export type ProviderCall = {
   startedAt: number;
   endedAt?: number;
   kind: 'backend' | 'summary' | 'judge';
+  contextBytes?: number;
   model: string;
   request: Record<string, unknown>;
   response?: Record<string, unknown>;
@@ -66,9 +67,34 @@ export type ProviderCall = {
   reservationUsd: number;
   outcome: string;
   requestId?: string;
-  context?: { scenario: string; step: string; modality: 'text' | 'voice'; repetition: number };
+  context?: {
+    scenario: string;
+    step: string;
+    modality: 'text' | 'voice';
+    repetition: number;
+    applicationVersion?: string;
+  };
   profile: string;
 };
+
+function historicalSummaryRequest(payload: Record<string, unknown>) {
+  if (!Array.isArray(payload.tools) || payload.tools.length || !Array.isArray(payload.input))
+    return false;
+  return payload.input.some((message) => {
+    if (message?.role !== 'user' || typeof message.content !== 'string') return false;
+    try {
+      const data = JSON.parse(message.content);
+      return (
+        data?.historical === true &&
+        typeof data.summary === 'string' &&
+        typeof data.source === 'string'
+      );
+    } catch {
+      return false;
+    }
+  });
+}
+
 export function requestMaximum(
   profile: EvaluationProfile,
   outputLimit: number,
@@ -172,7 +198,11 @@ export function budgetedProvider(
       if (!begun || ++calls > (profile.role === 'judge' ? 1 : 48))
         throw new Error('evaluation_call_limit');
       const kind =
-        profile.role === 'judge' ? 'judge' : context?.step === 'summary' ? 'summary' : 'backend';
+        profile.role === 'judge'
+          ? 'judge'
+          : context?.step === 'summary' || historicalSummaryRequest(payload)
+            ? 'summary'
+            : 'backend';
       const exact = countInput ? await countInput(payload) : undefined;
       const maximum = requestMaximum(profile, limit, exact);
       const reservation = budget.reserve(kind, maximum);
@@ -180,6 +210,14 @@ export function budgetedProvider(
         id: randomUUID(),
         startedAt: Date.now(),
         kind,
+        contextBytes: Buffer.byteLength(
+          JSON.stringify({
+            instructions: payload.instructions,
+            input: payload.input,
+            tools: payload.tools,
+            text: payload.text,
+          }),
+        ),
         context,
         profile: profile.id,
         model: profile.model,

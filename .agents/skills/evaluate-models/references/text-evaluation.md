@@ -25,5 +25,8 @@ and budget stops provide no basis for escalation or retries.
 
 ## Timing
 
-Start response timing at text submission. Use the shared completion boundary
-and report call durations alongside correctness and cost.
+Use the delivered-response boundary in
+[application-version comparison](application-comparison.md) for text timing,
+including queue and assisted exchanges. Report successful completion only
+after required state and the entire required response are verified. Keep
+first-useful response and observed failure times separate.

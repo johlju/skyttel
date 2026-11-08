@@ -414,6 +414,7 @@ export type RecordedReference = {
   catalogSha256: string;
   judgeSha256?: string;
   followUps?: boolean;
+  measurementContract?: string;
   summary: ProfileSummary;
 };
 
@@ -428,6 +429,7 @@ export function compareEvaluationProfiles(
     judgeSha256: string;
     followUps?: boolean;
     baselineProfiles: Partial<Record<'text' | 'voice', string>>;
+    measurementContracts?: Partial<Record<'text' | 'voice', string>>;
   },
 ) {
   const comparisons = summaries.flatMap((candidate) => {
@@ -459,6 +461,7 @@ export function compareEvaluationProfiles(
         ...(reference.commit === current.commit &&
         reference.catalogSha256 === current.catalogSha256 &&
         reference.judgeSha256 === current.judgeSha256 &&
+        reference.measurementContract === current.measurementContracts?.[candidate.modality] &&
         (reference.followUps ?? false) === (current.followUps ?? false)
           ? compareProfiles(
               {
@@ -472,12 +475,15 @@ export function compareEvaluationProfiles(
           : {
               label: 'Ej jämförbart',
               recommendation:
-                'Ändrad eller okänd kod, katalog, bedömarkonfiguration eller följdsvarspolicy: bedöm skillnaderna innan jämförelse.',
+                'Ändrad eller okänd kod, katalog, bedömarkonfiguration, mätgräns eller följdsvarspolicy: bedöm skillnaderna innan jämförelse.',
               changed: {
                 commit: reference.commit !== current.commit,
                 catalog: reference.catalogSha256 !== current.catalogSha256,
                 judge: reference.judgeSha256 !== current.judgeSha256,
                 followUps: (reference.followUps ?? false) !== (current.followUps ?? false),
+                measurement:
+                  reference.measurementContract !==
+                  current.measurementContracts?.[candidate.modality],
               },
             }),
       })),

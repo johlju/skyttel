@@ -1,0 +1,11 @@
+{
+  "id": "wait-optimization-v1",
+  "modality": "text",
+  "models": ["gpt-6.1-terra", "gpt-6.1-sol"],
+  "effort": "high",
+  "repetitions": [1, 2, 3, 4, 5],
+  "targetScenarios": ["everyday-question", "everyday-change", "everyday-follow-up"],
+  "targetMaximumRatio": 0.8,
+  "otherMaximumRatio": 1.1,
+  "maximumRelativeRange": 0.2
+}

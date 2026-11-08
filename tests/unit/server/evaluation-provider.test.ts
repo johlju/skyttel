@@ -4,9 +4,71 @@ import { EvaluationBudget } from '../../../scripts/model-evaluation/budget.js';
 import {
   budgetedProvider,
   modelCost,
+  type ProviderCall,
   requestMaximum,
   verifiedProfile,
 } from '../../../scripts/model-evaluation/provider.js';
+
+test('an automatic historical summary inside ordinary work retains its separate billing category', {
+  tags: ['technical'],
+}, async () => {
+  const db = new Database(':memory:');
+  try {
+    const budget = new EvaluationBudget(db, {
+      authorized: true,
+      priorUsd: 0,
+      priorSource: 'Controlled summary-category transport.',
+    });
+    const profile = verifiedProfile('sol-high');
+    const calls: ProviderCall[] = [];
+    const provider = budgetedProvider(profile, budget, {
+      record: (call) => calls.push(call),
+      transport: async () =>
+        Response.json({
+          model: profile.model,
+          service_tier: 'default',
+          status: 'completed',
+          usage: {
+            input_tokens: 20,
+            output_tokens: 10,
+            input_tokens_details: { cached_tokens: 0, cache_write_tokens: 0 },
+            output_tokens_details: { reasoning_tokens: 5 },
+          },
+        }),
+    });
+    provider.beginStep(0, {
+      scenario: 'automatic',
+      step: 'ordinary-read',
+      modality: 'text',
+      repetition: 1,
+    });
+    await provider.fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      body: JSON.stringify({
+        model: profile.model,
+        reasoning: { effort: 'high' },
+        service_tier: 'default',
+        max_output_tokens: profile.maxOutputTokens,
+        instructions: 'Controlled historical summary.',
+        tools: [],
+        input: [
+          {
+            role: 'user',
+            content: JSON.stringify({
+              historical: true,
+              summary: '',
+              source: 'Historical discussion.',
+            }),
+          },
+        ],
+      }),
+    });
+    expect(calls.at(-1)).toMatchObject({ kind: 'summary', outcome: 'completed' });
+    expect(calls.at(-1)?.contextBytes).toBeGreaterThan(0);
+  } finally {
+    db.close();
+  }
+});
 
 test('complete payload reservations enforce output and round caps without retries', {
   tags: ['technical'],

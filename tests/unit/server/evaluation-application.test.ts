@@ -1,10 +1,147 @@
+import Database from 'better-sqlite3';
 import { expect, test, vi } from 'vitest';
+import { EvaluationBudget } from '../../../scripts/model-evaluation/budget.js';
 import catalog from '../../../scripts/model-evaluation/catalog.json' with { type: 'json' };
 import { evaluationEnvironment } from '../../../scripts/model-evaluation/environment.js';
+import { contentJudge } from '../../../scripts/model-evaluation/judge.js';
+import {
+  budgetedProvider,
+  type ProviderCall,
+  verifiedProfile,
+} from '../../../scripts/model-evaluation/provider.js';
 import { runTextScenario } from '../../../scripts/model-evaluation/runner.js';
 import type { Scenario } from '../../../scripts/model-evaluation/types.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../../support/text-model.js';
+
+test('text evaluation separates observed work and judge calls, context, cache tokens and MCP metrics', {
+  tags: ['technical'],
+}, async () => {
+  const database = new Database(':memory:');
+  const budget = new EvaluationBudget(database, {
+    authorized: true,
+    priorUsd: 0,
+    priorSource: 'Synthetic transport metrics; no paid calls.',
+  });
+  const records = new Map<string, ProviderCall>();
+  const record = (call: ProviderCall) => records.set(call.id, call);
+  let workCalls = 0;
+  const model = textModel(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    return workCalls++ === 0 ? [modelTool('read_history', {})] : [modelMessage('Hela svaret.')];
+  });
+  const transport: typeof fetch = async (url, init) => {
+    const response = await model.provider(url, init);
+    return Response.json(
+      { ...(await response.json()), service_tier: 'default' },
+      { headers: response.headers },
+    );
+  };
+  const backend = budgetedProvider(verifiedProfile('sol-high'), budget, { record, transport });
+  const judgment = textModel(() => [
+    modelMessage(
+      JSON.stringify({
+        verdicts: [{ id: 'backend-0', outcome: 'pass', reason: 'Complete controlled answer.' }],
+      }),
+    ),
+  ]);
+  const judge = budgetedProvider(verifiedProfile('judge-sol-high'), budget, {
+    record,
+    transport: async (url, init) => {
+      const response = await judgment.provider(url, init);
+      return Response.json(
+        { ...(await response.json()), service_tier: 'default' },
+        { headers: response.headers },
+      );
+    },
+  });
+  try {
+    const run = await runTextScenario(
+      {
+        id: 'metrics',
+        title: 'Observed evaluator metrics',
+        voice: false,
+        steps: [
+          { id: 'read', text: 'Vad vet du?', expected: { requirements: ['Ge hela svaret.'] } },
+        ],
+      },
+      { modelProfile: verifiedProfile('sol-high'), modelFetch: backend.fetch },
+      {
+        profile: 'sol-high',
+        repetition: 1,
+        beginStep: backend.beginStep,
+        judge: contentJudge('synthetic-key', judge),
+        providerRecords: () => [...records.values()],
+      },
+    );
+    expect(run.attempts[0]).toMatchObject({
+      outcome: 'pass',
+      metrics: {
+        model: {
+          backend: {
+            count: 3,
+            inputTokens: 360,
+            outputTokens: 90,
+            reasoningTokens: 30,
+            providerCachedTokens: 60,
+          },
+          summary: { count: 0, elapsedMs: 0 },
+          judge: { count: 1, inputTokens: 120, outputTokens: 30 },
+        },
+        readCache: { hits: null },
+      },
+    });
+    expect(run.attempts[0].metrics?.model.backend.elapsedMs).toBeGreaterThanOrEqual(20);
+    expect(run.attempts[0].metrics?.model.backend.contextBytes).toBeGreaterThan(0);
+    expect(run.attempts[0].metrics?.model.backend.costUsd).toBeCloseTo(0.001506, 9);
+    expect(run.attempts[0].metrics?.mcp.count).toBeGreaterThan(0);
+    expect(run.attempts[0].metrics?.mcp.elapsedMs).toBeGreaterThanOrEqual(0);
+  } finally {
+    database.close();
+  }
+});
+
+test('text timing includes final response delivery and identifies the measurement contract', {
+  tags: ['technical'],
+}, async () => {
+  const model = textModel(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    return [modelMessage('Hela svaret.')];
+  });
+  let held = false;
+  const run = await runTextScenario(
+    {
+      id: 'delivered-text',
+      title: 'Whole response delivery',
+      voice: false,
+      steps: [{ id: 'read', text: 'Vad vet du?', expected: { requirements: [] } }],
+    },
+    {
+      modelFetch: model.provider,
+      deliverResponse: async (request, response) => {
+        if (request.method === 'GET' && /\/messages\/[^/]+$/.test(new URL(request.url).pathname)) {
+          const view = (await response.clone().json()) as TextAssistantView;
+          if (view.taskStatus === 'completed' && !held) {
+            held = true;
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
+        }
+        return response;
+      },
+    },
+    { profile: 'local', repetition: 1 },
+  );
+  expect(held).toBe(true);
+  expect(run.attempts[0]).toMatchObject({
+    outcome: 'pass',
+    timing: { contract: 'text-delivery-v2' },
+  });
+  expect(run.attempts[0].timing?.successfulCompletionMs).toBeGreaterThanOrEqual(100);
+  expect(run.attempts[0].timing?.firstUsefulMs).toBeGreaterThanOrEqual(100);
+  expect(run.attempts[0].timing?.firstUsefulMs).toBeLessThanOrEqual(run.attempts[0].elapsedMs ?? 0);
+  expect(run.attempts[0].timing?.successfulCompletionMs).toBe(run.attempts[0].elapsedMs);
+  expect(run.attempts[0].timing?.queueMs).toBeGreaterThanOrEqual(0);
+});
 
 test.each(['preserved', 'missing', 'judge-error'] as const)(
   'advanced inability needs explicit retained unfinished instructions: %s',

@@ -98,6 +98,13 @@ requests, observations, reports and the persistent atomic ledger in ignored
 `model-evaluation-results/<run-id>` artifacts. Keep raw transcripts and
 credentials private.
 
+For application revisions, use
+[application-version comparison](application-comparison.md). Keep both
+version selections in one model/effort/modality issue and one ledger. Record
+the common measurement contract, planned alternating order and individual
+version results; a model baseline from another contract cannot replace one
+of the selected application versions.
+
 The judge is a separate model that assesses semantic response requirements
 that fixed application-state checks cannot decide. Choose and record its model
 and effort in the run configuration. Its calibration must pass before its
