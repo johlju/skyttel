@@ -133,6 +133,41 @@ test('a separately reported continuation segment cannot establish comparison acc
   });
 });
 
+test('comparison contracts bind the declared execution order and reject unsupported schedules', {
+  tags: ['technical'],
+}, () => {
+  const run = plan();
+  const selection = { baseline: run.versions[0], candidate: run.versions[1], plan: run.plan };
+  const conditions = {
+    catalog: { scenarios, base: 'same initial data' },
+    audio: 'same approved audio',
+    judge: 'same calibrated judge',
+    followUps: true,
+  };
+  const deferred = prepareComparison(
+    {
+      ...selection,
+      plan: { ...run.plan, executionOrder: 'ordinary-before-stop-v1' },
+    },
+    scenarios,
+    verifiedProfile('sol-high'),
+    conditions,
+  );
+  expect(deferred.contractId).not.toBe(run.contractId);
+  expect(deferred.plan.executionOrder).toBe('ordinary-before-stop-v1');
+  expect(() =>
+    prepareComparison(
+      {
+        ...selection,
+        plan: { ...run.plan, executionOrder: 'unsupported' } as unknown as typeof run.plan,
+      },
+      scenarios,
+      verifiedProfile('sol-high'),
+      conditions,
+    ),
+  ).toThrow('evaluation_comparison_plan_invalid');
+});
+
 test.each([
   ['old-contract', 'inconclusive'],
   ['missing', 'inconclusive'],

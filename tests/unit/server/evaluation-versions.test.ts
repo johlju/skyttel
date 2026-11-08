@@ -8,6 +8,7 @@ import catalog from '../../../scripts/model-evaluation/catalog.json' with { type
 import profiles from '../../../scripts/model-evaluation/profiles.json' with { type: 'json' };
 import { verifiedProfile } from '../../../scripts/model-evaluation/provider.js';
 import { runTextScenario } from '../../../scripts/model-evaluation/runner.js';
+import type { Scenario } from '../../../scripts/model-evaluation/types.js';
 import { modelMessage, pricedProvider, textModel } from '../../support/text-model.js';
 
 async function applicationVersion(label: string, evaluator = false, sequentialOnly = false) {
@@ -86,6 +87,123 @@ export function createApp(options: Parameters<typeof original>[0]) {
   );
   return { id: label, directory, commit: git('rev-parse', 'HEAD') };
 }
+
+test('a declared stop-last comparison preserves whole ordinary dialogs and alternating variants in its attempts', {
+  tags: ['technical'],
+  timeout: 30_000,
+}, async () => {
+  const versions = [await applicationVersion('Baseline'), await applicationVersion('Candidate')];
+  const evaluator = await applicationVersion('Evaluator', true);
+  const directory = await mkdtemp(join(tmpdir(), 'skyttel-comparison-order-'));
+  const { evaluateModels } = (await import(
+    /* @vite-ignore */ pathToFileURL(
+      join(evaluator.directory, 'scripts/model-evaluation/evaluate.ts'),
+    ).href
+  )) as typeof import('../../../scripts/model-evaluation/evaluate.js');
+  const scenarioSet: Scenario[] = [
+    {
+      id: 'stop',
+      title: 'Declared cancellation',
+      voice: false,
+      steps: [
+        {
+          id: 'stop',
+          text: 'Ändra och vänta.',
+          expected: { requirements: [] },
+          userStop: {
+            trigger: 'first-working-after-input',
+            maximumObservationMs: 1000,
+            allowedStates: [{ requirements: [] }],
+          },
+        },
+      ],
+    },
+    {
+      id: 'change',
+      title: 'Ordinary dialog',
+      voice: false,
+      steps: [
+        { id: 'question', text: 'Ändra priset.', expected: { requirements: [] } },
+        { id: 'reply', text: '99 kronor.', expected: { requirements: [] } },
+      ],
+    },
+    {
+      id: 'read',
+      title: 'Ordinary question',
+      voice: false,
+      steps: [{ id: 'read', text: 'Vad vet du?', expected: { requirements: [] } }],
+    },
+  ];
+  try {
+    const run = await evaluateModels({
+      issue: 686,
+      directory,
+      apiKey: 'synthetic-no-network-key',
+      authorized: true,
+      limitUsd: 0,
+      priorUsd: 0,
+      priorSource: 'Zero-payment ordering regression.',
+      commit: evaluator.commit,
+      textProfiles: ['sol-high'],
+      judgeProfile: verifiedProfile('judge-sol-high'),
+      baselineProfiles: { text: 'sol-high' },
+      scenarioSet,
+      applicationComparison: {
+        baseline: versions[0],
+        candidate: versions[1],
+        plan: {
+          id: 'controlled-stop-last',
+          modality: 'text',
+          models: ['gpt-6.1-sol'],
+          effort: 'high',
+          repetitions: [1, 2],
+          targetScenarios: ['change'],
+          targetMaximumRatio: 0.8,
+          otherMaximumRatio: 1.1,
+          maximumRelativeRange: 0.2,
+          executionOrder: 'ordinary-before-stop-v1',
+        },
+      },
+      localVerification: {
+        passed: true,
+        commands: ['npm run test:unit'],
+        evidence: 'Controlled evaluation ordering and zero-payment boundary.',
+      },
+    });
+    expect(
+      run.attempts.map(
+        (attempt) => `${attempt.repetition}:${attempt.applicationVersion}:${attempt.step}`,
+      ),
+    ).toEqual([
+      '1:Baseline:question',
+      '1:Baseline:reply',
+      '1:Baseline:read',
+      '1:Candidate:question',
+      '1:Candidate:reply',
+      '1:Candidate:read',
+      '1:Baseline:stop',
+      '1:Candidate:stop',
+      '2:Candidate:question',
+      '2:Candidate:reply',
+      '2:Candidate:read',
+      '2:Baseline:question',
+      '2:Baseline:reply',
+      '2:Baseline:read',
+      '2:Candidate:stop',
+      '2:Baseline:stop',
+    ]);
+    expect(run.attempts.every((attempt) => attempt.outcome === 'not_run')).toBe(true);
+    expect(run.budget).toMatchObject({ spentUsd: 0, reservedUsd: 0, stopped: true });
+    const manifest = JSON.parse(await readFile(join(directory, '0001-manifest.json'), 'utf8'));
+    expect(manifest.data.applicationComparison.plan.executionOrder).toBe('ordinary-before-stop-v1');
+  } finally {
+    await Promise.all(
+      [...versions.map((version) => version.directory), evaluator.directory, directory].map(
+        (path) => rm(path, { recursive: true, force: true }),
+      ),
+    );
+  }
+});
 
 test('committed application modes retain comparable actual work and usage through public evaluation', {
   tags: ['technical'],

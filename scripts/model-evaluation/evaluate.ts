@@ -10,6 +10,7 @@ import rawCatalog from './catalog.json' with { type: 'json' };
 import {
   type ApplicationComparison,
   compareApplicationVersions,
+  comparisonScenarioOrder,
   prepareComparison,
 } from './comparison.js';
 import { type EvaluationContinuation, prepareContinuation } from './continuation.js';
@@ -221,6 +222,15 @@ export async function evaluateModels(plan: EvaluationPlan) {
           repetition,
           applicationVersion: application.id,
         })),
+        scenarioOrder: repetitions.flatMap((repetition) =>
+          comparisonScenarioOrder(comparisonRun, repetition, catalog.scenarios).map(
+            ({ application, scenario }) => ({
+              repetition,
+              applicationVersion: application.id,
+              scenario: scenario.id,
+            }),
+          ),
+        ),
       }
     : undefined;
   const audio = plan.voice
@@ -496,191 +506,55 @@ export async function evaluateModels(plan: EvaluationPlan) {
       });
     }
     for (const repetition of repetitions) {
-      const applications = comparisonRun
-        ? comparisonRun.order
-            .filter((entry) => entry.repetition === repetition)
-            .map((entry) => entry.application)
-        : [undefined];
-      for (const application of applications) {
+      const dialogs = comparisonRun
+        ? comparisonScenarioOrder(comparisonRun, repetition, catalog.scenarios)
+        : catalog.scenarios.map((scenario) => ({ application: undefined, scenario }));
+      for (const { application, scenario } of dialogs) {
         const order = repetition % 2 ? [...profiles] : [...profiles].reverse();
         for (const id of order) {
           const profile = backendProfile(id);
           const provider = budgetedProvider(profile, budget, { record, countInput: counted });
-          for (const scenario of catalog.scenarios) {
-            if (
-              continuation &&
-              application &&
-              !continuation.includes({
-                applicationVersion: application.id,
-                repetition,
-                scenario: scenario.id,
-              })
-            ) {
-              await missing(
-                scenario,
-                id,
-                repetition,
-                'text',
-                'evaluation_continuation_source_segment',
-                application,
-              );
-              continue;
-            }
-            if (budget.snapshot().stopped) {
-              await missing(
-                scenario,
-                id,
-                repetition,
-                'text',
-                budget.snapshot().reason as string,
-                application,
-              );
-              continue;
-            }
-            try {
-              const run = await runTextScenario(
-                scenario,
-                { providerApiKey: plan.apiKey, modelProfile: profile, modelFetch: provider.fetch },
-                {
-                  profile: id,
-                  repetition,
-                  application,
-                  comparisonContract: comparisonRun?.contractId,
-                  followUps: plan.followUps,
-                  judge,
-                  beginStep: provider.beginStep,
-                  costs: backendCost,
-                  judgeCosts: () => cost('judge'),
-                  stopped: () => budget.snapshot().stopped,
-                  stopReason: () => budget.snapshot().reason,
-                  providerCalls: () => budget.callsStarted,
-                  providerRecords: () => [...calls.values()],
-                  recordObservation: (event) =>
-                    privateRecords.observation({
-                      scenario: scenario.id,
-                      profile: id,
-                      repetition,
-                      applicationVersion: application?.id,
-                      applicationCommit: application?.commit,
-                      modality: 'text',
-                      event,
-                    }),
-                  record: async (attempt) => {
-                    attempts.push(attempt);
-                    await emit('attempt', `${scenario.title}: ${attempt.step}`, attempt);
-                  },
-                },
-              );
-              privateRecords.observation({
-                scenario: scenario.id,
-                profile: id,
-                repetition,
-                applicationVersion: application?.id,
-                applicationCommit: application?.commit,
-                finalMap: run.finalMap,
-              });
-            } catch (error) {
-              budget.stop(error instanceof Error ? error.message : 'evaluation_application_failed');
-              await missing(
-                scenario,
-                id,
-                repetition,
-                'text',
-                budget.snapshot().reason as string,
-                application,
-              );
-            }
-          }
-        }
-        if (plan.voice === true)
-          for (const scenario of catalog.scenarios.filter((item) => item.voice)) {
-            if (!voiceProfile) throw new Error('evaluation_voice_model_required');
-            const id = voiceProfile.id;
-            if (budget.snapshot().stopped) {
-              await missing(
-                scenario,
-                id,
-                repetition,
-                'voice',
-                budget.snapshot().reason as string,
-                application,
-              );
-              continue;
-            }
-            const audioSeconds = (
-              await Promise.all(
-                scenarioUtterances(scenario, plan.followUps).map((step) =>
-                  referenceSpeech(step.id, step.text, plan.referenceVoice),
-                ),
-              )
-            ).reduce((sum, item) => sum + item.clip.frames / item.clip.sampleRate, 0);
-            const utterances = scenarioUtterances(scenario, plan.followUps).length;
-            const maximumSeconds = Math.ceil(
-              audioSeconds + utterances * 180 + 32 + (utterances - 1) * 120,
-            );
-            const liveUsage: LiveUsageAttempt[] = [];
-            const live = budgetedLive(
-              budget,
-              maximumSeconds,
-              (usage) => liveUsage.push(usage),
-              fetch,
-              voiceProfile,
-              {
-                requiredSession: commonLiveSession(voiceProfile),
-                recordDispatch: (request) =>
-                  privateRecords.call({
-                    kind: 'voice_dispatch',
-                    applicationVersion: application?.id,
-                    scenario: scenario.id,
-                    repetition,
-                    profile: voiceProfile,
-                    request,
-                  }),
-              },
-            );
-            const profile = backendProfile(voiceProfile.backend);
-            const provider = budgetedProvider(profile, budget, { record, countInput: counted });
-            const run = await runVoiceScenario(
+          if (
+            continuation &&
+            application &&
+            !continuation.includes({
+              applicationVersion: application.id,
+              repetition,
+              scenario: scenario.id,
+            })
+          ) {
+            await missing(
               scenario,
-              {
-                providerApiKey: plan.apiKey,
-                modelProfile: profile,
-                modelFetch: provider.fetch,
-                liveFetch: live.fetch,
-                liveUsage: live.usage,
-                liveProfile: voiceProfile,
-              },
+              id,
+              repetition,
+              'text',
+              'evaluation_continuation_source_segment',
+              application,
+            );
+            continue;
+          }
+          if (budget.snapshot().stopped) {
+            await missing(
+              scenario,
+              id,
+              repetition,
+              'text',
+              budget.snapshot().reason as string,
+              application,
+            );
+            continue;
+          }
+          try {
+            const run = await runTextScenario(
+              scenario,
+              { providerApiKey: plan.apiKey, modelProfile: profile, modelFetch: provider.fetch },
               {
                 profile: id,
+                repetition,
                 application,
                 comparisonContract: comparisonRun?.contractId,
-                referenceVoice: plan.referenceVoice,
                 followUps: plan.followUps,
-                maximumSeconds,
-                sessionTimeLimit: () => budget.stop('evaluation_live_time_limit'),
-                repetition,
                 judge,
-                assessPlayback,
-                maximumPlaybackCandidates: plan.playbackAssessorProfile?.maximumCandidates,
-                recordInput: (input) =>
-                  privateRecords.observation({
-                    kind: 'source_playback',
-                    applicationVersion: application?.id,
-                    scenario: scenario.id,
-                    repetition,
-                    profile: id,
-                    input,
-                  }),
-                recordPlayback: ({ wav, ...metadata }) =>
-                  privateRecords.observation({
-                    kind: 'rendered_recording',
-                    applicationVersion: application?.id,
-                    scenario: scenario.id,
-                    repetition,
-                    profile: id,
-                    metadata,
-                    wavBase64: wav.toString('base64'),
-                  }),
                 beginStep: provider.beginStep,
                 costs: backendCost,
                 judgeCosts: () => cost('judge'),
@@ -692,11 +566,10 @@ export async function evaluateModels(plan: EvaluationPlan) {
                   privateRecords.observation({
                     scenario: scenario.id,
                     profile: id,
+                    repetition,
                     applicationVersion: application?.id,
                     applicationCommit: application?.commit,
-                    repetition,
-                    followUps: plan.followUps,
-                    modality: 'voice',
+                    modality: 'text',
                     event,
                   }),
                 record: async (attempt) => {
@@ -705,43 +578,175 @@ export async function evaluateModels(plan: EvaluationPlan) {
                 },
               },
             );
-            await emit('diagnostic', `Talkostnad: ${scenario.title}`, {
-              sessions: liveUsage,
-              maximumSeconds,
-              stepCost: 'Estimated allocations are not used to rank models.',
-              observation: voicePlaybackInstrumentation,
-            });
-            const finalUsage = [
-              ...new Map(liveUsage.map((usage) => [usage.attemptId, usage])).values(),
-            ];
-            scenarioVoiceUsage.push({
-              scenario: scenario.id,
-              applicationVersion: application?.id,
-              repetition,
-              sessions: finalUsage,
-              costUsd:
-                finalUsage.length &&
-                finalUsage.every(
-                  (usage) =>
-                    usage.final &&
-                    usage.endedAt &&
-                    usage.model === voiceProfile.model &&
-                    usage.seconds !== null,
-                )
-                  ? finalUsage.reduce(
-                      (sum, usage) => sum + ((usage.seconds ?? 0) * voiceProfile.usdPerMinute) / 60,
-                      0,
-                    )
-                  : null,
-            });
             privateRecords.observation({
               scenario: scenario.id,
-              applicationVersion: application?.id,
+              profile: id,
               repetition,
+              applicationVersion: application?.id,
+              applicationCommit: application?.commit,
               finalMap: run.finalMap,
-              liveUsage,
             });
+          } catch (error) {
+            budget.stop(error instanceof Error ? error.message : 'evaluation_application_failed');
+            await missing(
+              scenario,
+              id,
+              repetition,
+              'text',
+              budget.snapshot().reason as string,
+              application,
+            );
           }
+        }
+        if (plan.voice === true && scenario.voice) {
+          if (!voiceProfile) throw new Error('evaluation_voice_model_required');
+          const id = voiceProfile.id;
+          if (budget.snapshot().stopped) {
+            await missing(
+              scenario,
+              id,
+              repetition,
+              'voice',
+              budget.snapshot().reason as string,
+              application,
+            );
+            continue;
+          }
+          const audioSeconds = (
+            await Promise.all(
+              scenarioUtterances(scenario, plan.followUps).map((step) =>
+                referenceSpeech(step.id, step.text, plan.referenceVoice),
+              ),
+            )
+          ).reduce((sum, item) => sum + item.clip.frames / item.clip.sampleRate, 0);
+          const utterances = scenarioUtterances(scenario, plan.followUps).length;
+          const maximumSeconds = Math.ceil(
+            audioSeconds + utterances * 180 + 32 + (utterances - 1) * 120,
+          );
+          const liveUsage: LiveUsageAttempt[] = [];
+          const live = budgetedLive(
+            budget,
+            maximumSeconds,
+            (usage) => liveUsage.push(usage),
+            fetch,
+            voiceProfile,
+            {
+              requiredSession: commonLiveSession(voiceProfile),
+              recordDispatch: (request) =>
+                privateRecords.call({
+                  kind: 'voice_dispatch',
+                  applicationVersion: application?.id,
+                  scenario: scenario.id,
+                  repetition,
+                  profile: voiceProfile,
+                  request,
+                }),
+            },
+          );
+          const profile = backendProfile(voiceProfile.backend);
+          const provider = budgetedProvider(profile, budget, { record, countInput: counted });
+          const run = await runVoiceScenario(
+            scenario,
+            {
+              providerApiKey: plan.apiKey,
+              modelProfile: profile,
+              modelFetch: provider.fetch,
+              liveFetch: live.fetch,
+              liveUsage: live.usage,
+              liveProfile: voiceProfile,
+            },
+            {
+              profile: id,
+              application,
+              comparisonContract: comparisonRun?.contractId,
+              referenceVoice: plan.referenceVoice,
+              followUps: plan.followUps,
+              maximumSeconds,
+              sessionTimeLimit: () => budget.stop('evaluation_live_time_limit'),
+              repetition,
+              judge,
+              assessPlayback,
+              maximumPlaybackCandidates: plan.playbackAssessorProfile?.maximumCandidates,
+              recordInput: (input) =>
+                privateRecords.observation({
+                  kind: 'source_playback',
+                  applicationVersion: application?.id,
+                  scenario: scenario.id,
+                  repetition,
+                  profile: id,
+                  input,
+                }),
+              recordPlayback: ({ wav, ...metadata }) =>
+                privateRecords.observation({
+                  kind: 'rendered_recording',
+                  applicationVersion: application?.id,
+                  scenario: scenario.id,
+                  repetition,
+                  profile: id,
+                  metadata,
+                  wavBase64: wav.toString('base64'),
+                }),
+              beginStep: provider.beginStep,
+              costs: backendCost,
+              judgeCosts: () => cost('judge'),
+              stopped: () => budget.snapshot().stopped,
+              stopReason: () => budget.snapshot().reason,
+              providerCalls: () => budget.callsStarted,
+              providerRecords: () => [...calls.values()],
+              recordObservation: (event) =>
+                privateRecords.observation({
+                  scenario: scenario.id,
+                  profile: id,
+                  applicationVersion: application?.id,
+                  applicationCommit: application?.commit,
+                  repetition,
+                  followUps: plan.followUps,
+                  modality: 'voice',
+                  event,
+                }),
+              record: async (attempt) => {
+                attempts.push(attempt);
+                await emit('attempt', `${scenario.title}: ${attempt.step}`, attempt);
+              },
+            },
+          );
+          await emit('diagnostic', `Talkostnad: ${scenario.title}`, {
+            sessions: liveUsage,
+            maximumSeconds,
+            stepCost: 'Estimated allocations are not used to rank models.',
+            observation: voicePlaybackInstrumentation,
+          });
+          const finalUsage = [
+            ...new Map(liveUsage.map((usage) => [usage.attemptId, usage])).values(),
+          ];
+          scenarioVoiceUsage.push({
+            scenario: scenario.id,
+            applicationVersion: application?.id,
+            repetition,
+            sessions: finalUsage,
+            costUsd:
+              finalUsage.length &&
+              finalUsage.every(
+                (usage) =>
+                  usage.final &&
+                  usage.endedAt &&
+                  usage.model === voiceProfile.model &&
+                  usage.seconds !== null,
+              )
+                ? finalUsage.reduce(
+                    (sum, usage) => sum + ((usage.seconds ?? 0) * voiceProfile.usdPerMinute) / 60,
+                    0,
+                  )
+                : null,
+          });
+          privateRecords.observation({
+            scenario: scenario.id,
+            applicationVersion: application?.id,
+            repetition,
+            finalMap: run.finalMap,
+            liveUsage,
+          });
+        }
       }
     }
     const summaries = profiles.map((id) =>

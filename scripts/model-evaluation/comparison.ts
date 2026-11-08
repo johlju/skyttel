@@ -18,6 +18,8 @@ export type ComparisonPlan = {
   targetMaximumRatio: number;
   otherMaximumRatio: number;
   maximumRelativeRange: number;
+  /** Keep whole dialogs intact, deferring their declared cancellation work. */
+  executionOrder?: 'ordinary-before-stop-v1';
 };
 export type ApplicationComparison = {
   baseline: ApplicationVersion;
@@ -92,7 +94,8 @@ export function prepareComparison(
     !Number.isFinite(plan.otherMaximumRatio) ||
     plan.otherMaximumRatio < 1 ||
     !Number.isFinite(plan.maximumRelativeRange) ||
-    plan.maximumRelativeRange < 0
+    plan.maximumRelativeRange < 0 ||
+    (plan.executionOrder !== undefined && plan.executionOrder !== 'ordinary-before-stop-v1')
   )
     throw new Error('evaluation_comparison_plan_invalid');
   if (
@@ -131,6 +134,23 @@ export function prepareComparison(
       })),
     ),
   };
+}
+
+/** Preserve the declared variant order within each ordinary/Stop group.
+ * The default keeps every scenario of one application together. */
+export function comparisonScenarioOrder(
+  run: ComparisonRun,
+  repetition: number,
+  scenarios: Scenario[],
+) {
+  const selected = scenarios.filter((scenario) => run.plan.modality !== 'voice' || scenario.voice);
+  const dialogs = run.order
+    .filter((entry) => entry.repetition === repetition)
+    .flatMap(({ application }) => selected.map((scenario) => ({ application, scenario })));
+  if (run.plan.executionOrder !== 'ordinary-before-stop-v1') return dialogs;
+  const stopped = ({ scenario }: (typeof dialogs)[number]) =>
+    scenario.steps.some((step) => step.userStop);
+  return [...dialogs.filter((dialog) => !stopped(dialog)), ...dialogs.filter(stopped)];
 }
 
 /** Compare application changes within one exact model, keeping raw outcomes

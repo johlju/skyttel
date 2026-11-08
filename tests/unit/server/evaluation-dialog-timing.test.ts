@@ -336,8 +336,9 @@ test.each(['text', 'voice'] as const)(
       } else if (fault === 'missing-required-proof') {
         fixture.parent.followUpSelection!.candidates[0].content!.pop();
       } else if (fault === 'failed-retention' || fault === 'duplicated-retention') {
-        const evidence = fixture.parent.followUpSelection!.candidates[0].content!;
-        const retention = evidence.find((item) => item.id === 'backend-retention')!;
+        const evidence = fixture.parent.followUpSelection?.candidates[0]?.content;
+        const retention = evidence?.find((item) => item.id === 'backend-retention');
+        if (!evidence || !retention) throw new Error('Missing retained-work proof fixture.');
         if (fault === 'failed-retention') retention.outcome = 'fail';
         else evidence.push(structuredClone(retention));
       } else if (fault === 'independent-reply-state') {
