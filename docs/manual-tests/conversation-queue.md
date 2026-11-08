@@ -500,6 +500,14 @@ manuell ändring eller en redan inaktuell begäran fortfarande avvisas.
       "runner": "vitest",
       "suite": "server",
       "spec": "tests/unit/server/conversation-draft-ordering.test.ts",
+      "title": "repeated draft changes during admission refuse the request without expiring its conversation",
+      "purpose": "HTTP-bevis att upprepade manuella ändringar under två fördröjda läsningar avvisar en inaktuell begäran, bevarar utkastet och låter samma behöriga samtal läsa aktuella uppgifter."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-draft-ordering.test.ts",
       "title": "stopping one conversation releases other devices and preserves completed batches",
       "purpose": "HTTP-bevis med kontrollerat sent modellsvar för kvarvarande batch och stoppets samtalsgräns."
     }
@@ -510,6 +518,11 @@ manuell ändring eller en redan inaktuell begäran fortfarande avvisas.
 <!-- markdownlint-enable MD013 -->
 
 **Steg:**
+
+Den separata HTTP-evidensen fördröjer också två läsningar och rättar utkastet
+manuellt under båda. Den inaktuella begäran avvisas, utkastet bevaras och
+samma behöriga samtal kan läsa de aktuella uppgifterna. Detta är en teknisk
+kapplöpningskontroll, inte ett utfört manuellt prov.
 
 1. Skicka **Hållet uppdrag.** i första profilen. Låt terminalens första
    modelluppdrag vänta. Skicka också **Ska strykas.** där.

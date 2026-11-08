@@ -69,10 +69,12 @@ test('a read crossing a content change or a new conversation is never installed 
     () => cache.clear(),
   ]) {
     const load = vi.fn(async () => ({ objects: [] }));
-    await cache.read('read_map', {}, async () => {
-      change();
-      return load();
-    });
+    await expect(
+      cache.read('read_map', {}, async () => {
+        change();
+        return load();
+      }),
+    ).rejects.toMatchObject({ code: 'assistant_draft_changed' });
     await cache.read('read_map', {}, load);
     expect(load).toHaveBeenCalledTimes(2);
     cache.clear();

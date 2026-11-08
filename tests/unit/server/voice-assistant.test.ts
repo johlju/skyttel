@@ -191,17 +191,35 @@ test('resuming interrupted output keeps historical context separate from new sav
     },
   ]);
   expect(JSON.stringify(retained)).not.toContain('Klientens påhittade historik.');
+  const publicReview = (await (await browser.get(`${path}/${assistant.id}`)).json()).review;
   expect(retained?.[2]).toEqual({
     role: 'assistant',
     content: [{ type: 'output_text', text: expect.any(String) }],
     status: 'completed',
   });
   expect(JSON.parse(String(retained?.[2]?.content[0]?.text))).toEqual({
-    currentDraft: beforeResume.review,
+    historical: true,
+    currentDraft: {
+      version: publicReview.version,
+      contentVersion: publicReview.contentVersion,
+      readyToSave: publicReview.readyToSave,
+      complete: false,
+      totals: {
+        changes: 0,
+        relationships: 0,
+        objectTypes: 0,
+        relationshipTypes: 0,
+        conflicts: 0,
+        unresolvedIdentities: 0,
+      },
+      changes: [],
+      current: { types: [], relationshipTypes: [] },
+      conflicts: [],
+      unresolvedIdentities: [],
+    },
     unfinishedRequests: [],
     pendingParts: [],
     saveOperations: [],
-    historical: true,
   });
   const session = [...live.channels.keys()].at(-1);
   if (!session) throw new Error('Missing resumed voice session');

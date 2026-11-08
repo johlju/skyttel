@@ -4,7 +4,7 @@ import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
-import { modelTool, textModel, verifiedAnswers } from '../../support/text-model.js';
+import { modelMessage, modelTool, textModel, verifiedAnswers } from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
 let browser: APIRequestContext;
@@ -22,112 +22,134 @@ test('controlled clarification preserves the request, independent work and prope
     'Vilken Alex använder tjänsten: personen i Lund eller personen i Umeå? Vilket objekt ska betalningen komma från?',
   ];
   let turn = 0;
-  const model = textModel((body) => {
-    const input = JSON.parse(String(body.input.findLast((item) => item.role === 'user')?.content));
-    const change = input.draft.changes.find((item: { id: string }) => item.id === 'lo');
-    const value = change.after;
-    const properties = value.properties;
-    if (turn++ === 0) {
-      expect(body.instructions).toContain('Hitta inte på datatyp');
-      expect(body.instructions).toContain('Skapa ingen ersättningsegenskap');
-      return [
-        modelTool('submit_changes', {
-          version: input.draft.version,
-          contentVersion: input.draft.contentVersion,
-          completion: 'draft',
-          questions,
-          operations: [
-            {
-              name: 'propose_object',
-              arguments: {
-                id: 'lo',
-                baseRevision: null,
-                value: {
-                  ...value,
-                  properties: [
-                    ...properties,
-                    { label: 'Telefon', kind: 'text', value: '0700123456' },
-                  ],
+  const model = textModel(
+    (body) => {
+      const input = JSON.parse(
+        String(body.input.findLast((item) => item.role === 'user')?.content),
+      );
+      if (input.message.startsWith('Förklara ordet'))
+        return [modelMessage('Ett utkast innehåller osparade förslag.')];
+      if (turn >= 3)
+        return [
+          modelTool('save_draft', {
+            version: input.draft.version,
+            contentVersion: input.draft.contentVersion,
+            operationId: 'clarified-whole-draft',
+          }),
+        ];
+      const change = input.draft.changes.find((item: { id: string }) => item.id === 'lo');
+      const value = change.after;
+      const properties = value.properties;
+      if (turn++ === 0) {
+        expect(body.instructions).toContain('Hitta inte på datatyp');
+        expect(body.instructions).toContain('Skapa ingen ersättningsegenskap');
+        return [
+          modelTool('submit_changes', {
+            version: input.draft.version,
+            contentVersion: input.draft.contentVersion,
+            completion: 'draft',
+            questions,
+            operations: [
+              {
+                name: 'propose_object',
+                arguments: {
+                  id: 'lo',
+                  baseRevision: null,
+                  value: {
+                    ...value,
+                    properties: [
+                      ...properties,
+                      { label: 'Telefon', kind: 'text', value: '0700123456' },
+                    ],
+                  },
                 },
               },
-            },
-          ],
-        }),
-      ];
-    }
-    if (turn === 2) {
-      // The actual provider conversation retains both the original request and
-      // the focused questions; the fixture supplies the interpretation itself.
-      expect(JSON.stringify(body.input)).toContain('Kod 0012');
-      expect(JSON.stringify(body.input)).toContain('personen i Umeå');
-      return [
-        modelTool('submit_changes', {
-          version: input.draft.version,
-          contentVersion: input.draft.contentVersion,
-          completion: 'draft',
-          questions: [],
-          continueResponse: true,
-          operations: [
-            {
-              name: 'propose_object',
-              arguments: {
-                id: 'lo',
-                baseRevision: null,
-                value: {
-                  ...value,
-                  properties: [
-                    { ...properties[0], value: undefined },
-                    properties[1],
-                    properties[2],
-                    { label: 'Kod', kind: 'text', value: '0012' },
-                  ],
+            ],
+          }),
+        ];
+      }
+      if (turn === 2) {
+        // The actual provider conversation retains both the original request and
+        // the focused questions; the fixture supplies the interpretation itself.
+        expect(JSON.stringify(body.input)).toContain('Kod 0012');
+        expect(JSON.stringify(body.input)).toContain('personen i Umeå');
+        return [
+          modelTool('submit_changes', {
+            version: input.draft.version,
+            contentVersion: input.draft.contentVersion,
+            completion: 'draft',
+            questions: [],
+            continueResponse: true,
+            operations: [
+              {
+                name: 'propose_object',
+                arguments: {
+                  id: 'lo',
+                  baseRevision: null,
+                  value: {
+                    ...value,
+                    properties: [
+                      { ...properties[0], value: undefined },
+                      properties[1],
+                      properties[2],
+                      { label: 'Kod', kind: 'text', value: '0012' },
+                    ],
+                  },
                 },
               },
-            },
-            {
-              name: 'propose_relationship',
-              arguments: {
-                id: 'uses',
-                baseRevision: null,
-                value: {
-                  typeId: input.draft.relationshipTypes.find(
-                    (change: { id: string }) => change.id === 'type-uses',
-                  ).after.id,
-                  sourceId: 'alex-umea',
-                  targetId: 'service',
+              {
+                name: 'propose_relationship',
+                arguments: {
+                  id: 'uses',
+                  baseRevision: null,
+                  value: {
+                    typeId: input.draft.relationshipTypes.find(
+                      (change: { id: string }) => change.id === 'type-uses',
+                    ).after.id,
+                    sourceId: 'alex-umea',
+                    targetId: 'service',
+                  },
                 },
               },
-            },
-            {
-              name: 'propose_relationship',
-              arguments: {
-                id: 'pays',
-                baseRevision: null,
-                value: {
-                  typeId: input.draft.relationshipTypes.find(
-                    (change: { id: string }) => change.id === 'type-pays',
-                  ).after.id,
-                  sourceId: 'account',
-                  targetId: 'service',
+              {
+                name: 'propose_relationship',
+                arguments: {
+                  id: 'pays',
+                  baseRevision: null,
+                  value: {
+                    typeId: input.draft.relationshipTypes.find(
+                      (change: { id: string }) => change.id === 'type-pays',
+                    ).after.id,
+                    sourceId: 'account',
+                    targetId: 'service',
+                  },
                 },
               },
-            },
-          ],
-        }),
-      ];
-    }
-    if (turn === 3)
-      return [
-        modelTool('ask_questions', { questions: [], updates: verifiedAnswers(body, questions) }),
-      ];
-    return [
-      modelTool('save_draft', {
-        version: input.draft.version,
-        contentVersion: input.draft.contentVersion,
-        operationId: 'clarified-whole-draft',
-      }),
-    ];
-  });
+            ],
+          }),
+        ];
+      }
+      if (turn === 3)
+        return [
+          modelTool('ask_questions', { questions: [], updates: verifiedAnswers(body, questions) }),
+        ];
+      throw new Error('Unexpected controlled clarification step');
+    },
+    (request) => {
+      if (request.instructions.startsWith('SKYTTEL_TURN_SCOPE')) {
+        const { current } = JSON.parse(String(request.input[0].content));
+        return [
+          modelMessage(
+            JSON.stringify({
+              mode: current.startsWith('Förklara ordet') ? 'read' : 'work',
+              request: current,
+            }),
+          ),
+        ];
+      }
+      return [modelMessage('{"decision":"allow","complete":true}')];
+    },
+  );
   app = await createInstallation(undefined, { modelFetch: model.provider });
   browser = await request.newContext();
   await signIn(browser, app.origin);
@@ -224,7 +246,12 @@ test('controlled clarification preserves the request, independent work and prope
     { label: 'Telefon', kind: 'text', value: '0700123456' },
   ]);
   expect(session.operations).toEqual([]);
-  await message('Kod ska vara text. Töm Hem. Det är Alex i Umeå. Använd Betalkonto. Spara inte.');
+  for (let index = 0; index < 3; index++) {
+    await message(`Förklara ordet utkast, del ${index + 1}.`);
+    expect(session.modelReply).toBe('Ett utkast innehåller osparade förslag.');
+    expect(session.questions).toEqual(questions);
+  }
+  await message('Kod ska vara text. Töm Hem. Använd Alex i Umeå och Betalkonto. Spara inte.');
   expect(session.questionPending).not.toBe(true);
   state = await read();
   const corrected = state.draft.changes.find((change: { id: string }) => change.id === 'lo').after

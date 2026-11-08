@@ -252,6 +252,13 @@ TEXT-15.
     "spec": "tests/unit/server/conversation-whole-draft-save.test.ts",
     "title": "an old whole-draft approval cannot save newer proposals and a rejected attempt needs fresh authority",
     "purpose": "Ändrar utkastet medan den oberoende kontrollen hålls och verifierar beständig avvisning, återhämtning och krav på ny uttrycklig sparbegäran."
+  }, {
+    "kind": "technical",
+    "runner": "playwright",
+    "suite": "technical-browser",
+    "spec": "tests/technical-browser/whole-draft-preparation.spec.ts",
+    "title": "literal whole-draft preparation reads omitted proposals before a rejected combined save",
+    "purpose": "Kör förberedelsens publicerade läsning, batch och kontrollsvar mot den disponibla installationen; hela utkastet hämtas innan Lo-förslagets typ används."
   }]
 }
 ```

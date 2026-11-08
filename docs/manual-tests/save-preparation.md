@@ -275,7 +275,14 @@ tool REQUEST submit_changes {"version":VERSION,"contentVersion":CONTENT,"complet
 <!-- markdownlint-enable MD013 -->
 
 För UTKAST-15 börjar det hållna anropet efter att Lo läggs i utkastet.
-Kopiera Lo-förslagets ID och hela `after`-värde från `held.draft.changes`.
+Läs hela det aktuella utkastet innan förslaget bearbetas:
+
+```text
+tool REQUEST read_my_draft {}
+```
+
+Kopiera Lo-förslagets ID och hela `after`-värde från nästa
+`held.lastToolResult.changes`.
 Ersätt ID och VALUE nedan, och ändra enbart värdets description till
 **Förslag väntar på svar**. Släpp sedan frågeresultatet:
 

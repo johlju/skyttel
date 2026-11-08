@@ -49,18 +49,20 @@ async function arrange() {
     assistant: initial,
   };
   vi.stubGlobal('fetch', async (url: string) =>
-    Response.json({
-      assistant: server.assistant,
-      voice: {
-        id: 'reply-voice',
-        phase: url.endsWith('/stop') ? 'closed' : 'listening',
-        seconds: null,
-        usageFinal: false,
-        response: server.response,
-        replyDelivery: server.replyDelivery,
-      },
-      sdp: 'synthetic-answer',
-    }),
+    url === `/api/households/linden/text-assistant/${initial.id}`
+      ? Response.json(server.assistant)
+      : Response.json({
+          assistant: server.assistant,
+          voice: {
+            id: 'reply-voice',
+            phase: url.endsWith('/stop') ? 'closed' : 'listening',
+            seconds: null,
+            usageFinal: false,
+            response: server.response,
+            replyDelivery: server.replyDelivery,
+          },
+          sdp: 'synthetic-answer',
+        }),
   );
   render(<Voice />);
   await act(async () => {

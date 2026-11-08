@@ -158,6 +158,9 @@ test('manual voice controls drive real delegation and MCP, preserve provisional 
 }, 30_000);
 
 test('manual voice family setup refuses reuse and resolves the seeded conflict and price through actual voice delegation and MCP', async () => {
+  const document = await readFile('docs/manual-tests/voice-controls-preparation.md', 'utf8');
+  const readDraft = document.match(/^\s*tool REQUEST read_my_draft \{\}$/mu)?.[0].trim();
+  if (!readDraft) throw new Error('Missing public family draft-read recipe');
   const { child, lines, exit, next, command } = launch();
   const browser = await request.newContext();
   try {
@@ -188,13 +191,18 @@ test('manual voice family setup refuses reuse and resolves the seeded conflict a
     await command('user Behåll Lo-förslaget, rätta priset till 189 kr och spara.');
     await command('delegate');
     let held = await next('held');
-    const contentVersion = held.draft.contentVersion;
-    expect(held.draft.conflicts).toHaveLength(1);
+    await command(readDraft.replace('REQUEST', held.id));
+    held = await next('held');
+    const review = held.lastToolResult;
+    const contentVersion = review.contentVersion;
+    expect(review.conflicts).toHaveLength(1);
+    expect(review.changes).toEqual(before.draft.changes);
+    expect(review.relationships).toEqual(before.draft.relationships);
     await command(
       `tool ${held.id} resolve_conflict ${JSON.stringify({
-        version: held.draft.version,
+        version: review.version,
         contentVersion,
-        conflict: held.draft.conflicts[0],
+        conflict: review.conflicts[0],
         choice: 'proposed',
       })}`,
     );
@@ -212,15 +220,12 @@ test('manual voice family setup refuses reuse and resolves the seeded conflict a
         value: {
           ...value,
 
-          properties: [
-            {
-              id: 'description',
-              label: 'Beskrivning',
-              kind: 'text',
-              value: 'Familjeabonnemang 189 kr per månad.',
-            },
-            { id: 'price', label: 'Pris', kind: 'number', value: 189 },
-          ],
+          properties: value.properties.map((property: { label: string }) => {
+            if (property.label === 'Beskrivning')
+              return { ...property, kind: 'text', value: 'Familjeabonnemang 189 kr per månad.' };
+            if (property.label === 'Pris') return { ...property, kind: 'number', value: 189 };
+            return property;
+          }),
         },
       })}`,
     );
@@ -235,12 +240,28 @@ test('manual voice family setup refuses reuse and resolves the seeded conflict a
     await expect.poll(async () => (await (await browser.get(path)).json()).receipt).toBeTruthy();
     const saved = await (await browser.get(`${base}/map`)).json();
     expect(saved.draft.changes).toEqual([]);
+    expect(saved.draft.relationships ?? []).toEqual([]);
+    expect(saved.relationships).toContainEqual(
+      expect.objectContaining({
+        id: review.relationships[0].id,
+        targetId: saved.objects.find((item: { name: string }) => item.name === 'musik@example.test')
+          .id,
+      }),
+    );
+    expect(saved.objects.find((item: { id: string }) => item.id === id).properties).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Valuta', kind: 'text', value: 'SEK' }),
+        expect.objectContaining({ label: 'Betalningsintervall', kind: 'text', value: 'månad' }),
+      ]),
+    );
     expect(
       saved.objects
         .find((item: { id: string }) => item.id === id)
         .properties.find((property: { label: string }) => property.label === 'Pris'),
     ).toMatchObject({ kind: 'number', value: 189 });
-    expect(saved.objects.some((item: { name: string }) => item.name === 'Lo Lind')).toBe(true);
+    expect(
+      saved.objects.find((item: { name: string }) => item.name === 'Lo Lind').properties,
+    ).toContainEqual(expect.objectContaining({ value: 'Spelar piano i musikföreningen.' }));
     await command('quit', 'closed');
     await exit;
     expect(child.exitCode).toBe(0);

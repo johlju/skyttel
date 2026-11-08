@@ -425,9 +425,18 @@ export function useVoice(options: {
       setVoice(null);
       setError(null);
       const active = () => mounted.current && current.current === attempt;
+      let admitted = initial;
       const anchor = () => {
         const shown = latest.current.assistant;
-        const assistant = shown && shown.revision >= initial.revision ? shown : initial;
+        const assistant =
+          shown &&
+          shown.id === admitted.id &&
+          shown.revision >= admitted.revision &&
+          shown.review.contentVersion >= admitted.review.contentVersion &&
+          (shown.review.contentVersion > admitted.review.contentVersion ||
+            shown.review.version >= admitted.review.version)
+            ? shown
+            : admitted;
         return {
           revision: assistant.revision,
           draftVersion: assistant.review.version,
@@ -627,7 +636,18 @@ export function useVoice(options: {
           async (sdp, options) => {
             let result: VoiceAssistantResponse;
             try {
+              const fresh = await request<TextAssistantView>(
+                path.replace(/\/voice$/, ''),
+                undefined,
+                options.signal,
+              );
+              if (!active()) throw new DOMException('Voice setup cancelled', 'AbortError');
+              if (fresh.id !== initial.id)
+                throw new Error('Conversation changed during voice setup');
+              admitted = fresh;
+              if (JSON.stringify(fresh) !== JSON.stringify(initial)) apply(fresh);
               attempt.delivery = await delivery?.connect(path.replace(/\/voice$/, ''));
+              if (!active()) throw new DOMException('Voice setup cancelled', 'AbortError');
               if (delivery && !attempt.delivery)
                 throw new Error('The whole-answer delivery connection is unavailable');
               result = await request<VoiceAssistantResponse>(

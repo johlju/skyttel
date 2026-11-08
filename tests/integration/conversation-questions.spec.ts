@@ -173,10 +173,13 @@ for (const mode of ['text', 'voice'] as const) {
     let relationshipTypeId = '';
     const pending = 'Vilket kort ska användas?';
     const model = textModel((request) => {
-      const { draft } = JSON.parse(
+      const input = JSON.parse(
         String(request.input.findLast((item) => item.role === 'user')?.content),
       );
+      const read = lastToolResult(request);
+      const draft = read?.changes ? read : input.draft;
       const lo = draft.changes.find((change: { id: string }) => change.id === 'lo');
+      if (!lo) return [modelTool('read_my_draft', {})];
       const first = turn++ === 0;
       return [
         modelTool('submit_changes', {
@@ -558,7 +561,22 @@ test('FRAGA-02: Skyttel frågar om en verklig konflikt i samtalet utan en genere
 }) => {
   const conflictQuestion =
     'Lo hette Lo Exempel. Vill du behålla ditt förslag Lo Lind eller det sparade namnet Lo Berg?';
-  const model = textModel(() => [modelTool('ask_questions', { questions: [conflictQuestion] })]);
+  const model = textModel((request) => {
+    const draft = lastToolResult(request);
+    if (!draft?.conflicts) return [modelTool('read_my_draft', {})];
+    expect(draft.conflicts).toHaveLength(1);
+    expect(draft.conflicts[0]).toMatchObject({
+      id: 'lo',
+      kind: 'object',
+      current: { name: 'Lo Berg' },
+    });
+    expect(draft.changes[0]).toMatchObject({
+      id: 'lo',
+      before: { name: 'Lo Exempel' },
+      after: { name: 'Lo Lind' },
+    });
+    return [modelTool('ask_questions', { questions: [conflictQuestion] })];
+  });
   const { app, path, value } = await fixture(page, model);
   const other = await createPreparedContext(browser);
   const post = (client: typeof page.request, action: string, data: unknown) =>
@@ -614,10 +632,7 @@ test('FRAGA-02: Skyttel frågar om en verklig konflikt i samtalet utan en genere
     await startConversationWithText(page);
     await send(page, 'Hjälp mig välja vilket namn vi ska behålla.');
     await expect(textView(page)).toContainText(conflictQuestion);
-    const current = JSON.parse(
-      String(model.requests[0].input.findLast((row) => row.role === 'user')?.content),
-    );
-    expect(current.draft.conflicts).toHaveLength(1);
+    expect(lastToolResult(model.requests[1]).conflicts).toHaveLength(1);
     await expect(page.getByText('Utkastet har konflikter', { exact: false })).toHaveCount(0);
     await expect(voiceBox(page)).toHaveCount(0);
     expect((await (await page.request.get(path)).json()).objects[0].name).toBe('Lo Berg');

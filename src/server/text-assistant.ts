@@ -34,6 +34,7 @@ import {
   type ObserveAssistant,
 } from './assistant-observation.js';
 import { assistantReadCache, assistantReadKey } from './assistant-read-cache.js';
+import { assistantStartDraft } from './assistant-start-facts.js';
 import {
   type CheckTurnActions,
   compareTurnActions,
@@ -656,7 +657,10 @@ export function textAssistantRoutes({
       {
         role: 'assistant' as const,
         text: JSON.stringify({
-          currentDraft: session.state.review,
+          currentDraft: draftFacts(
+            session,
+            session.state.activeMessage?.text ?? session.state.userRequests.at(-1) ?? '',
+          ),
           unfinishedRequests: activeRequests(session),
           pendingParts: contextParts(session),
           saveOperations: session.state.operations,
@@ -669,6 +673,33 @@ export function textAssistantRoutes({
     return session.state.unfinishedRequests
       .filter((request) => !request.paused)
       .map(({ id, text }) => ({ id, text }));
+  }
+  function unfinishedFactReferences(session: Session) {
+    return [
+      ...activeRequests(session)
+        .filter((request) => request.id !== session.state.activeMessage?.id)
+        .map((request) => request.text),
+      ...contextParts(session)
+        .filter((part) => ['waiting', 'ready'].includes(part.status))
+        .flatMap((part) => [part.request, part.question]),
+    ];
+  }
+  function factRelevance(session: Session, message: string) {
+    return [
+      message,
+      session.state.userRequests.slice(0, -1),
+      unfinishedFactReferences(session),
+    ] as const;
+  }
+  function draftFacts(session: Session, message: string, review = session.state.review) {
+    return assistantStartDraft(review, ...factRelevance(session, message));
+  }
+  function envelopeFacts(session: Session, message: string, review = session.state.review) {
+    const relevance = factRelevance(session, message);
+    return {
+      draft: assistantStartDraft(review, ...relevance),
+      verifiedReads: session.execution.reads.facts(...relevance),
+    };
   }
   function pauseCapacity(session: Session) {
     session.state.capacityPaused = true;
@@ -779,9 +810,9 @@ export function textAssistantRoutes({
       const previous = latest.get(key);
       if (previous) removed.add(previous);
       latest.set(key, item.call_id);
-      // The current work envelope replaces the complete draft read. Other
-      // source changes keep their warning until the model rereads that source.
-      if (item.name === 'read_my_draft' && changed.has(item.name)) removed.add(item.call_id);
+      // Invalid facts are removed together with their call association. The
+      // current envelope or an explicit new read supplies their replacement.
+      if (changed.has(item.name)) removed.add(item.call_id);
     }
     session.state.input = session.state.input.filter(
       (item) =>
@@ -796,21 +827,36 @@ export function textAssistantRoutes({
       if (item.type === 'function_call_output' && typeof item.output === 'string') {
         try {
           const value = JSON.parse(item.output);
-          if (
-            value.review &&
-            !value.review.superseded &&
-            (value.review.version !== session.state.review.version ||
-              value.review.contentVersion !== session.state.review.contentVersion)
-          ) {
-            // Keep checked effects and receipts; replace the obsolete draft picture.
-            value.review = {
-              version: value.review.version,
-              contentVersion: value.review.contentVersion,
-              superseded: true,
-            };
+          for (const snapshot of [value, value.review]) {
+            if (
+              !snapshot ||
+              !Array.isArray(snapshot.changes) ||
+              !Number.isSafeInteger(snapshot.version) ||
+              !Number.isSafeInteger(snapshot.contentVersion) ||
+              (snapshot.version === session.state.review.version &&
+                snapshot.contentVersion === session.state.review.contentVersion)
+            )
+              continue;
+            // Both direct mutations and batch reviews contain draft pictures.
+            // Keep their versions, checked effects, receipts and result identity.
+            for (const field of [
+              'readyToSave',
+              'complete',
+              'totals',
+              'changes',
+              'relationships',
+              'objectTypes',
+              'relationshipTypes',
+              'current',
+              'conflicts',
+              'unresolvedIdentities',
+              'pendingOperations',
+            ])
+              delete snapshot[field];
+            snapshot.superseded = true;
             replaced = true;
-            item.output = JSON.stringify(value);
           }
+          item.output = JSON.stringify(value);
         } catch {
           // Non-JSON tool content is preserved as returned.
         }
@@ -826,7 +872,7 @@ export function textAssistantRoutes({
           replaced = true;
         item.content = JSON.stringify({
           ...value,
-          draft: session.state.review,
+          ...envelopeFacts(session, value.message),
           pendingParts: contextParts(session),
         });
       } catch {
@@ -1091,12 +1137,16 @@ export function textAssistantRoutes({
     name: string,
     args: Record<string, unknown>,
     guard?: () => void,
+    readPolicy: 'shared' | 'lifecycle' = 'shared',
   ) {
     guard?.();
     checkViewAccess(session);
     const work = textWork.getStore();
     if (work?.session === session) work.guard();
-    const value = await session.execution.reads.read(name, args, async () => {
+    const load = async () => {
+      guard?.();
+      checkViewAccess(session);
+      if (work?.session === session) work.guard();
       const at = now();
       const observed = observationWork.getStore();
       const parent = observed?.session === session ? observed.context : undefined;
@@ -1186,7 +1236,8 @@ export function textAssistantRoutes({
           409,
         );
       return value;
-    });
+    };
+    const value = await session.execution.reads.read(name, args, load, readPolicy);
     guard?.();
     checkViewAccess(session);
     if (work?.session === session) work.guard();
@@ -1382,10 +1433,10 @@ export function textAssistantRoutes({
     };
   }
   async function refresh(session: Session, guard?: () => void) {
-    const review = await call(session, 'read_my_draft', {}, guard);
+    const review = await call(session, 'read_my_draft', {}, guard, 'lifecycle');
     guard?.();
     session.state.review = review;
-    const { operations } = await call(session, 'read_my_save_operations', {}, guard);
+    const { operations } = await call(session, 'read_my_save_operations', {}, guard, 'lifecycle');
     guard?.();
     session.state.operations = operations;
     if (
@@ -1399,6 +1450,7 @@ export function textAssistantRoutes({
         'read_save_operation',
         { operationId: session.state.pendingSave.operationId },
         guard,
+        'lifecycle',
       );
       guard?.();
       if (operation) session.state.operations.push(operation);
@@ -1888,7 +1940,12 @@ export function textAssistantRoutes({
           throw new MapError('assistant_batch_incomplete', 409);
       };
       scopeReady(checkActions, scope.mode);
-      const review = (await call(session, 'read_my_draft', {}, guard)) as TextAssistantReview;
+      const [review, saveState] = await session.execution.reads.consistent(() =>
+        Promise.all([
+          call(session, 'read_my_draft', {}, guard) as Promise<TextAssistantReview>,
+          call(session, 'read_my_save_operations', {}, guard),
+        ]),
+      );
       guard();
       if (
         review.version !== expected.version ||
@@ -1898,9 +1955,7 @@ export function textAssistantRoutes({
         throw new MapError('assistant_draft_changed', 409);
       }
       session.state.review = review;
-      session.state.operations = (
-        await call(session, 'read_my_save_operations', {}, guard)
-      ).operations;
+      session.state.operations = saveState.operations;
       if (session.state.operations.some((operation) => operation.status === 'pending'))
         throw new MapError('operation_pending', 409);
       const summaryRequested = session.state.contextSummaryState === 'needed';
@@ -1958,7 +2013,7 @@ export function textAssistantRoutes({
             .map((part) => part.question),
           questionPending: contextParts(session).some((part) => part.status === 'waiting'),
           pendingParts: contextParts(session),
-          draft: review,
+          ...envelopeFacts(session, text, review),
           saveOperations: session.state.operations.map(
             ({ operationId, status, draftVersion, contentVersion }) => ({
               operationId,
@@ -1974,11 +2029,19 @@ export function textAssistantRoutes({
             : undefined,
         }),
       });
+      async function refreshCurrentDraft() {
+        const current = (await call(session, 'read_my_draft', {}, guard)) as TextAssistantReview;
+        if (current.version !== version || current.contentVersion !== contentVersion)
+          throw new MapError('assistant_draft_changed', 409);
+        session.state.review = current;
+        const outdated = session.execution.reads.outdated();
+        refreshContext(session, outdated);
+        return outdated;
+      }
       for (let step = 0; step < 48; step++) {
         guard();
         if (!respond) throw new Error('assistant_unavailable');
-        const outdatedReads = session.execution.reads.outdated();
-        refreshContext(session, outdatedReads);
+        const outdatedReads = await refreshCurrentDraft();
         if (needsSummary(session)) {
           const continuation = session.state.input.slice(turnStart);
           await summarize(session, guard, continuation);
@@ -2139,6 +2202,16 @@ export function textAssistantRoutes({
             return;
           }
         }
+        // Summaries await a provider and rebuild context. Revalidate their
+        // continuation before dispatch so an intervening edit cannot reach
+        // another work call as an older draft picture.
+        await refreshCurrentDraft();
+        if (exceedsRequestBudget(session, instructions, tools)) {
+          failSummaryCapacity(session);
+          session.state.phase = 'ready';
+          return;
+        }
+        checkViewAccess(session);
         const response = await respond(instructions, session.state.input, tools, task.signal);
         guard();
         // Recheck the actual MCP grant and content owner after provider await,
@@ -2149,7 +2222,11 @@ export function textAssistantRoutes({
           {},
           guard,
         )) as TextAssistantReview;
-        if (afterProvider.version !== version || afterProvider.contentVersion !== contentVersion)
+        if (
+          afterProvider.version !== version ||
+          afterProvider.contentVersion !== contentVersion ||
+          session.execution.reads.outdated().length
+        )
           throw new MapError('assistant_draft_changed', 409);
         if (response.status !== 'completed') throw new Error('assistant_incomplete');
         session.state.input.push(...toResponseInputItems(response.output));
@@ -2349,6 +2426,32 @@ export function textAssistantRoutes({
                 scope.mode === 'read' || !['save_draft', 'prepare_save'].includes(operation.name),
             ),
           );
+        }
+        // Only trusted read contracts can overlap. Mixed sets retain their
+        // checked execution order; mutations still require their atomic batch.
+        if (
+          calls.length > 1 &&
+          calls.every((action) =>
+            session.execution.mcp.tools.some(
+              (tool) => tool.name === action.name && tool.annotations?.readOnlyHint === true,
+            ),
+          )
+        ) {
+          const results = await session.execution.reads.consistent(() =>
+            Promise.all(
+              calls.map((action) =>
+                call(session, action.name, JSON.parse(action.arguments), guard),
+              ),
+            ),
+          );
+          guard();
+          for (const [index, action] of calls.entries())
+            session.state.input.push({
+              type: 'function_call_output',
+              call_id: action.call_id,
+              output: JSON.stringify(results[index]),
+            });
+          continue;
         }
         for (const action of calls) {
           guard();
@@ -2646,7 +2749,16 @@ export function textAssistantRoutes({
             session.state.input.push({
               type: 'function_call_output',
               call_id: action.call_id,
-              output: JSON.stringify(value),
+              output: JSON.stringify(
+                tool.annotations?.readOnlyHint === false && Array.isArray(value.changes)
+                  ? {
+                      ...draftFacts(session, text, value),
+                      ...(typeof value.existingId === 'string'
+                        ? { existingId: value.existingId }
+                        : {}),
+                    }
+                  : value,
+              ),
             });
           if (tool.annotations?.readOnlyHint !== true) {
             if (Number.isSafeInteger(value.version)) session.state.workVersion = value.version;
@@ -2669,7 +2781,7 @@ export function textAssistantRoutes({
               result: session.state.result,
               receipt: session.state.receipt,
               reply: session.state.reply,
-              review: session.state.review,
+              review: draftFacts(session, text),
               questions: combined.questions,
               pendingParts: session.execution.parts.read(),
             }),
@@ -3594,10 +3706,14 @@ export function textAssistantRoutes({
         if (context.req.method === 'GET' && now() >= session.execution.mcp.expiresAt) {
           checkViewAccess(session);
         } else if (context.req.method === 'GET') await refreshConfirmed(session);
-        else await call(session, 'read_my_draft', {});
-      } catch {
+        else await call(session, 'read_my_draft', {}, undefined, 'lifecycle');
+      } catch (error) {
         if (preparation && !preparation.active) {
           checkPreparation(preparation);
+        }
+        if (error instanceof MapError && error.code === 'assistant_draft_changed') {
+          checkViewAccess(session);
+          return context.json({ error: error.code }, 409);
         }
         await stop(session);
         return context.json({ error: 'assistant_session_expired' }, 404);
@@ -3631,7 +3747,11 @@ export function textAssistantRoutes({
       checkViewAccess(session);
       await waitForReset(session);
       checkViewAccess(session);
-    } catch {
+    } catch (error) {
+      if (error instanceof MapError && error.code === 'assistant_draft_changed') {
+        checkViewAccess(session);
+        return context.json({ error: error.code }, 409);
+      }
       await stop(session);
       return context.json({ error: 'assistant_session_expired' }, 404);
     }
@@ -3729,7 +3849,13 @@ export function textAssistantRoutes({
     let current: TextAssistantReview;
     let draftVersion: number;
     do {
-      current = await call(session, 'read_my_draft', {});
+      current = await call(
+        session,
+        'read_my_draft',
+        {},
+        () => checkPreparation(preparation),
+        'lifecycle',
+      );
       checkPreparation(preparation);
       if (!currentTurn()) return context.json({ error: 'assistant_turn_changed' }, 409);
       draftVersion = preparedDraftVersion(preparation, body.draftVersion, body.contentVersion);

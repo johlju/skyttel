@@ -4,8 +4,11 @@
   "language": "sv,en",
   "import": ["@cspell/dict-sv/cspell-ext.json"],
   "words": [
+    "promptcache",
+    "batcharbete",
     "läsbehörighet",
     "läsresultat",
+    "läsomgång",
     "tokenisering",
     "retargeted",
     "begärandetext",

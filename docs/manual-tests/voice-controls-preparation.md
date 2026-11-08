@@ -225,9 +225,17 @@ förberedelse. Läs det verkliga held-anropets värden varje gång. Alla uppgift
    för egenskapen **Beskrivning** utan att lägga den i utkastet.
    Mikrofonen fortsätter medan formuläret är öppet.
 3. Skriv `user Behåll Lo-förslaget, rätta priset till 189 kr och spara.` och
-   sedan `delegate`. Från `held.draft` kopieras `version`, `contentVersion`
-   och hela första objektet i `conflicts`. Ersätt markörerna nedan; `CONFLICT`
-   ska vara det kopierade JSON-objektet, utan extra citattecken:
+   sedan `delegate`. Första `held.draft` är ett urval, inte hela utkastet.
+   Läs hela utkastet med det hållna anropets ID:
+
+   ```text
+   tool REQUEST read_my_draft {}
+   ```
+
+   Från nästa `held.lastToolResult` kopieras `version`, `contentVersion`
+   och hela första objektet i `conflicts`. Ersätt markörerna nedan och använd
+   det nya anropets ID; `CONFLICT` ska vara det kopierade JSON-objektet, utan
+   extra citattecken:
 
    <!-- markdownlint-disable MD013 -->
    ```text

@@ -230,11 +230,13 @@ test.each([
           return [modelMessage('Läsningen är klar.')];
         }
         correctionEntered = true;
+        const draft = lastToolResult(body);
+        if (!draft) return [modelTool('read_my_draft', {})];
         const target =
-          input.draft.changes.find(
+          draft.changes.find(
             (item: { after?: { name: string } }) => item.after?.name === 'Stolen',
-          ) ?? input.draft.changes[0];
-        return [proposeObject(input.draft, target.id, { ...target.after, name: 'Klar stol' })];
+          ) ?? draft.changes[0];
+        return [proposeObject(draft, target.id, { ...target.after, name: 'Klar stol' })];
       },
       (body) => {
         if (body.instructions.startsWith('SKYTTEL_TURN_SCOPE')) {
@@ -653,6 +655,47 @@ test.each([false, true])(
     }
   },
 );
+
+test('repeated draft changes during admission refuse the request without expiring its conversation', async () => {
+  const firstRead = heldDraftRead();
+  const retryRead = heldDraftRead();
+  const model = textModel(() => [modelMessage('Utkastet finns kvar.')]);
+  const value = await arrange(model.provider, (incoming, dispatch) =>
+    firstRead.dispatch(incoming, (request) => retryRead.dispatch(request, dispatch)),
+  );
+  await seed(value);
+  const initial = await map(value);
+  firstRead.hold();
+  const preparing = post(value.client, `${value.path}/messages`, {
+    revision: value.initial.revision,
+    draftVersion: initial.draft.version,
+    contentVersion: initial.contentVersion,
+    requestId: crypto.randomUUID(),
+    text: 'Kasta utkastet.',
+  });
+  await expect.poll(() => firstRead.held).toBe(true);
+  await seed(value, 'Första manuella rättelsen');
+  retryRead.hold();
+  firstRead.release();
+  await expect.poll(() => retryRead.held).toBe(true);
+  await seed(value, 'Andra manuella rättelsen');
+  const retained = await map(value);
+  retryRead.release();
+  const rejected = await preparing;
+  expect(rejected.status(), await rejected.text()).toBe(409);
+  expect(await rejected.json()).toEqual({ error: 'assistant_draft_changed' });
+  const response = await value.client.get(value.path);
+  expect(response.status(), await response.text()).toBe(200);
+  expect(await response.json()).toMatchObject({
+    review: {
+      version: retained.draft.version,
+      changes: [{ id: 'chair', after: { name: 'Andra manuella rättelsen' } }],
+    },
+  });
+  expect(model.requests).toEqual([]);
+  expect(await map(value)).toEqual(retained);
+  expect((await (await value.client.get(`${base}/map/history`)).json()).history).toEqual([]);
+});
 
 test.each(['messages', 'new'] as const)(
   'a held %s reset discards before a later conversation proposal',
@@ -1234,15 +1277,25 @@ test.each(['messages', 'new'] as const)(
 test('two devices serialize their conversations against one draft and dequeue current data', async () => {
   const { pending: held, release } = heldResponse();
   let typeId = '';
+  let secondDraft: TextAssistantView['review'] | undefined;
   const model = textModel(async (body) => {
-    if (lastToolResult(body)) return [modelMessage('Utkastet är uppdaterat.')];
+    const previous = lastToolResult(body);
+    if (previous?.review) return [modelMessage('Utkastet är uppdaterat.')];
     const input = JSON.parse(String(body.input.findLast((item) => item.role === 'user')?.content));
     if (input.message === 'Lägg till Stolen.') await held;
+    else {
+      if (!previous) return [modelTool('read_my_draft', {})];
+      secondDraft = previous;
+    }
     return [
-      proposeObject(input.draft, input.message === 'Lägg till Stolen.' ? 'chair' : 'lamp', {
-        typeId,
-        name: input.message === 'Lägg till Stolen.' ? 'Stolen' : 'Lampan',
-      }),
+      proposeObject(
+        previous ?? input.draft,
+        input.message === 'Lägg till Stolen.' ? 'chair' : 'lamp',
+        {
+          typeId,
+          name: input.message === 'Lägg till Stolen.' ? 'Stolen' : 'Lampan',
+        },
+      ),
     ];
   });
   const first = await arrange(model.provider);
@@ -1260,10 +1313,7 @@ test('two devices serialize their conversations against one draft and dequeue cu
     { id: 'chair', after: { name: 'Stolen' } },
     { id: 'lamp', after: { name: 'Lampan' } },
   ]);
-  const secondInput = JSON.parse(
-    String(model.requests[1].input.findLast((item) => item.role === 'user')?.content),
-  );
-  expect(secondInput.draft.changes).toMatchObject([{ id: 'chair', after: { name: 'Stolen' } }]);
+  expect(secondDraft?.changes).toMatchObject([{ id: 'chair', after: { name: 'Stolen' } }]);
   expect((await read(first)).completedReplies?.map((reply) => reply.request)).toEqual([
     'Lägg till Stolen.',
   ]);

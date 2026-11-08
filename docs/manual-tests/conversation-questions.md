@@ -147,6 +147,13 @@ med serverns väntesignal”.
 [konfliktförberedelsen UTKAST-17](drafts.md#utkast-17-avbruten-formulärförlust-och-oberoende-utkast-består-vid-konflikt).
 Lo Exempel är sparad, Alex föreslår Lo Lind och Robin sparar Lo Berg.
 
+**Separat förberedelse:** Vid det hållna anropet efter Alex begäran,
+släpp `read_my_draft` med `{}` och läs konflikten i nästa
+`held.lastToolResult.conflicts`. Kontrollera Lo Exempel och Lo Lind
+i `held.lastToolResult.changes` och det sparade Lo Berg i konfliktens
+`current`. Släpp därefter en riktad `ask_questions`-fråga om dessa
+alternativ.
+
 **Integrationstest:**
 [conversation-questions.spec.ts](../../tests/integration/conversation-questions.spec.ts),
 testfallet “FRAGA-02: Skyttel frågar om en verklig konflikt i samtalet
@@ -174,8 +181,8 @@ utan en genererad frågeruta”.
 
 1. Alex väljer **Skriv till Skyttel → Nytt samtal → Godkänn och starta**
    och skickar **Hjälp mig välja vilket namn vi ska behålla.**
-2. Släpp en riktad `ask_questions`-fråga om Lo Exempel, Lo Lind och
-   Lo Berg. Läs frågan och kontrollera båda klienternas karta.
+2. Låt operatören släppa den riktade frågan enligt förberedelsen.
+   Läs frågan och kontrollera båda klienternas karta.
 
 **Förväntat resultat:**
 

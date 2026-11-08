@@ -28,7 +28,13 @@ import { liveProvider } from '../support/live-provider.js';
 import { focusMapSearch } from '../support/object-search.js';
 import { propertyRow, setProperty } from '../support/property-controls.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
-import { modelMessage, modelTool, textModel, verifiedAnswers } from '../support/text-model.js';
+import {
+  lastToolResult,
+  modelMessage,
+  modelTool,
+  textModel,
+  verifiedAnswers,
+} from '../support/text-model.js';
 
 function saveToast(page: Page) {
   return page.locator('p[aria-hidden="true"]').filter({ hasText: /^Utkastet är sparat$/ });
@@ -586,7 +592,8 @@ test('UTKAST-15: a necessary answer gates the native draft save until a fresh ex
   let calls = 0;
   const model = textModel((body) => {
     const call = calls++;
-    if (call === 1)
+    if (call === 0) return [modelTool('read_my_draft', {})];
+    if (call === 2)
       return [
         modelTool('ask_questions', {
           questions: [],
@@ -594,10 +601,8 @@ test('UTKAST-15: a necessary answer gates the native draft save until a fresh ex
           continueResponse: true,
         }),
       ];
-    if (call > 1) return [modelMessage('Frågan är besvarad. Förslaget väntar på sparbesked.')];
-    const current = JSON.parse(
-      String(body.input.findLast((item) => item.role === 'user')?.content),
-    ).draft;
+    if (call > 2) return [modelMessage('Frågan är besvarad. Förslaget väntar på sparbesked.')];
+    const current = lastToolResult(body);
     const change = current.changes[0];
     return [
       modelTool('submit_changes', {
@@ -663,14 +668,14 @@ test('UTKAST-15: a necessary answer gates the native draft save until a fresh ex
     await openConversationText(page);
     await page.getByLabel('Meddelande till Skyttel').fill('Kortet Lo Exempel avses.');
     await page.getByRole('button', { name: 'Skicka', exact: true }).click();
-    await expect.poll(() => calls).toBe(3);
+    await expect.poll(() => calls).toBe(4);
     await openMap(page);
     await page.getByRole('button', { name: 'Utkast', exact: true }).click();
     const save = page
       .getByRole('region', { name: 'Utkastet', exact: true })
       .getByRole('button', { name: 'Spara hela utkastet', exact: true });
     await expect(save).toBeEnabled();
-    expect(calls).toBe(3);
+    expect(calls).toBe(4);
     expect((await read()).objects).toEqual([]);
     expect((await (await page.request.get(`${path}/operations`)).json()).operations).toEqual([]);
     await save.click();

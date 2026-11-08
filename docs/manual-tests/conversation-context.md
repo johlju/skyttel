@@ -739,8 +739,8 @@ efter känt utfall, avsluta med `quit` och starta nytt mellan fallen.
 
 **Steg:**
 
-1. Skicka **Behåll vårt sammanhang.** och släpp ett vanligt textsvar. Slå på
-   mikrofonen. Låt mikrofonen vara på.
+1. Skicka **Behåll vårt sammanhang om Lo Exempel.** och släpp ett vanligt
+   textsvar. Slå på mikrofonen. Låt mikrofonen vara på.
 2. Be operatören förbereda och leverera sammanfattningsgränsen. Invänta
    bekräftelse av samma nya sammanfattningsanrops släppta historiska
    Lo-sammandrag.
@@ -748,8 +748,10 @@ efter känt utfall, avsluta med `quit` och starta nytt mellan fallen.
    samma mikrofonläge efter bytet. Inget nytt reset- eller sparbesked visas.
 4. Släpp den gamla mätningen enligt den separata förberedelsen. Procenttalet ska
    inte höjas av den gamla anslutningen.
-5. Stäng av mikrofonen vid behov. Skicka **Ändra den sista.** och släpp
-   rättelsen till Lo Senaste enligt KONTEXT-08, steg 3.
+5. Stäng av mikrofonen vid behov. Läs det oförändrade Lo-förslaget med
+   **Utkast → Visa förslaget: Lo Exempel**. Skicka **Ändra den sista.** och
+   släpp rättelsen till Lo Senaste enligt KONTEXT-08, steg 3. Läs rättelsen
+   i utkastet. Lo ska fortfarande vara osparad och inget sparbesked visas.
 
 **Förväntat resultat:**
 
@@ -1618,6 +1620,290 @@ Detta mäter inte en verklig modells kontextgräns.
 - Skyttel säger ”Förtydliga vilka ändringar du vill göra.”.
 - Namnet är Lo Manuell och Beskrivning är Påhittad uppgift. Ingenting sparas.
 - Den ursprungliga köade begäran finns kvar i samtalstexten.
+
+### KONTEXT-23: text och röst läser aktuellt förslag efter en manuell rättelse
+
+**Syfte:** Besvara en fråga med aktuella uppgifter och bevara en manuell
+rättelse samt tidigare synlig samtalstext vid byte till röst.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Lo Exempel ligger osparad med Beskrivning som
+Påhittad uppgift enligt områdets allmänna förberedelse. Återställ
+installation, hushåll och samtal mellan fallen.
+
+**Separat förberedelse:** Låt terminalen hålla varje arbetsanrop. Läs det
+aktuella Lo-förslaget i `held.draft`. Släpp det första svaret med
+`reply REQUEST Lo-förslaget heter Lo Exempel.` och det andra med
+`reply REQUEST Lo-förslaget heter Lo Manuell.`, där REQUEST är respektive
+verkligt anrops-ID. Använd startguidens `user` och `delegate` för den andra
+frågan om du provar med syntetisk mikrofon. Faktiskt hört ljud ingår inte.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/conversation-context.spec.ts",
+    "caseId": "KONTEXT-23"
+  },
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "verified relevant start facts answer directly while unrelated draft details remain unread",
+      "purpose": "Relevant verifierat startunderlag ger ett svar utan extra arbetsomgång medan orelaterade utkastdetaljer inte skickas."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "a completed human follow-up starts with bounded current saved facts without another read round",
+      "purpose": "En avslutad fråga om Lina följs av hon utan en extra läsomgång; äldre orelaterade personuppgifter utelämnas."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "a completed human follow-up starts with bounded current draft facts without another read round",
+      "purpose": "Samma indirekta följdfråga använder aktuella relevanta utkastuppgifter utan en extra läsomgång."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "a bare pending answer reuses verified saved facts after unrelated completed questions",
+      "purpose": "Ett svar med enbart telefonnummer återanvänder aktuella sparade fakta för den exakta väntande begäran efter oberoende frågor; avslutade delar väljer inga fakta."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "a bare pending answer preserves current saved candidates after a saved revision",
+      "purpose": "Ett svar med enbart datum kräver en ny läsning efter en sparad rättelse och återför inte gamla värden."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "a bare pending answer preserves current saved candidates after a duplicate name",
+      "purpose": "Ett kort svar bevarar båda sparade kandidaternas identiteter vid samma namn och omformulerar samma väntande fråga utan att välja person."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "a bare pending answer keeps the count limit and excludes a cached whole map",
+      "purpose": "Sjutton relevanta sparade läsningar ger högst sexton startfakta; en tillgänglig hel karta skickas inte automatiskt."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "a bare pending answer keeps the bytes limit and excludes a cached whole map",
+      "purpose": "Stora relevanta läsningar håller startunderlaget inom 32 KiB och lämnar orelaterade uppgifter utanför."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "a bare pending answer rejects verified saved facts after grant revocation",
+      "purpose": "Verkligt återkallad MCP-behörighet stoppar ett hållet svar för den väntande begäran även när fakta redan finns tillgängliga."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "a bare pending answer rejects verified saved facts after content replacement",
+      "purpose": "Verklig återimport byter innehållsägare och stoppar ett hållet svar med tidigare verifierade fakta för en väntande begäran."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "successive single corrections supersede obsolete draft pictures and preserve checked batch evidence",
+      "purpose": "Efter flera rättelser ser nästa arbetsanrop aktuell utkastbild och bevarade kontrollerade ändringsbesked."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "superseding a duplicate relationship draft picture preserves its real existing identity",
+      "purpose": "Ett verkligt återanvänt sambands identitet bevaras när dess gamla utkastbild ersätts efter en senare rättelse."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "plural follow-ups retain both bounded saved candidates and singular ambiguity asks which person",
+      "purpose": "En plural hänvisning får båda aktuella sparade kandidaterna; en senare oklar singular hänvisning ger en fråga utan ändring."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "plural follow-ups retain both bounded draft candidates and singular ambiguity asks which person",
+      "purpose": "Motsvarande kandidater i utkastet bevaras utan att en av personerna väljs vid oklar hänvisning."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "an indirect saved follow-up preserves two people with the same name for clarification",
+      "purpose": "Två sparade personer med samma namn behåller skilda identiteter och ger en riktad fråga."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "an indirect draft follow-up preserves two people with the same name for clarification",
+      "purpose": "Två personer med samma namn i utkastet ger en riktad fråga utan gissning eller ändring."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "an initial human reference without a prior target cannot select an unrelated sole proposal",
+      "purpose": "Hon utan tidigare mål väljer inte ett orelaterat ensamt förslag; samtalet frågar vilken person som avses."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "an indirect follow-up after a saved revision uses the new date and never the obsolete cached value",
+      "purpose": "En sparad rättelse kräver aktuell läsning och gamla egenskapsvärden återförs inte till nästa arbetsanrop."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "an indirect follow-up after a draft revision uses the new date and never the obsolete cached value",
+      "purpose": "En manuell rättelse i utkastet ger aktuellt relevant startunderlag utan gammalt värde eller extra läsomgång."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "grant revocation rejects a held indirect cached-fact reply and a new conversation inherits no prior referent",
+      "purpose": "Återkallad verklig MCP-behörighet stoppar ett väntande svar byggt på tidigare läsning och ett nytt samtal ärver ingen hänvisning."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "content replacement rejects a held indirect cached-fact reply and a new conversation inherits no prior referent",
+      "purpose": "Verklig återimport ersätter innehållsägaren, stoppar gammalt väntande svar och förhindrar återanvändning av dess hänvisning."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/text-assistant.test.ts",
+      "title": "independent reads overlap and identical concurrent reads share one authorized result",
+      "purpose": "Publik MCP och kontrollerad leverantör visar överlappande oberoende läsningar och ett gemensamt resultat för identiska anrop."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/text-assistant.test.ts",
+      "title": "parallel reads that cross a manual draft change cannot supply a mixed snapshot to the model",
+      "purpose": "En manuell ändring under asynkron läsning stoppar blandat underlag före nästa arbetsanrop och bevarar den manuella ändringen."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/text-assistant.test.ts",
+      "title": "a relevant verified map read answers a follow-up without another tool round and refreshes after saving",
+      "purpose": "En relevant aktuell läsning återanvänds vid begärans start, medan ett senare sparande kräver aktuella uppgifter."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "continued batch work and renewed Live context retain current relevant facts without unrelated draft details",
+      "purpose": "Fortsatt batcharbete och förnyad röstanslutning använder aktuella relevanta fakta utan orelaterade utkastdetaljer."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "continued single work and renewed Live context retain current relevant facts without unrelated draft details",
+      "purpose": "Även en enskild ändrings fortsättning och förnyad röstanslutning bevarar urvalet av relevanta fakta."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "a manual edit during summary prevents another work request with the older draft snapshot",
+      "purpose": "En manuell ändring under asynkron sammanfattning stoppar en ny arbetsomgång med gamla utkastuppgifter och bevarar den exakta begäran."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-provider-contracts.test.ts",
+      "title": "ordinary conversation requests select the 30-minute minimum prompt lifetime without persistent provider state",
+      "purpose": "Kontrollerade leverantörer verifierar begärans 30-minutersinställning och store:false, inte verklig lagringstid eller snabbare svar."
+    }
+  ],
+  "reference": "Chromium, riktig server och SQLite, kontrollerade text- och röstleverantörer. Teknisk evidens mäter anropsantal och giltighet, inte verklig modellförståelse eller kortare väntetid.",
+  "outcomes": [
+    "Textfrågan besvaras med Lo Exempel och den senare röstfrågan med det manuella namnet Lo Manuell.",
+    "Tidigare fråga och svar finns kvar i samtalstexten; hela Lo Manuell finns kvar osparad med oförändrad beskrivning."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Skriv ”Vad heter Lo Exempel i förslaget?”. Släpp det första svaret och
+   läs ”Lo-förslaget heter Lo Exempel.”. Öppna förslaget och läs namn,
+   Person och Beskrivning. Stäng läsningen.
+2. Öppna **Tabell → Redigera Lo Exempel**. Sätt **Namn** till ”Lo Manuell”
+   och välj **Lägg i utkastet och stäng**. Öppna textvyn och läs hela
+   Lo Manuell i utkastet. Stäng läsningen.
+3. Slå på mikrofonen. Säg ”Vad heter Lo Manuell i förslaget nu?” och släpp
+   det andra svaret. Läs ”Lo-förslaget heter Lo Manuell.” i samtalstexten.
+   Kontrollera att den första frågan och det första svaret finns kvar.
+4. Slå av mikrofonen. Läs hela Lo Manuell i utkastet igen. Ingenting
+   ska vara sparat i hushållets karta.
+
+**Förväntat resultat:**
+
+- Det senare svaret använder det manuella namnet Lo Manuell.
+- Namn, typ och beskrivning finns kvar i utkastet, utan nytt sparande.
+- Den tidigare synliga samtalstexten ändras inte.
 
 ### KONTEXT-16: kontextens verkliga uppläsning
 

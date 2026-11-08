@@ -667,6 +667,20 @@ inte behandling enbart i EU eller omedelbar radering av alla kopior hos
 leverantören. Återkallat medgivande
 tar inte tillbaka uppgifter som redan har skickats. Läs
 [OpenAI:s datavillkor](https://developers.openai.com/api/docs/guides/your-data).
+
+För arbetsmodellens promptcache begär Skyttel 30 minuters minsta livslängd.
+Det är ingen raderingsfrist: OpenAI kan behålla cacheuppgifter längre.
+Inställningen ändrar inte leverantörens övriga lagringsvillkor.
+Skyttels begäran `store:false` innebär inget löfte om noll lagring hos
+OpenAI. Läs [OpenAI:s beskrivning av promptcache](https://developers.openai.com/api/docs/guides/prompt-caching).
+
+Samtalstexten du ser, arbetsmodellens kontext, Skyttels tillfälligt
+återanvända läsningar inom samma samtal och OpenAI:s promptcache är olika
+saker. Skyttel
+kontrollerar åtkomst och aktuella versioner innan en tidigare läsning
+återanvänds. En återanvänd läsning visar inte i sig att modellens kontext
+är kortare, att OpenAI använder cachade token eller att svaret går fortare.
+
 Hushållets administratör hanterar användare, export, återimport och
 permanent radering i Skyttels egna administrationsvyer.
 

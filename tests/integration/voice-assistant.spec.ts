@@ -1,5 +1,4 @@
 import type { Page } from '@playwright/test';
-import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
 import {
   createHousehold,
   openMap,
@@ -27,6 +26,7 @@ import {
   openObjectRelationships,
   readTableObject,
 } from '../support/domain-work.js';
+import { familySaveSequence } from '../support/family-save-model.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider, voiceAnswerParts } from '../support/live-provider.js';
@@ -581,52 +581,16 @@ test('TAL-04: samtalstext hålls isär från verifierade röstresultat', async (
 test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtext', async ({
   page,
 }) => {
-  let step = 0;
-  let version = 0;
-  const model = textModel((body) => {
-    const current = JSON.parse(String(body.input.findLast((item) => item.role === 'user')?.content))
-      .draft as TextAssistantReview;
-    if (step++ === 0)
-      return [
-        modelTool('resolve_conflict', {
-          version: current.version,
-          contentVersion: current.contentVersion,
-          conflict: current.conflicts[0],
-          choice: 'proposed',
-        }),
-      ];
-    if (step === 2) {
-      version = lastToolResult(body).version;
-      return [modelTool('read_map', { query: 'Familjens Molnmusik' })];
-    }
-    if (step === 3) {
-      const { id, householdId: _household, revision, ...value } = lastToolResult(body).objects[0];
-      return [
-        modelTool('propose_object', {
-          version,
-          contentVersion: 1,
-          id,
-          baseRevision: revision,
-          value: {
-            ...value,
-            properties: value.properties.map((property: { label: string }) => {
-              if (property.label === 'Beskrivning')
-                return { ...property, kind: 'text', value: 'Familjeabonnemang 189 kr per månad.' };
-              if (property.label === 'Pris') return { ...property, kind: 'number', value: 189 };
-              return property;
-            }),
-          },
-        }),
-      ];
-    }
-    return [
-      modelTool('save_draft', {
-        version: lastToolResult(body).version,
-        contentVersion: 1,
-        operationId: 'family-request',
+  const model = textModel(
+    familySaveSequence((properties) =>
+      properties.map((property) => {
+        if (property.label === 'Beskrivning')
+          return { ...property, kind: 'text', value: 'Familjeabonnemang 189 kr per månad.' };
+        if (property.label === 'Pris') return { ...property, kind: 'number', value: 189 };
+        return property;
       }),
-    ];
-  });
+    ),
+  );
   const live = liveProvider();
   const app = await createInstallation(undefined, {
     modelFetch: model.provider,
@@ -732,7 +696,7 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
           objectIds.has(edge.sourceId) && objectIds.has(edge.targetId),
       ),
     ).toBe(true);
-    expect(model.requests).toHaveLength(4);
+    expect(model.requests).toHaveLength(5);
     await expect
       .poll(() => live.sent.some(({ event }) => event.type === 'session.commentary.append'))
       .toBe(true);
@@ -751,7 +715,7 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
     expect(
       await (await page.request.get(`${app.origin}/api/households/${household.id}/map`)).json(),
     ).toEqual(map);
-    expect(model.requests).toHaveLength(4);
+    expect(model.requests).toHaveLength(5);
     await signOut(page);
     await expect.poll(() => openVoiceConnections(page)).toBe(0);
     expect(

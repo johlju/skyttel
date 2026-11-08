@@ -171,6 +171,187 @@ test('a conversation reuses identical MCP reads across messages and refreshes ch
   expect(counts.get('read_map')).toBe(3);
 });
 
+test('a relevant verified map read answers a follow-up without another tool round and refreshes after saving', async () => {
+  const model = textModel((request) => {
+    const current = JSON.parse(
+      String(request.input.findLast((item) => item.role === 'user')?.content),
+    );
+    const known =
+      current.verifiedReads?.find((read: { name: string }) => read.name === 'read_map')?.value ??
+      lastToolResult(request);
+    return known?.objects?.length
+      ? [modelMessage(`Personen heter ${known.objects[0].name}.`)]
+      : [modelTool('read_map', { query: 'Lina' })];
+  });
+  await setup(model.provider);
+  await webProposal('Lina');
+  const mapPath = path.replace('/text-assistant', '/map');
+  async function save(operationId: string) {
+    const map = await (await browser.get(mapPath)).json();
+    const response = await browser.post(`${mapPath}/save`, {
+      headers: { origin: app.origin },
+      data: { version: map.draft.version, contentVersion: map.contentVersion, operationId },
+    });
+    expect(response.status(), await response.text()).toBe(200);
+  }
+  await save('seed-lina');
+  let session = await message(await start(), 'Läs Lina.');
+  expect(session.modelReply).toBe('Personen heter Lina.');
+  expect(model.requests).toHaveLength(2);
+  session = await message(session, 'Vad vet du om Lina?');
+  expect(session.modelReply).toBe('Personen heter Lina.');
+  expect(model.requests).toHaveLength(3);
+  const map = await (await browser.get(mapPath)).json();
+  const lina = map.objects[0];
+  const edited = await browser.post(`${mapPath}/draft`, {
+    headers: { origin: app.origin },
+    data: {
+      version: map.draft.version,
+      contentVersion: map.contentVersion,
+      id: lina.id,
+      baseRevision: lina.revision,
+      value: { typeId: lina.typeId, name: 'Lina Ny', properties: lina.properties },
+    },
+  });
+  expect(edited.status(), await edited.text()).toBe(200);
+  await save('rename-lina');
+  session = await (await browser.get(`${path}/${session.id}`)).json();
+  session = await message(session, 'Vad vet du om Lina nu?');
+  expect(session.modelReply).toBe('Personen heter Lina Ny.');
+  expect(model.requests).toHaveLength(5);
+});
+
+test('independent reads overlap and identical concurrent reads share one authorized result', async () => {
+  const entered = new Map<string, number>();
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const model = textModel((request) => {
+    if (model.requests.length === 1)
+      return [
+        modelTool('read_map', { query: 'Lina' }),
+        modelTool('read_map', { query: 'Lina' }),
+        modelTool('read_type_catalog', {}),
+      ];
+    const result = (name: string) => {
+      const call = request.input.find(
+        (item) => item.type === 'function_call' && item.name === name,
+      );
+      return JSON.parse(
+        String(
+          request.input.find(
+            (item) => item.type === 'function_call_output' && item.call_id === call?.call_id,
+          )?.output,
+        ),
+      );
+    };
+    const lina = result('read_map').objects[0];
+    const type = result('read_type_catalog').types.find(
+      (item: { id: string }) => item.id === lina.typeId,
+    );
+    return [modelMessage(`${lina.name} är ${type.name}.`)];
+  });
+  await setup(model.provider, undefined, async (request, dispatch) => {
+    const rpc =
+      request.method === 'POST' && new URL(request.url).pathname === '/mcp'
+        ? await request.clone().json()
+        : null;
+    if (
+      rpc?.method === 'tools/call' &&
+      ['read_map', 'read_type_catalog'].includes(rpc.params.name)
+    ) {
+      entered.set(rpc.params.name, (entered.get(rpc.params.name) ?? 0) + 1);
+      await held;
+    }
+    return dispatch(request);
+  });
+  await webProposal('Lina');
+  const mapPath = path.replace('/text-assistant', '/map');
+  const map = await (await browser.get(mapPath)).json();
+  const saved = await browser.post(`${mapPath}/save`, {
+    headers: { origin: app.origin },
+    data: {
+      version: map.draft.version,
+      contentVersion: map.contentVersion,
+      operationId: 'seed-parallel-lina',
+    },
+  });
+  expect(saved.status(), await saved.text()).toBe(200);
+  const session = await start();
+  const response = await browser.post(`${path}/${session.id}/messages`, {
+    headers: { origin: app.origin },
+    data: {
+      revision: session.revision,
+      ...displayedVersion(session),
+      requestId: crypto.randomUUID(),
+      text: 'Läs Lina och typerna. Ändra ingenting.',
+    },
+  });
+  expect(response.status()).toBe(202);
+  try {
+    await expect
+      .poll(() => [...entered.keys()].sort(), { timeout: 1000 })
+      .toEqual(['read_map', 'read_type_catalog']);
+    release();
+    await expect
+      .poll(async () => (await (await browser.get(`${path}/${session.id}`)).json()).phase)
+      .toBe('ready');
+    const final = await (await browser.get(`${path}/${session.id}`)).json();
+    expect(final.modelReply).toBe('Lina är Person.');
+    expect(entered.get('read_map')).toBe(1);
+    expect(entered.get('read_type_catalog')).toBe(1);
+    expect(model.requests).toHaveLength(2);
+    expect(model.requests[0]).toMatchObject({ parallel_tool_calls: true });
+    expect(final.review).toEqual(session.review);
+  } finally {
+    release();
+  }
+});
+
+test('parallel reads that cross a manual draft change cannot supply a mixed snapshot to the model', async () => {
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let readStarted = false;
+  const model = textModel(() =>
+    model.requests.length === 1
+      ? [modelTool('read_map', { query: 'Lina' }), modelTool('read_type_catalog', {})]
+      : [modelMessage('Ett gammalt blandat svar.')],
+  );
+  await setup(model.provider, undefined, async (request, dispatch) => {
+    const rpc =
+      request.method === 'POST' && new URL(request.url).pathname === '/mcp'
+        ? await request.clone().json()
+        : null;
+    const response = await dispatch(request);
+    if (rpc?.method === 'tools/call' && rpc.params.name === 'read_type_catalog') {
+      readStarted = true;
+      await held;
+    }
+    return response;
+  });
+  await webProposal('Lina');
+  const session = await start();
+  const completion = message(session, 'Läs Lina och typerna. Ändra ingenting.');
+  try {
+    await expect.poll(() => readStarted).toBe(true);
+    await webProposal('Lina Manuell');
+    release();
+    const final = await completion;
+    expect(final).toMatchObject({ phase: 'error', error: 'assistant_draft_changed' });
+    expect(final.modelReply).toBeUndefined();
+    expect(model.requests).toHaveLength(1);
+    const map = await (await browser.get(path.replace('/text-assistant', '/map'))).json();
+    expect(map.draft.changes[0].after.name).toBe('Lina Manuell');
+    expect(map.objects).toEqual([]);
+  } finally {
+    release();
+    await completion;
+  }
+});
+
 test('public activity follows the model and actual MCP work without exposing tool arguments', async () => {
   let releaseModel: (value: unknown[]) => void = () => {};
   let releaseTool: () => void = () => {};
@@ -1328,6 +1509,7 @@ test.each(['duplicate', 'waiting', 'information'])(
   'an invalid batch resolution (%s) cannot change the draft or close a part',
   async (invalid) => {
     let turn = 0;
+    let typeId = '';
     const model = textModel((request) => {
       const input = JSON.parse(
         String(request.input.findLast((row) => row.role === 'user')?.content),
@@ -1358,7 +1540,7 @@ test.each(['duplicate', 'waiting', 'information'])(
               arguments: {
                 id: 'unexpected',
                 baseRevision: null,
-                value: { typeId: input.draft.changes[0].after.typeId, name: 'Oväntat' },
+                value: { typeId, name: 'Oväntat' },
               },
             },
           ],
@@ -1366,7 +1548,7 @@ test.each(['duplicate', 'waiting', 'information'])(
       ];
     });
     await setup(model.provider);
-    await webProposal();
+    typeId = (await webProposal()).typeId;
     const waiting = await message(await start(), 'Beskriv cykeln.');
     const rejected = await message(waiting, 'Jag vet inte.');
     expect(rejected.error).toBe('invalid_request');

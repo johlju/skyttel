@@ -102,7 +102,11 @@ function setup() {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init: RequestInit) => {
-      calls.push({ url, body: JSON.parse(String(init.body)) });
+      calls.push({
+        url,
+        body: init.body === undefined ? undefined : JSON.parse(String(init.body)),
+      });
+      if (url === base.replace(/\/voice$/, '')) return Response.json(view);
       return Response.json({
         voice: {
           id: 'voice-session',
@@ -152,6 +156,41 @@ afterEach(async () => {
   Reflect.deleteProperty(navigator, 'mediaDevices');
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+});
+
+test('voice startup uses the freshly authorized draft even while rendered conversation props retain the same older revision', async () => {
+  const { view, changed } = setup();
+  const fresh = { ...view, review: { ...view.review, version: 4 } };
+  const posts: unknown[] = [];
+  let reads = 0;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string, init: RequestInit) => {
+      if (url === base.replace(/\/voice$/, '')) {
+        reads++;
+        return Response.json(fresh);
+      }
+      if (url === base)
+        posts.push(init.body === undefined ? undefined : JSON.parse(String(init.body)));
+      return Response.json({
+        assistant: fresh,
+        sdp: 'synthetic-answer',
+        voice: {
+          id: 'fresh-voice',
+          phase: url.endsWith('/stop') ? 'closed' : 'listening',
+          seconds: null,
+          usageFinal: false,
+        },
+      });
+    }),
+  );
+  await startWithAudio();
+  await waitFor(() => expect(microphoneButton().getAttribute('aria-pressed')).toBe('true'));
+  expect(reads).toBe(1);
+  expect(posts).toEqual([
+    expect.objectContaining({ revision: 2, draftVersion: 4, contentVersion: 1 }),
+  ]);
+  expect(changed).toHaveBeenCalledWith(fresh);
 });
 
 // An audio context whose analysers measure what the test sets for each track,
@@ -217,7 +256,16 @@ test.each([true, false])(
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string, init: RequestInit) => {
-        calls.push({ url, body: JSON.parse(String(init.body)) });
+        calls.push({
+          url,
+          body: init.body === undefined ? undefined : JSON.parse(String(init.body)),
+        });
+        if (url === base.replace(/\/voice$/, ''))
+          return Response.json({
+            ...view,
+            ...(needed && !summarized ? { contextSummaryState: 'needed' } : {}),
+            ...(summarized ? { contextGeneration: 1 } : {}),
+          });
         if (url.endsWith('/summarize')) {
           summarized = true;
           return Response.json({
@@ -271,19 +319,21 @@ test('failed automatic summary retains the authorized microphone paused until ex
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) =>
-      url.endsWith('/summarize')
-        ? Response.json({ ...view, contextSummaryState: 'failed' })
-        : Response.json({
-            voice: {
-              id: 'voice-session',
-              phase: url.endsWith('/stop') ? 'closed' : 'listening',
-              seconds: null,
-              usageFinal: false,
-              summaryReady: true,
-            },
-            assistant: { ...view, ...(needed ? { contextSummaryState: 'needed' } : {}) },
-            sdp: 'synthetic-answer',
-          }),
+      url === base.replace(/\/voice$/, '')
+        ? Response.json(view)
+        : url.endsWith('/summarize')
+          ? Response.json({ ...view, contextSummaryState: 'failed' })
+          : Response.json({
+              voice: {
+                id: 'voice-session',
+                phase: url.endsWith('/stop') ? 'closed' : 'listening',
+                seconds: null,
+                usageFinal: false,
+                summaryReady: true,
+              },
+              assistant: { ...view, ...(needed ? { contextSummaryState: 'needed' } : {}) },
+              sdp: 'synthetic-answer',
+            }),
     ),
   );
   await startWithAudio();
@@ -336,19 +386,21 @@ test('failed summary handoff request releases its microphone and permits an expl
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) =>
-      url.endsWith('/summarize')
-        ? Response.json({ error: 'controlled_handoff_failure' }, { status: 503 })
-        : Response.json({
-            voice: {
-              id: 'voice-session',
-              phase: 'listening',
-              seconds: null,
-              usageFinal: false,
-              summaryReady: true,
-            },
-            assistant: { ...view, ...(needed ? { contextSummaryState: 'needed' } : {}) },
-            sdp: 'synthetic-answer',
-          }),
+      url === base.replace(/\/voice$/, '')
+        ? Response.json(view)
+        : url.endsWith('/summarize')
+          ? Response.json({ error: 'controlled_handoff_failure' }, { status: 503 })
+          : Response.json({
+              voice: {
+                id: 'voice-session',
+                phase: 'listening',
+                seconds: null,
+                usageFinal: false,
+                summaryReady: true,
+              },
+              assistant: { ...view, ...(needed ? { contextSummaryState: 'needed' } : {}) },
+              sdp: 'synthetic-answer',
+            }),
     ),
   );
   await startWithAudio();
@@ -476,16 +528,18 @@ test('a screen reader is told Lyssnar once, Skyttel arbetar, and Mikrofonen är 
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) =>
-      Response.json({
-        sdp: 'answer',
-        assistant: view,
-        voice: {
-          id: 'voice-session',
-          phase: url.endsWith('/stop') ? 'closed' : phase,
-          seconds: null,
-          usageFinal: false,
-        },
-      }),
+      url === base.replace(/\/voice$/, '')
+        ? Response.json(view)
+        : Response.json({
+            sdp: 'answer',
+            assistant: view,
+            voice: {
+              id: 'voice-session',
+              phase: url.endsWith('/stop') ? 'closed' : phase,
+              seconds: null,
+              usageFinal: false,
+            },
+          }),
     ),
   );
   await userEvent.click(microphoneButton());
@@ -612,6 +666,7 @@ test('a task that was said is worked through with the microphone off, including 
     'fetch',
     vi.fn(async (url: string) => {
       urls.push(url);
+      if (url === base.replace(/\/voice$/, '')) return Response.json(view);
       return Response.json({
         sdp: 'answer',
         assistant: view,
@@ -824,8 +879,11 @@ test('voice starts only on request, gates microphone on protocol readiness and s
   const { track, getUserMedia, calls } = setup();
   expect(getUserMedia).not.toHaveBeenCalled();
   await userEvent.click(microphoneButton());
-  await waitFor(() => expect(calls[0]?.url).toBe(base));
-  expect(calls[0].body).toEqual({
+  await waitFor(() =>
+    expect(calls.map((call) => call.url)).toEqual([base.replace(/\/voice$/, ''), base]),
+  );
+  expect(calls[0].body).toBeUndefined();
+  expect(calls[1].body).toEqual({
     sdp: 'synthetic-offer',
     revision: 2,
     draftVersion: 3,
@@ -992,7 +1050,9 @@ test('a microphone refusal offers recovery without creating a remote session', a
   expect(calls).toHaveLength(0);
   expect(Peer.all[0].connectionState).toBe('closed');
   await userEvent.click(microphoneButton());
-  await waitFor(() => expect(calls[0]?.url).toBe(base));
+  await waitFor(() =>
+    expect(calls.map((call) => call.url)).toEqual([base.replace(/\/voice$/, ''), base]),
+  );
 });
 
 test.each([
@@ -1134,6 +1194,7 @@ test('a late creation response after cancellation closes that session without re
     'fetch',
     vi.fn(async (url: string) => {
       posted.push(url);
+      if (url === base.replace(/\/voice$/, '')) return Response.json(view);
       if (url === base)
         return new Promise<Response>((resolve) => {
           reply = resolve;
@@ -1194,17 +1255,23 @@ test('a server-reported voice failure explains the interruption while preserving
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) =>
-      Response.json({
-        sdp: 'answer',
-        assistant: view,
-        voice: {
-          id: 'voice-session',
-          phase: url.endsWith('/poll') ? 'error' : url.endsWith('/stop') ? 'closed' : 'listening',
-          errorGroup: url.endsWith('/poll') ? 'interrupted' : undefined,
-          seconds: null,
-          usageFinal: false,
-        },
-      }),
+      url === base.replace(/\/voice$/, '')
+        ? Response.json(view)
+        : Response.json({
+            sdp: 'answer',
+            assistant: view,
+            voice: {
+              id: 'voice-session',
+              phase: url.endsWith('/poll')
+                ? 'error'
+                : url.endsWith('/stop')
+                  ? 'closed'
+                  : 'listening',
+              errorGroup: url.endsWith('/poll') ? 'interrupted' : undefined,
+              seconds: null,
+              usageFinal: false,
+            },
+          }),
     ),
   );
   await userEvent.click(microphoneButton());
@@ -1220,6 +1287,7 @@ test('a delayed poll after stopping cannot replace newer assistant work', async 
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) => {
+      if (url === base.replace(/\/voice$/, '')) return Response.json(view);
       if (url.endsWith('/poll'))
         return new Promise<Response>((resolve) => {
           reply = resolve;
@@ -1260,6 +1328,7 @@ test('losing the polling connection stops capture and preserves an explicit reco
     'fetch',
     vi.fn(async (url: string) => {
       calls.push(url);
+      if (url === base.replace(/\/voice$/, '')) return Response.json(view);
       if (url.endsWith('/poll')) throw new TypeError('Network interrupted');
       return Response.json({
         sdp: 'answer',
@@ -1286,6 +1355,7 @@ test('an unconfirmed remote stop has a bounded drain and never claims known fina
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) => {
+      if (url === base.replace(/\/voice$/, '')) return Response.json(view);
       if (url.endsWith('/stop')) return new Promise<Response>(() => {});
       return Response.json({
         sdp: 'answer',
@@ -1378,7 +1448,9 @@ test.each([
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string, init: RequestInit) => {
-        if (url.endsWith('/poll')) polls.push(JSON.parse(String(init.body)));
+        if (url === base.replace(/\/voice$/, '')) return Response.json(view);
+        if (url.endsWith('/poll'))
+          polls.push(init.body === undefined ? undefined : JSON.parse(String(init.body)));
         return Response.json({
           sdp: 'answer',
           assistant: view,
@@ -1427,6 +1499,7 @@ test.each(['resolved', 'rejected'])(
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string) => {
+        if (url === base.replace(/\/voice$/, '')) return Response.json(view);
         if (url.endsWith('/stop'))
           return new Promise<Response>((resolve) => {
             finishStop = resolve;
@@ -1490,6 +1563,7 @@ test('a rejected stop request closes local resources and requires receipt recove
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) => {
+      if (url === base.replace(/\/voice$/, '')) return Response.json(view);
       if (url.endsWith('/stop')) throw new TypeError('Connection lost');
       return Response.json({
         sdp: 'answer',

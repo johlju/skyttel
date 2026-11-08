@@ -10,14 +10,14 @@ import { runTextScenario } from '../../../scripts/model-evaluation/runner.js';
 import * as speech from '../../../scripts/model-evaluation/speech.js';
 import type { Attempt, JudgeInput, Scenario } from '../../../scripts/model-evaluation/types.js';
 import { runVoiceScenario } from '../../../scripts/model-evaluation/voice-runner.js';
-import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
+import type { TextAssistantReview, TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { liveProvider, voiceAnswerParts } from '../../support/live-provider.js';
 import {
+  lastToolResult,
   modelMessage,
   modelTool,
   pendingUpdate,
   textModel,
-  verifiedAnswers,
 } from '../../support/text-model.js';
 
 afterEach(() => {
@@ -664,22 +664,59 @@ test('a renewed save after clarification completes the original target exactly o
   };
   let environment: Awaited<ReturnType<typeof environments.evaluationEnvironment>>;
   let turn = 0;
+  let fullDraft: TextAssistantReview | undefined;
   const model = textModel(async (request) => {
     if (turn++ === 0)
       return [modelTool('ask_questions', { questions: ['Vilket utkast menar du?'] })];
-    if (turn === 2)
+    if (turn === 2) {
+      const input = JSON.parse(
+        String(request.input.findLast((item) => item.role === 'user')?.content),
+      );
+      expect(input.message).toBe(saveScenario.steps[0].followUps?.[0].text);
+      expect(input.draft).toMatchObject({
+        complete: false,
+        totals: { changes: 2 },
+        changes: [],
+      });
+      return [modelTool('read_my_draft', {})];
+    }
+    if (turn === 3) {
+      fullDraft = lastToolResult(request);
+      expect(fullDraft).toEqual(environment.assistant.review);
+      expect(fullDraft?.changes).toHaveLength(2);
+      if (!fullDraft) throw new Error('Missing full draft fixture');
       return [
         modelTool('ask_questions', {
           questions: [],
-          updates: verifiedAnswers(request, ['Vilket utkast menar du?']),
+          updates: [
+            pendingUpdate(request, 'Vilket utkast menar du?', {
+              expected: fullDraft.changes.map((change) => ({
+                kind: 'object',
+                id: change.id,
+                value: change.after,
+              })),
+            }),
+          ],
           continueResponse: true,
         }),
       ];
-    const state = await environment.read();
+    }
+    const answer = lastToolResult(request);
+    expect(answer.pendingParts).toEqual([
+      expect.objectContaining({
+        question: 'Vilket utkast menar du?',
+        status: 'completed',
+        revision: 1,
+        evidence: expect.objectContaining({
+          text: saveScenario.steps[0].followUps?.[0].text,
+        }),
+      }),
+    ]);
+    if (!fullDraft) throw new Error('Missing verified full draft fixture');
     return [
       modelTool('save_draft', {
-        version: state.draft.version,
-        contentVersion: state.contentVersion,
+        version: fullDraft.version,
+        contentVersion: fullDraft.contentVersion,
       }),
     ];
   });
@@ -699,6 +736,11 @@ test('a renewed save after clarification completes the original target exactly o
         if (context?.observedState.saveOperations.length) {
           expect(context.observedState.saveOperations).toHaveLength(1);
           expect(context.observedState.historyChanges).toBe(1);
+          expect(context.observedState.saveReceipt).toMatchObject({
+            operationId: context.observedState.saveOperations[0].operationId,
+            draftVersion: fullDraft?.version,
+            contentVersion: fullDraft?.contentVersion,
+          });
         }
         return (await passingJudge(input)).map((item) => ({
           ...item,
@@ -712,7 +754,11 @@ test('a renewed save after clarification completes the original target exactly o
     ['renew-save', 'pass', []],
   ]);
   expect(result.attempts[1].followUpFor).toBe('save');
+  expect(turn).toBe(4);
   expect(result.finalMap.draft.changes).toEqual([]);
+  expect(result.finalMap.draft.relationships ?? []).toEqual([]);
+  expect(result.finalMap.draft.objectTypes ?? []).toEqual([]);
+  expect(result.finalMap.draft.relationshipTypes ?? []).toEqual([]);
 });
 
 test.each([0, 12000])(

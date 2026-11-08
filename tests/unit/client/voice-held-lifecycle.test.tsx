@@ -96,7 +96,11 @@ test('a held start released before provider readiness stops new capture but pres
   });
   const requests: { url: string; body: unknown }[] = [];
   vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
-    requests.push({ url, body: JSON.parse(String(init.body)) });
+    requests.push({
+      url,
+      body: init.body === undefined ? undefined : JSON.parse(String(init.body)),
+    });
+    if (url === path.replace(/\/voice$/, '')) return Response.json(view);
     if (url === path) await held;
     return Response.json({
       voice: {
@@ -144,6 +148,7 @@ test('held speech captured before the conversation exists survives release and j
   const calls: string[] = [];
   vi.stubGlobal('fetch', async (url: string) => {
     calls.push(url);
+    if (url === path.replace(/\/voice$/, '')) return Response.json(view);
     return Response.json({
       voice: {
         id: 'late-voice',
@@ -247,16 +252,18 @@ test('explicit audio recovery after releasing a blocked held start never resumes
     new DOMException('Blocked', 'NotAllowedError'),
   );
   vi.stubGlobal('fetch', async (url: string) =>
-    Response.json({
-      voice: {
-        id: 'audio-voice',
-        phase: url.endsWith('/stop') ? 'closed' : 'listening',
-        seconds: null,
-        usageFinal: false,
-      },
-      assistant: view,
-      sdp: 'synthetic-answer',
-    }),
+    url === path.replace(/\/voice$/, '')
+      ? Response.json(view)
+      : Response.json({
+          voice: {
+            id: 'audio-voice',
+            phase: url.endsWith('/stop') ? 'closed' : 'listening',
+            seconds: null,
+            usageFinal: false,
+          },
+          assistant: view,
+          sdp: 'synthetic-answer',
+        }),
   );
   const options = {
     householdId: 'linden',
@@ -287,16 +294,18 @@ test.each(['after input is ready', 'as its indicator turns on'] as const)(
   async (timing) => {
     const media = voiceMedia();
     vi.stubGlobal('fetch', async (url: string) =>
-      Response.json({
-        voice: {
-          id: 'reused-voice',
-          phase: url.endsWith('/stop') ? 'closed' : 'listening',
-          seconds: null,
-          usageFinal: false,
-        },
-        assistant: view,
-        sdp: 'synthetic-answer',
-      }),
+      url === path.replace(/\/voice$/, '')
+        ? Response.json(view)
+        : Response.json({
+            voice: {
+              id: 'reused-voice',
+              phase: url.endsWith('/stop') ? 'closed' : 'listening',
+              seconds: null,
+              usageFinal: false,
+            },
+            assistant: view,
+            sdp: 'synthetic-answer',
+          }),
     );
     render(
       <HeldVoice
@@ -356,16 +365,18 @@ test.each(['inputBlocked', 'contextFailed', 'saveChecking'] as const)(
   async (blocked) => {
     const media = voiceMedia();
     vi.stubGlobal('fetch', async (url: string) =>
-      Response.json({
-        voice: {
-          id: 'blocked-voice',
-          phase: url.endsWith('/stop') ? 'closed' : 'listening',
-          seconds: null,
-          usageFinal: false,
-        },
-        assistant: view,
-        sdp: 'synthetic-answer',
-      }),
+      url === path.replace(/\/voice$/, '')
+        ? Response.json(view)
+        : Response.json({
+            voice: {
+              id: 'blocked-voice',
+              phase: url.endsWith('/stop') ? 'closed' : 'listening',
+              seconds: null,
+              usageFinal: false,
+            },
+            assistant: view,
+            sdp: 'synthetic-answer',
+          }),
     );
     const options = {
       householdId: 'linden',

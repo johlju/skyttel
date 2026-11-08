@@ -474,7 +474,9 @@ for (const microphoneOn of [true, false]) {
   }) => {
     const { app, live, read } = await arrange(page);
     try {
-      await send(page, 'Behåll vårt sammanhang.');
+      const before = await read();
+      const request = 'Behåll vårt sammanhang om Lo Exempel.';
+      await send(page, request);
       await turnMicrophoneOn(page);
       if (!microphoneOn) await turnMicrophoneOff(page);
       await field(page).focus();
@@ -507,7 +509,14 @@ for (const microphoneOn of [true, false]) {
         .toEqual({ enabled: microphoneOn, state: 'live' });
       const retained = JSON.stringify(live.requests[1].session.input);
       expect(retained).toContain('untrusted');
+      expect(retained).toContain('Spara hela utkastet nu.');
       expect(retained).toContain('Lo Exempel');
+      const authoritative = live.requests[1].session.input?.at(-1) as {
+        content: { text: string }[];
+      };
+      expect(JSON.parse(authoritative.content[0].text).currentDraft.changes).toEqual(
+        before.draft.changes,
+      );
       expect(live.sent.filter(({ event }) => event.type === 'session.commentary.append')).toEqual(
         [],
       );
@@ -520,11 +529,16 @@ for (const microphoneOn of [true, false]) {
         .poll(async () => Number(await meter(page).getAttribute('value')))
         .toBeLessThan(20);
       if (microphoneOn) await turnMicrophoneOff(page);
+      const renewed = await read();
+      expect(renewed.draft).toEqual(before.draft);
+      expect(renewed.objects).toEqual(before.objects);
       await readVoiceProposal(page);
       await send(page, 'Ändra den sista.');
       await expect.poll(async () => (await read()).draft.changes[0].after.name).toBe('Lo Senaste');
       await readVoiceProposal(page, 'Lo Senaste');
-      await expect(log(page)).toContainText('Behåll vårt sammanhang.');
+      expect((await read()).objects).toEqual(before.objects);
+      await expect(log(page)).not.toContainText('Utkastet är sparat');
+      await expect(log(page)).toContainText(request);
       await expect(log(page).getByRole('listitem').filter({ hasText: summaryLine })).toHaveCount(1);
     } finally {
       await app.close();

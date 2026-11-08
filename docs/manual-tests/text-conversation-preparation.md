@@ -39,9 +39,17 @@ Lo-förslaget och en verklig
 samtidig rättelse från Robin Demo. Behåll första modellbegäran tills
 användaren har skrivit den oskickade beskrivningen i Kim-formuläret.
 
-Släpp sedan `resolve_conflict` med `version`, `contentVersion` och det
-första fullständiga konfliktobjektet från `held.draft.conflicts`, samt
-`choice:"proposed"`. Kopiera den nya versionen ur nästa `lastToolResult`.
+Första `held.draft` är ett urval, inte hela utkastet. Läs hela utkastet med
+det hållna anropets ID:
+
+```text
+tool REQUEST read_my_draft {}
+```
+
+Släpp sedan `resolve_conflict` med det nya anropets ID, `version`,
+`contentVersion` och det första fullständiga konfliktobjektet från
+`held.lastToolResult.conflicts`, samt `choice:"proposed"`.
+Kopiera den nya versionen ur nästa `lastToolResult`.
 Släpp `read_map` med `{"query":"Familjens Molnmusik"}`. Nästa resultat
 innehåller abonnemangets objekt. Kopiera hela dess värde, ta bort
 `id`, `householdId`, `revision`, och behåll dem separat som `id` och
@@ -73,8 +81,16 @@ Alex, skapa Textprov och lägg Lo Exempel av typen Person med beskrivningen
 Påhittad uppgift i utkastet genom det vanliga formuläret. Lämna mikrofonen
 av. Aktivera `hold-check on` före användarens första textmeddelande.
 
-Vid dess `held` kopieras V och C från `draft`, och TYPE från
-Lo-förslagets `after.typeId`. Släpp en ny person i en kombinerad begäran:
+Vid dess första `held` begär operatören hela aktuella utkastet:
+
+```text
+tool REQUEST read_my_draft {}
+```
+
+Invänta nästa `held` och kopiera V och C från `lastToolResult`, och TYPE
+från Lo-förslagets `after.typeId` där. Det första underlaget är avgränsat
+till användarens begäran och behöver inte innehålla Lo. Släpp en ny person
+i en kombinerad begäran med det nya anrops-ID:t:
 
 <!-- markdownlint-disable MD013 -->
 ```text

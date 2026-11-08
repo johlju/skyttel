@@ -284,6 +284,8 @@ function modelExchange(value: unknown, project: ProjectArray, input: boolean) {
       : ['id', 'status', 'model', 'service_tier'],
   );
   if (input && source?.reasoning) admitted.reasoning = fields(source.reasoning, ['effort']);
+  if (input && source?.prompt_cache_options)
+    admitted.prompt_cache_options = fields(source.prompt_cache_options, ['ttl']);
   const items = source?.[input ? 'input' : 'output'];
   if (Array.isArray(items))
     admitted[input ? 'input' : 'output'] = project(items, (item) => {

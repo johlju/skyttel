@@ -12,7 +12,7 @@ import {
   turnMicrophoneOff,
   turnMicrophoneOn,
 } from '../support/conversation-page.js';
-import { readTableObject } from '../support/domain-work.js';
+import { editTableObject, readTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
@@ -405,6 +405,46 @@ test('KONTEXT-03: skrivna och talade kommandon börjar om samtalet och kastar ut
     await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
     await page.getByRole('button', { name: 'Logga ut', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Välkommen till Skyttel' })).toBeVisible();
+  } finally {
+    await app.close();
+  }
+});
+
+test('KONTEXT-23: text och röst läser aktuellt förslag efter en manuell rättelse', async ({
+  page,
+}) => {
+  const model = textModel((request) => {
+    const { draft } = current(request);
+    const lo = draft.changes.find((change) => change.id === 'lo');
+    return lo
+      ? [modelMessage(`Lo-förslaget heter ${lo.after?.name}.`)]
+      : [modelTool('read_my_draft', {})];
+  });
+  const live = liveProvider();
+  const app = await createInstallation(undefined, {
+    modelFetch: model.provider,
+    liveFetch: live.provider,
+    liveSideband: live.attach,
+  });
+  try {
+    const { read } = await arrange(page, app);
+    await send(page, 'Vad heter Lo Exempel i förslaget?');
+    await expect(log(page)).toContainText('Lo-förslaget heter Lo Exempel.');
+    await readVoiceProposal(page, 'Lo Exempel');
+    const form = await editTableObject(page, 'Lo Exempel');
+    await form.getByLabel('Namn', { exact: true }).fill('Lo Manuell');
+    await form.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
+    await expect(form).not.toBeVisible();
+    await openConversationText(page);
+    await readVoiceProposal(page, 'Lo Manuell');
+    await turnMicrophoneOn(page);
+    speak(live, 'Vad heter Lo Manuell i förslaget nu?');
+    await expect(log(page)).toContainText('Lo-förslaget heter Lo Manuell.');
+    await expect(log(page)).toContainText('Vad heter Lo Exempel i förslaget?');
+    await expect(log(page)).toContainText('Lo-förslaget heter Lo Exempel.');
+    await turnMicrophoneOff(page);
+    await readVoiceProposal(page, 'Lo Manuell');
+    expect((await read()).objects).toEqual([]);
   } finally {
     await app.close();
   }

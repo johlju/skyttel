@@ -50,10 +50,14 @@ För FRAGA-13/14: börja med ett identifierat, osparat **Lo Exempel**
 utan egenskaper. Släpp första uppdraget enligt **Utkastbatch och
 sparande**, med namnet **Lo Lind**. Det är en egen slutförd batch.
 
-Vid nästa uppdrag, läs sambandstyperna med
+Vid nästa uppdrag, läs hela utkastet med
+`tool REQUEST read_my_draft {}`. Det inledande underlaget kan utelämna
+Lo eftersom den nya begäran gäller Lampan. Kopiera TYPE från
+Lo-förslagets `after.typeId` i nästa `held.lastToolResult.changes`.
+Läs sedan sambandstyperna med
 `tool REQUEST read_type_catalog {}`. Kopiera ett verkligt ID till REL
-från nästa `held.lastToolResult.relationshipTypes`. Kopiera TYPE från
-Lo-förslagets `after.typeId`, och V/C från aktuellt `held.draft`.
+från nästa `held.lastToolResult.relationshipTypes`, och V/C från
+aktuellt `held.draft`.
 Släpp sedan följande, med aktuellt REQUEST. Den andra operationens
 avsiktligt saknade ändpunkt provar fel efter ett giltigt objektförslag:
 
