@@ -16,6 +16,7 @@ import { afterAll, afterEach, beforeAll, expect, test, vi } from 'vitest';
 import { FormLeaveProvider } from '../../../src/client/FormLeave.js';
 import { HouseholdMap } from '../../../src/client/HouseholdMap.js';
 import type { MapState } from '../../../src/shared/map.js';
+import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../../support/client.js';
 import {
   closeConversationText,
@@ -27,7 +28,13 @@ import {
 import { createInstallation } from '../../support/installation.js';
 import { liveProvider } from '../../support/live-provider.js';
 import { openDraftReview, openNewObjectForm } from '../../support/native-household-unit.js';
-import { lastToolResult, modelMessage, modelTool, textModel } from '../../support/text-model.js';
+import {
+  lastToolResult,
+  modelMessage,
+  modelTool,
+  readOnlyScope,
+  textModel,
+} from '../../support/text-model.js';
 import { voiceMedia } from '../../support/voice-media.js';
 
 vi.setConfig({ testTimeout: 30_000 });
@@ -54,14 +61,16 @@ afterEach(async () => {
 async function household({
   unavailable = false,
   reply = () => [modelMessage('Vilken av de två cyklarna menar du?')],
+  authorization,
   textUsage,
 }: {
   unavailable?: boolean;
   reply?: Parameters<typeof textModel>[0];
+  authorization?: Parameters<typeof textModel>[1];
   textUsage?: number;
 } = {}) {
   const live = liveProvider();
-  const model = textModel(reply);
+  const model = textModel(reply, authorization);
   // Server SDK construction runs before mounting the browser client. Its safety
   // check must see the server environment, rather than jsdom's global window.
   const browser = window;
@@ -381,6 +390,73 @@ test('abandoning failed typed work preserves the private draft and a newer unsen
   expect(home.model.requests).toHaveLength(1);
   expect((await home.read()).draft.changes).toEqual([]);
   expect(home.media.getUserMedia).not.toHaveBeenCalled();
+});
+
+test('a later work failure retains recovery controls behind an open blocked-action notice', async () => {
+  let typeId = '';
+  let blocked = false;
+  const home = await household({
+    authorization: readOnlyScope,
+    reply: (input) => {
+      if (blocked) throw new Error('Synthetic provider outage');
+      blocked = true;
+      const current = JSON.parse(
+        String(input.input.findLast((item) => item.role === 'user')?.content),
+      );
+      return [
+        modelTool('propose_object', {
+          version: current.draft.version,
+          contentVersion: current.draft.contentVersion,
+          id: 'outside-request',
+          baseRevision: null,
+          value: { name: 'Cykel', typeId, properties: [] },
+        }),
+      ];
+    },
+  });
+  typeId = (await home.read()).types[0].id;
+  await home.open();
+  await startConversationWithText();
+  const field = await screen.findByLabelText('Meddelande till Skyttel');
+  await userEvent.type(field, 'Läs kartan utan att ändra något.');
+  await userEvent.click(screen.getByRole('button', { name: 'Skicka' }));
+  const securityNotice = await screen.findByRole('region', { name: 'Samtalsnotis' });
+  expect(securityNotice.textContent).toContain('Skyttel stoppade en åtgärd utanför din begäran.');
+  const reference = securityNotice.textContent?.match(/Felreferens: ([^.]+)\./)?.[1];
+  expect(reference).toBeTruthy();
+  // Exercise the client boundary with a retained security reference alongside
+  // independent failed work; ordinary provider failures clear the current one.
+  home.network.after = async (url, _init, response) => {
+    if (!url.startsWith(`${home.base}/text-assistant/`) || !response.ok) return response;
+    const view: TextAssistantView = await response.clone().json();
+    return view.workFailure ? Response.json({ ...view, securityReference: reference }) : response;
+  };
+
+  await userEvent.type(field, 'Läs kartan igen.');
+  await userEvent.click(screen.getByRole('button', { name: 'Skicka' }));
+  await waitFor(() => expect(home.model.requests).toHaveLength(2));
+  await waitFor(() =>
+    expect(screen.queryByText('Skyttel arbetar… Tryck på Escape för att avbryta.')).toBeNull(),
+  );
+  expect(screen.getByRole('region', { name: 'Samtalsnotis' })).toBe(securityNotice);
+  expect(securityNotice.textContent).toContain(`Felreferens: ${reference}.`);
+  await userEvent.click(within(securityNotice).getByRole('button', { name: 'Stäng notisen' }));
+
+  const failure = await screen.findByRole('region', { name: 'Samtalsnotis' });
+  expect(failure.textContent).toContain('Modellen är tillfälligt otillgänglig. Valet är kvar.');
+  expect(within(failure).queryByRole('button', { name: 'Stäng notisen' })).toBeNull();
+  expect(document.querySelector('.notice-announcement[aria-live="polite"]')?.textContent).toContain(
+    'Försök igen.',
+  );
+  await userEvent.click(within(failure).getByRole('button', { name: /^Försök igen$/ }));
+  await waitFor(() => expect(home.model.requests).toHaveLength(3));
+  const abandon = await screen.findByRole('button', { name: 'Avstå från det oavslutade arbetet' });
+  await waitFor(() => expect(abandon.hasAttribute('disabled')).toBe(false));
+  await userEvent.click(abandon);
+  await waitFor(() => expect(screen.queryByRole('region', { name: 'Samtalsnotis' })).toBeNull());
+  expect(document.activeElement).toBe(field);
+  expect((await home.read()).draft.changes).toEqual([]);
+  expect(home.model.requests).toHaveLength(3);
 });
 
 test('Settings saves and revokes consent without starting a conversation or altering the private draft', async () => {

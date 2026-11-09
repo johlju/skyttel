@@ -215,7 +215,8 @@ TEXT-18.
 
 ### TEXT-SCOPE-01: stoppad åtgärd visar felreferens och behåller utkastet
 
-**Syfte:** Läsa en stoppnotis utan att förlora befintliga förslag.
+**Syfte:** Läsa och kopiera en stoppnotis med rätt begäran utan att
+förlora befintliga förslag eller få dubbla fel i samtalstexten.
 
 **Användare:** Alex i den kontrollerade installationen.
 
@@ -246,6 +247,17 @@ textuppdraget släpper operatören nästa hållna svar med
 `fail REQUEST` för respektive hållna svar. Återställ med `scope-work`; avsluta och
 städa med `quit` efter provet.
 
+Inför det andra kopieringsförsöket nekar operatören urklippsåtkomst
+genom att köra följande i webbläsarens konsol. Omladdning återställer
+webbläsarens vanliga kopiering efter provet:
+
+```javascript
+Object.defineProperty(navigator.clipboard, 'writeText', {
+  configurable: true,
+  value: async () => { throw new DOMException('Nekad', 'NotAllowedError'); }
+});
+```
+
 **Automatiskt motsvarande test:**
 [assistant-turn-scope.spec.ts](../../tests/integration/assistant-turn-scope.spec.ts),
 TEXT-SCOPE-01. Separata HTTP-prov verifierar två medlemmars bevarade
@@ -262,7 +274,7 @@ utkast, sparade uppgifter och historik samt loggens begränsade innehåll.
     "caseId": "TEXT-SCOPE-01"
   },
   "reference": "Kontrollerad läsomfattning och felaktigt kastande; ingen verklig leverantör.",
-  "outcomes": ["Notis och samtalstext visar samma felreferens, Lo ligger kvar och senare mikrofonnotiser och textuppdrag fungerar."],
+  "outcomes": ["Notisen visar felreferens utan dubbla fel i samtalstexten. Kopierad rapport och Läs mer innehåller samma fel och ursprungliga begäran. Nekad kopiering visar markerbar rapport. Lo ligger kvar och senare mikrofonnotiser och textuppdrag fungerar."],
   "evidence": [{
     "kind": "technical",
     "runner": "vitest",
@@ -281,14 +293,27 @@ utkast, sparade uppgifter och historik samt loggens begränsade innehåll.
 1. Starta samtalet med text och godkänn. Visa utkastet och läs **Lo Exempel**.
 2. Skicka **Sammanfatta kartan. Ändra ingenting.** Låt operatören släppa
    det felaktiga modellsvar som beskrivs ovan.
-3. Läs notisen om stoppad åtgärd. Jämför felreferensen med samtalstexten.
+3. Läs notisen om stoppad åtgärd. Felet ska inte upprepas i samtalstexten.
+   Välj **Läs mer** i slutet av feltexten. Samma text ska utökas utan
+   extra ruta eller upprepat felmeddelande. Hela felrapporten innehåller
+   felreferensen och den skickade begäran. Skriv **Oskickad text.** i
+   meddelandefältet utan att skicka. Välj **Kopiera felrapport** till höger
+   om texten, före stängningskrysset, och
+   klistra in i en textredigerare. Texten ska överensstämma med rapporten
+   i den expanderade texten, utan den oskickade texten. Välj **Visa mindre**
+   längst ned. Texten fälls ihop och länken blir **Läs mer** med fokus kvar.
 4. Kontrollera att **Lo Exempel** ligger kvar i utkastet.
 5. Stäng notisen. Låt operatören neka den simulerade mikrofonen.
    Tryck **Prata med Skyttel**, läs mikrofonnotisen och stäng den.
    Upprepa en gång; även det andra försöket ska visa samma mikrofonhinder.
 6. Skicka **Sammanfatta kartan igen. Ändra ingenting.** Låt operatören
    åter släppa ett felaktigt kastande enligt förberedelsen. En ny stoppnotis
-   ska visas med en annan felreferens. Stäng notisen.
+   ska visas med en annan felreferens. Den nya notisen ska ha stängd
+   **Läs mer** och inget gammalt kopieringsbesked. Låt operatören neka
+   urklippsåtkomst enligt förberedelsen.
+   Välj **Kopiera felrapport**. Ett besked ska förklara att kopieringen
+   misslyckades och feltexten expanderas med markerbar text för den nya
+   begäran och referensen. Stäng notisen.
 7. Skicka **Prova ett vanligt fel.** Låt operatören neka svaret.
    Läs notisen **Modellen är tillfälligt otillgänglig** och kontrollera
    att den oavslutade begäran visas. Välj **Avstå från det oavslutade
@@ -299,8 +324,9 @@ utkast, sparade uppgifter och historik samt loggens begränsade innehåll.
 8. Skriv och skicka **Mitt nästa uppdrag**. Låt operatören släppa svaret.
    Läs **Ett nytt svar.** och kontrollera att ingen gammal notis visas.
 
-**Förväntat resultat:** Åtgärden stoppas, samma referens finns i notis och
-samtalstext och utkastet finns kvar. Senare fel kan visas på nytt och ett
+**Förväntat resultat:** Åtgärden stoppas, notisen och den kopierade
+rapporten visar samma referens och rätt begäran. Felet upprepas inte i
+samtalstexten och utkastet finns kvar. Senare fel kan visas på nytt och ett
 nytt textuppdrag kan slutföras.
 Avstående avslutar den oavslutade begäran och bevarar Lo-förslaget.
 Ingen automatisk upprepning eller extra godkännanderuta visas.
@@ -621,8 +647,9 @@ som stöd, skilt från hela det ordinarie fallet.
 6. Skriv **Beskriv de sparade objekten och vilket år uppgifterna gäller.
    Lägg till Kim som person. Spara hela utkastet.**
    Operatören släpper tillägget och sparandet och avbryter därefter
-   förklaringen. Läs **Sparat.**, **Vilket år gäller beskrivningen?** och
-   felbeskedet. Kontrollera samma besked i den kontrollerade
+   förklaringen. Läs **Sparat.** och **Vilket år gäller beskrivningen?**.
+   Välj **Läs mer** i **Samtalsnotis** och läs felbeskedet.
+   Kontrollera samma besked i den kontrollerade
    röstleveransen enligt förberedelsen.
 7. Läs ett tomt utkast samt Lo Exempel och Kim av typen Person i Tabell.
    Öppna **Rapporter → Ändringshistorik** och kontrollera att ett sparande
@@ -633,7 +660,8 @@ som stöd, skilt från hela det ordinarie fallet.
    mikrofonen. Skriv **Lägg till Kim och en kollega med samma objekttyp
    som Lo Exempel och förklara typen Person. Spara inte.**
 9. Operatören släpper utkaständringen och avbryter därefter förklaringen.
-   Läs **Kim lades till.**, **Vad heter kollegan?** och felbeskedet.
+   Läs **Kim lades till.** och **Vad heter kollegan?**. Välj **Läs mer**
+   i **Samtalsnotis** och läs felbeskedet.
    Kontrollera samma sakliga innehåll i den kontrollerade
    röstleveransen. Inget **Sparat.** ska finnas i text eller röstleverans.
 10. Läs Kim och Lo Exempel i utkastet. Öppna
@@ -724,9 +752,10 @@ TEXT-15.
 1. Öppna textvyn, börja samtalet och godkänn. Visa utkastet och läs Lo.
 2. Skicka **Lägg till Kim som person och spara.** Låt operatören
    släppa förslaget och avvisa sparandet enligt förberedelsen.
-3. Läs att ändringarna ligger kvar osparade och att ett nytt sparbesked
-   behövs. Läs både Lo Exempel och Kim i utkastet. Öppna Lo och
-   kontrollera att beskrivningen Påhittad uppgift finns kvar. Stäng detaljen.
+3. Välj **Läs mer** i **Samtalsnotis**. Läs att ändringarna ligger kvar
+   osparade och att ett nytt sparbesked behövs. Läs både Lo Exempel och
+   Kim i utkastet. Öppna Lo och kontrollera att beskrivningen Påhittad
+   uppgift finns kvar. Stäng detaljen.
 4. Skicka **Vad finns i utkastet?** Läs redovisningen av båda personerna.
    Utkastet finns kvar och inget **Sparat.** visas.
 5. Slå på **Prata med Skyttel** i samma samtal. Låt operatören förmedla
@@ -843,7 +872,7 @@ tillgängligt”.
   "reference": "Dator; kontrollerad leverantör och den angivna motiverade felgränsen.",
   "outcomes": [
     "Det verkliga meddelandet styr tillåtelsen att spara och ett leverantörsfel förstör inte utkastet.",
-    "Samtalstexten förklarar att modellen är tillfälligt otillgänglig, att valet är kvar och att återförsök kräver en egen handling."
+    "Felnotisen förklarar att modellen är tillfälligt otillgänglig, att valet är kvar och att återförsök kräver en egen handling."
   ]
 }
 ```
@@ -857,8 +886,8 @@ tillgängligt”.
    Låt operatören försöka spara efter varje meddelande. Vänta på den
    uttryckliga felnotisen före nästa meddelande.
 2. Skicka **Beskriv mitt utkast.** och låt operatören ge leverantörsfel.
-   Läs felnotisen, modellens felbesked i samtalstexten och kvarvarande
-   Lo-förslag.
+   Välj **Läs mer** i felnotisen och läs modellens felbesked. Kontrollera
+   att Lo-förslaget finns kvar.
 3. Stäng textvyn, välj **Tabell → Redigera Lo Exempel**, rätta Namn till
    **Lo Lind** och välj **Lägg i utkastet och stäng**. Läs Lo Lind med
    oförändrad **Påhittad uppgift** i utkastets fullständiga uppgifter.
@@ -867,7 +896,7 @@ tillgängligt”.
 
 - Ingen av de nekade, hypotetiska, uppskjutna eller citerade begärandena
   sparar kartan, även när ersättaren försöker anropa sparverktyget.
-- Vid leverantörsfelet visar både felnotisen och samtalstexten att modellen
+- Vid leverantörsfelet visar felnotisen att modellen
   är tillfälligt otillgänglig, att valet är kvar och att återförsök kräver en
   egen handling när felet är löst. Oavslutat arbete och senare kö väntar.
 - Utkastet och vanligt formulärarbete finns kvar. Provet är ett kontrollerat

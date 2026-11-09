@@ -96,19 +96,3 @@ enabled = false
 
 [plugins.plugin-management]
 enabled = false
-
-[[skills.config]]
-path = "/home/vscode/.codex/skills/.system/plugin-creator/SKILL.md"
-enabled = false
-
-[[skills.config]]
-path = "/home/vscode/.codex/skills/.system/review-agent/SKILL.md"
-enabled = false
-
-[[skills.config]]
-path = "/home/vscode/.codex/skills/.system/skill-creator/SKILL.md"
-enabled = false
-
-[[skills.config]]
-path = "/home/vscode/.codex/skills/.system/skill-installer/SKILL.md"
-enabled = false

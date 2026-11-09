@@ -29,6 +29,9 @@ test('TEXT-SCOPE-01: stoppad åtgärd visar felreferens och behåller utkastet',
   );
   const app = await createInstallation(undefined, { modelFetch: model.provider });
   try {
+    await page
+      .context()
+      .grantPermissions(['clipboard-read', 'clipboard-write'], { origin: app.origin });
     await signIn(page.request, app.origin);
     const { household } = await (await createHousehold(page.request, app.origin)).json();
     const mapPath = `${app.origin}/api/households/${household.id}/map`;
@@ -57,11 +60,35 @@ test('TEXT-SCOPE-01: stoppad åtgärd visar felreferens och behåller utkastet',
     await expect(notice).toContainText(/Felreferens: [a-f0-9-]{36}/);
     const reference = (await notice.textContent())?.match(/Felreferens: ([a-f0-9-]{36})/)?.[1];
     if (!reference) throw new Error('Missing security reference');
-    await expect(page.getByRole('log', { name: 'Samtalstext', exact: true })).toContainText(
-      reference,
-    );
-    await expect(draft).toContainText('Lo Exempel');
+    const transcript = page.getByRole('log', { name: 'Samtalstext', exact: true });
+    await expect(transcript).not.toContainText(reference);
+    const copyBox = await notice.getByRole('button', { name: 'Kopiera felrapport' }).boundingBox();
+    const closeBox = await notice.getByRole('button', { name: 'Stäng notisen' }).boundingBox();
+    const textBox = await notice.locator('.conversation-diagnostic-text').boundingBox();
+    if (!copyBox || !closeBox || !textBox) throw new Error('Missing notice controls');
+    expect(textBox.x + textBox.width).toBeLessThanOrEqual(copyBox.x);
+    expect(copyBox.x + copyBox.width).toBeLessThanOrEqual(closeBox.x);
+    expect(copyBox.y).toBe(closeBox.y);
+    await expect(notice.locator('[data-diagnostic-report]')).not.toBeVisible();
+    await notice.getByText('Läs mer', { exact: true }).click();
+    const report = notice.locator('[data-diagnostic-report]');
+    await expect(report).toContainText(reference);
+    await expect(report).toContainText(/Sammanfatta kartan\. Ändra ingenting\./);
+    await expect(report).toContainText(/Uppdrags-ID:/);
     await expect(page.getByRole('button', { name: 'Skicka', exact: true })).toBeDisabled();
+    await page.getByLabel('Meddelande till Skyttel', { exact: true }).fill('Oskickad text.');
+    await notice.getByRole('button', { name: 'Kopiera felrapport', exact: true }).click();
+    await expect(notice.getByRole('status')).toHaveText('Felrapporten är kopierad.');
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      await report.textContent(),
+    );
+    await expect(report).not.toContainText(/Oskickad text\./);
+    expect((await report.textContent())?.split('Skyttel stoppade en åtgärd').length).toBe(2);
+    await expect(notice.locator('textarea')).toHaveCount(0);
+    await notice.getByRole('button', { name: 'Visa mindre', exact: true }).click();
+    await expect(report).toHaveCount(0);
+    await expect(notice.getByRole('button', { name: 'Läs mer', exact: true })).toBeFocused();
+    await expect(draft).toContainText('Lo Exempel');
     await notice.getByRole('button', { name: 'Stäng notisen', exact: true }).click();
     await page.evaluate(() => window.skyttelVoiceFixture.setMicrophone('deny'));
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -76,6 +103,22 @@ test('TEXT-SCOPE-01: stoppad åtgärd visar felreferens och behåller utkastet',
     await page.getByRole('button', { name: 'Skicka', exact: true }).click();
     await expect(notice).toContainText('Skyttel stoppade en åtgärd utanför din begäran.');
     await expect(notice).not.toContainText(reference);
+    await expect(notice.getByRole('status')).toBeEmpty();
+    await expect(notice.locator('[data-diagnostic-report]')).not.toBeVisible();
+    await page.evaluate(() => {
+      Object.defineProperty(navigator.clipboard, 'writeText', {
+        configurable: true,
+        value: async () => {
+          throw new DOMException('Synthetic clipboard denial', 'NotAllowedError');
+        },
+      });
+    });
+    await notice.getByRole('button', { name: 'Kopiera felrapport', exact: true }).click();
+    await expect(notice.getByRole('status')).toContainText('Kunde inte kopiera.');
+    await expect(report).toBeVisible();
+    await expect(report).toContainText(/Sammanfatta kartan igen\. Ändra ingenting\./);
+    await expect(report).not.toContainText(reference);
+    await expect(transcript).not.toContainText('Skyttel stoppade en åtgärd');
     await notice.getByRole('button', { name: 'Stäng notisen', exact: true }).click();
     for (let attempt = 0; attempt < 2; attempt++) {
       await page

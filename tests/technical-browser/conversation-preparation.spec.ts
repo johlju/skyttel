@@ -470,7 +470,9 @@ for (const seeded of [false, true]) {
       await giveConversationConsent(page);
       item = await send('Behåll den ursprungliga begäran vid kapacitetsstopp.');
       command(render(capacityFailure, item));
-      await expect(log).toContainText('Avgränsa uppdraget');
+      await expect(
+        page.getByRole('button', { name: 'Avgränsa uppdraget', exact: true }),
+      ).toBeVisible();
       at = events.length;
       await field.fill('Beskriv enbart mitt aktuella utkast. Spara inte.');
       await page.getByRole('button', { name: 'Avgränsa uppdraget', exact: true }).click();

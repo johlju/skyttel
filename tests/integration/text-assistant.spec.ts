@@ -250,7 +250,9 @@ async function verifyTypedUnsavedExplanationFailure(page: Page) {
     const failure =
       'Modellen är tillfälligt otillgänglig. Valet är kvar. Försök igen genom en egen handling när felet är löst.';
     await expect(transcript(page)).toContainText('Kim lades till.');
-    await expect(transcript(page)).toContainText(failure);
+    const notice = page.getByRole('region', { name: 'Samtalsnotis', exact: true });
+    await notice.getByRole('button', { name: 'Läs mer', exact: true }).click();
+    await expect(notice).toContainText(failure);
     await expect(transcript(page)).toContainText(question);
     await expect(transcript(page)).not.toContainText('Sparat.');
     await expect(await showDraft(page)).toContainText('Kim');
@@ -332,7 +334,9 @@ async function verifyTypedSaveExplanationFailure(page: Page) {
     );
     const failure =
       'Modellen är tillfälligt otillgänglig. Valet är kvar. Försök igen genom en egen handling när felet är löst.';
-    await expect(transcript(page)).toContainText(failure);
+    const notice = page.getByRole('region', { name: 'Samtalsnotis', exact: true });
+    await notice.getByRole('button', { name: 'Läs mer', exact: true }).click();
+    await expect(notice).toContainText(failure);
     await expect(transcript(page)).toContainText('Sparat.');
     await expect(transcript(page)).toContainText(question);
     await expect(await showDraft(page)).toContainText('Utkastet är tomt.');
@@ -451,8 +455,8 @@ async function verifyBatchRecovery(page: Page, explanation: boolean) {
     await expect(transcript(page)).toContainText('Kim');
     await expect(transcript(page)).toContainText('lades till');
     const unfinished = 'Uppdraget är inte slutfört.';
-    await expect(transcript(page)).toContainText(unfinished);
-    await expect(transcript(page)).toContainText('Återstående arbete är pausat');
+    await expect(notice).toContainText(unfinished);
+    await expect(notice).toContainText('Återstående arbete är pausat');
     await expect(transcript(page)).toContainText(instruction);
     if (explanation) {
       await expect(transcript(page)).toContainText(question);
@@ -590,8 +594,10 @@ test('TEXT-15: avvisat sparande bevarar utkastet före ett nytt talat sparbesked
     await consent(page);
     await expect(await showDraft(page)).toContainText('Lo Exempel');
     await send(page, 'Lägg till Kim som person och spara.');
-    await expect(transcript(page)).toContainText('Ändringarna ligger kvar osparade i ditt utkast.');
-    await expect(transcript(page)).toContainText('Be om sparande igen');
+    const notice = page.getByRole('region', { name: 'Samtalsnotis', exact: true });
+    await notice.getByRole('button', { name: 'Läs mer', exact: true }).click();
+    await expect(notice).toContainText('Ändringarna ligger kvar osparade i ditt utkast.');
+    await expect(notice).toContainText('Be om sparande igen');
     await expect(await showDraft(page)).toContainText('Lo Exempel');
     await expect(await showDraft(page)).toContainText('Kim');
     await (await showDraft(page))
@@ -833,7 +839,11 @@ test('TEXT-02: sena svar efter kastat utkast och avbrott ändrar inte nytt arbet
         value: { ...value, name: 'För sent' },
       }),
     ]);
-    await expect(notice(page)).toHaveText('Skyttel kunde inte slutföra uppdraget. Försök igen.');
+    await expect(
+      notice(page).getByText('Skyttel kunde inte slutföra uppdraget. Försök igen.', {
+        exact: true,
+      }),
+    ).toBeVisible();
     expect(
       (
         await (
@@ -927,7 +937,8 @@ test('TEXT-03: nekade sparbesked och modellfel lämnar formulärarbetet tillgän
     await expect(notice(page)).toContainText(
       'Modellen är tillfälligt otillgänglig. Valet är kvar.',
     );
-    await expect(transcript(page)).toContainText(
+    await notice(page).getByRole('button', { name: 'Läs mer', exact: true }).click();
+    await expect(notice(page)).toContainText(
       'Modellen är tillfälligt otillgänglig. Valet är kvar. Försök igen genom en egen handling när felet är löst.',
     );
     await closeTextView(page);

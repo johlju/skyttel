@@ -232,7 +232,9 @@ for (const mode of ['text', 'voice'] as const) {
         await expect(voiceBox(page)).toHaveText('Lyssnar');
         speak(live, instruction);
       } else await send(page, instruction);
-      await expect(transcript).toContainText('Uppdraget kunde inte slutföras.');
+      const notice = page.getByRole('region', { name: 'Samtalsnotis', exact: true });
+      await notice.getByRole('button', { name: 'Läs mer', exact: true }).click();
+      await expect(notice).toContainText('Uppdraget kunde inte slutföras.');
       await expect(transcript).toContainText(pending);
       const draft = await openConversationDraft(page);
       await expect(

@@ -18,6 +18,11 @@ The event `assistant_action_out_of_scope` includes a UUID `reference`, UTC
 `voice`), a known `tool` name and a bounded `reason` (`read_only_turn` or
 `outside_requested_work`). The user's notice contains the same reference.
 The event excludes raw conversation, map content, tool arguments and secrets.
+The notice's **Kopiera felrapport** control copies the error, the original
+request and available conversation/task identities. **Läs mer** previews the
+same report. The report can contain private user text; keep it within the
+installation's support process. Automatic failure notices are not repeated
+in the visible conversation text.
 Treat its identity metadata as access-controlled operational information.
 Apply the installation's log retention and access policy.
 

@@ -166,7 +166,7 @@ for (const mode of ['text', 'voice'] as const) {
       await expect(page.getByRole('log', { name: 'Samtalstext', exact: true })).toContainText(
         'lades till',
       );
-      await expect(page.getByRole('log', { name: 'Samtalstext', exact: true })).toContainText(
+      await expect(notice).toContainText(
         'Uppdraget är inte slutfört. Återstående arbete är pausat',
       );
       await expect(page.getByRole('log', { name: 'Samtalstext', exact: true })).toContainText(

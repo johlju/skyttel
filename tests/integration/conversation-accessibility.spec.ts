@@ -104,10 +104,12 @@ for (const width of [1280, 390])
             '.workspace-text',
             '.voice-box .conversation-model-button',
             '.voice-stop',
+            '.conversation-diagnostic-toggle',
             '.conversation-notice-content > button:nth-of-type(1)',
             '.conversation-notice summary',
             '.conversation-notice-content > button:nth-of-type(2)',
             '.conversation-notice-content > button:nth-of-type(3)',
+            '.conversation-diagnostic-copy',
             '.workspace-tools-footer button',
           ].map((selector) => document.querySelector(selector));
           return controls.every(
@@ -131,6 +133,10 @@ for (const width of [1280, 390])
         await page.keyboard.press('Tab');
         await expect(voiceBox(page).getByRole('button', { name: 'Avbryt' })).toBeFocused();
         await page.keyboard.press('Tab');
+        await expect(
+          notice(page).getByRole('button', { name: 'Läs mer', exact: true }),
+        ).toBeFocused();
+        await page.keyboard.press('Tab');
         await expect(retry).toBeFocused();
         await page.keyboard.press('Tab');
         await expect(unfinished).toBeFocused();
@@ -138,6 +144,10 @@ for (const width of [1280, 390])
         await expect(abandon).toBeFocused();
         await page.keyboard.press('Tab');
         await expect(stopAll).toBeFocused();
+        await page.keyboard.press('Tab');
+        await expect(
+          notice(page).getByRole('button', { name: 'Kopiera felrapport', exact: true }),
+        ).toBeFocused();
         await page.keyboard.press('Tab');
         await expect(
           page.getByRole('button', {

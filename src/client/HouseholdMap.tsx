@@ -41,6 +41,7 @@ import {
   useConversationNotice,
 } from './ConversationNotice.js';
 import { ConversationSettings } from './ConversationSettings.js';
+import { conversationDiagnosticReport } from './conversation-diagnostics.js';
 import { useFormLeave } from './FormLeave.js';
 import { MapLegend } from './MapLegend.js';
 import { MapSelectionDetails } from './MapSelectionDetails.js';
@@ -546,17 +547,30 @@ export function HouseholdMap({
     ]
       .filter(Boolean)
       .join(', ');
-    for (const element of workspace.current?.querySelectorAll(measured) ?? [])
-      observer.observe(element);
+    const observed = new Set<Element>();
+    const trackLayout = () => {
+      for (const element of observed) {
+        if (workspace.current?.contains(element)) continue;
+        observer.unobserve(element);
+        observed.delete(element);
+      }
+      for (const element of workspace.current?.querySelectorAll(measured) ?? []) {
+        if (observed.has(element)) continue;
+        observed.add(element);
+        observer.observe(element);
+      }
+      measure();
+    };
+    trackLayout();
     // Insertion/removal or a flow-class change can move a footer without
     // changing its size (for example after the first object is saved).
-    const layout = new MutationObserver(measure);
+    const layout = new MutationObserver(trackLayout);
     if (workspace.current)
       layout.observe(workspace.current, {
         childList: true,
         subtree: true,
         attributes: true,
-        attributeFilter: ['class', 'hidden'],
+        attributeFilter: ['class', 'hidden', 'open'],
       });
     return () => {
       observer.disconnect();
@@ -1158,7 +1172,8 @@ export function HouseholdMap({
   beforeConnection.current = { blocked: Boolean(conversation.inputBlocked), ongoing };
   const securityReference =
     conversation.session?.securityReference ??
-    conversation.session?.completedReplies?.at(-1)?.securityReference;
+    conversation.session?.completedReplies?.findLast((reply) => reply.securityReference)
+      ?.securityReference;
   const workFailure = !conversation.session?.paused ? conversation.session?.workFailure : undefined;
   const noticeState = useConversationNotice({
     workFailure,
@@ -1172,7 +1187,7 @@ export function HouseholdMap({
       ),
       disconnectedIdle: Boolean(!conversation.revokedHere && conversation.disconnected && !ongoing),
       unavailable: !conversation.revokedHere && conversation.available === false,
-      taskFailed: Boolean((conversation.taskFailed || workFailure) && !securityReference),
+      taskFailed: Boolean(conversation.taskFailed || workFailure),
       actionBlocked: Boolean(securityReference),
       consentRevoked: Boolean(conversation.consentRevoked),
       contextFull: conversation.session?.contextSummaryState === 'failed',
@@ -1195,6 +1210,7 @@ export function HouseholdMap({
     <ConversationNoticeCard
       key={noticeState.notice.id}
       notice={noticeState.notice}
+      diagnosticReport={conversationDiagnosticReport(noticeState.notice, conversation.session)}
       closable={noticeState.closable}
       onDismiss={noticeState.dismiss}
       onAction={

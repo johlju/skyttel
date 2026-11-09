@@ -610,10 +610,14 @@ for (const viewport of [
       ).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(
+        notice(page).getByRole('button', { name: 'Läs mer', exact: true }),
+      ).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(
         notice(page).getByRole('button', { name: 'Försök igen', exact: true }),
       ).toBeFocused();
       await page.keyboard.press('Tab');
-      await expect(notice(page).locator('summary')).toBeFocused();
+      await expect(notice(page).getByText('Oavslutad begäran', { exact: true })).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(
         notice(page).getByRole('button', {

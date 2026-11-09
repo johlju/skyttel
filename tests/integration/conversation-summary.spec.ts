@@ -292,7 +292,9 @@ test('KONTEXT-20: nödvändiga instruktioner som inte ryms ger ett begripligt st
   const exact = `Spara inte. Behåll instruktionerna ordagrant: ${'blå; grön, '.repeat(300)}`;
   try {
     await send(page, exact);
-    await expect(log(page)).toContainText('Avgränsa uppdraget');
+    await expect(
+      page.getByRole('button', { name: 'Avgränsa uppdraget', exact: true }),
+    ).toBeVisible();
     await expect(log(page)).toContainText(exact.trim());
     await expect(field(page)).toHaveAccessibleDescription(
       /står för sig självt.*alla begränsningar/,
@@ -419,11 +421,11 @@ for (const renamed of [false, true]) {
       await expect(form).not.toBeVisible();
       await openConversationText(page);
       releaseSummary();
-      await expect(log(page)).toContainText(
-        renamed
-          ? 'Förtydliga vilka ändringar du vill göra.'
-          : 'Lo Exempel bytte namn till Lo Klar.',
-      );
+      if (renamed) {
+        const notice = page.getByRole('region', { name: 'Samtalsnotis', exact: true });
+        await notice.getByRole('button', { name: 'Läs mer', exact: true }).click();
+        await expect(notice).toContainText('Förtydliga vilka ändringar du vill göra.');
+      } else await expect(log(page)).toContainText('Lo Exempel bytte namn till Lo Klar.');
       await readVoiceProposal(
         page,
         renamed ? 'Lo Manuell' : 'Lo Klar',

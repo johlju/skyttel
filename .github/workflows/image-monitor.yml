@@ -20,7 +20,7 @@ defaults:
 jobs:
   monitor:
     if: github.repository == 'viscalyx/skyttel' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: avrea-ubuntu-latest
     timeout-minutes: 40
     environment: production
     # Prevent competing issue updates without replacing queued release deployments.

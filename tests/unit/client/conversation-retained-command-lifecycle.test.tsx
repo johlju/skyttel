@@ -26,7 +26,10 @@ const earlier = {
   ...commandConversation,
   id: 'earlier',
   paused: true,
-  conversation: [{ role: 'assistant' as const, text: 'Det valda tidigare samtalet.' }],
+  conversation: [
+    { role: 'assistant' as const, text: 'Det valda tidigare samtalet.' },
+    { role: 'assistant' as const, text: 'Ett fel som visas i notisen.', notice: true },
+  ],
 };
 
 test('the retained list prevents concurrent opening and rejects unsent text before any switch', async () => {

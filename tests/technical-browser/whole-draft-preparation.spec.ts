@@ -154,8 +154,10 @@ test('literal whole-draft preparation reads omitted proposals before a rejected 
     ]);
     command(reject.replace('CHECK', item.id));
     const log = page.getByRole('log', { name: 'Samtalstext' });
-    await expect(log).toContainText('Ändringarna ligger kvar osparade i ditt utkast.');
-    await expect(log).toContainText('Be om sparande igen');
+    const notice = page.getByRole('region', { name: 'Samtalsnotis', exact: true });
+    await notice.getByRole('button', { name: 'Läs mer', exact: true }).click();
+    await expect(notice).toContainText('Ändringarna ligger kvar osparade i ditt utkast.');
+    await expect(notice).toContainText('Be om sparande igen');
     const after = await (await page.request.get(path)).json();
     expect(after.objects).toEqual(before.objects);
     expect(after.draft.changes).toEqual(item.comparison?.untrusted.data.draft.changes);

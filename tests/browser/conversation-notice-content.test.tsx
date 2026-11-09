@@ -26,9 +26,47 @@ afterEach(async () => {
   } finally {
     restoreMedia = undefined;
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
     localStorage.clear();
   }
 });
+
+test.each([
+  { width: 1280, height: 800 },
+  { width: 320, height: 600 },
+  { width: 844, height: 390 },
+])(
+  'expanded error report remains readable and keyboard accessible at $width × $height',
+  { tags: ['technical'] },
+  async ({ width, height }) => {
+    const home = await openHouseholdConversation(width, height);
+    await startConversationWithText();
+    home.failNextReply();
+    await page.getByRole('textbox', { name: 'Meddelande till Skyttel' }).fill('Läs kartan.');
+    await page.getByRole('button', { name: 'Skicka', exact: true }).click();
+    const copy = notice().getByRole('button', { name: 'Kopiera felrapport' });
+    await expect.element(copy).toBeVisible();
+    const write = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
+    await focusReachable(copy);
+    await userEvent.keyboard('{Enter}');
+    await expect
+      .element(notice().getByRole('status'))
+      .toHaveTextContent('Felrapporten är kopierad.');
+    const toggle = notice().getByRole('button', { name: 'Läs mer', exact: true });
+    await focusReachable(toggle);
+    await userEvent.keyboard('{Enter}');
+    const report = notice().element().querySelector('[data-diagnostic-report]');
+    expect(report).not.toBeNull();
+    expect(write).toHaveBeenCalledWith(report?.textContent);
+    expect(notice().element().querySelector('textarea')).toBeNull();
+    const less = notice().getByRole('button', { name: 'Visa mindre', exact: true });
+    await focusReachable(less);
+    expect(notice().element().scrollWidth).toBeLessThanOrEqual(notice().element().clientWidth + 1);
+    await userEvent.keyboard('{Enter}');
+    await expect.element(toggle).toHaveFocus();
+    expect(notice().element().querySelector('[data-diagnostic-report]')).toBeNull();
+  },
+);
 
 // The original startup contains Lo in Alex's private draft, not an empty map.
 function proposedLo(): MapState {

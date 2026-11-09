@@ -470,7 +470,8 @@ konfiguration före samma steg.
 1. Skicka **Ge ett förslag.** och låt det misslyckas enligt tidslinjen.
 2. Stäng textvyn. Läs notisen, röstrutan och kartans status.
 3. Fokusera **Skriv till Skyttel** och tryck Tab till röstrutans
-   **Modell och resonemang**. Tryck Tab till **Försök igen**, sedan till
+   **Modell och resonemang**. Tryck Tab till **Läs mer**, **Försök igen**,
+   sedan till
    **Oavslutad begäran** och **Avstå från det oavslutade arbetet**. Tryck Retur.
 
 **Förväntat resultat:**
@@ -479,7 +480,8 @@ konfiguration före samma steg.
   kortet ovanför röstrutan, över hela bredden. Symbolen står till vänster,
   texten och de uttryckliga nästa stegen bredvid.
 - Ingen överlappning döljer röstrutan eller återkopplingen. Tab når
-  återförsök, den gamla begäran och avstående efter **Modell och resonemang**.
+  **Läs mer**, återförsök, den gamla begäran och avstående efter
+  **Modell och resonemang**.
 - Avstående återför fokus till mikrofonknappen. Mikrofonen och **Lyssnar**
   finns kvar. Det aktuella utkastet bevaras och samtalet fortsätter.
 
