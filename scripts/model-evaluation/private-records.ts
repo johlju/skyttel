@@ -1,6 +1,7 @@
 import { closeSync, openSync, writeSync } from 'node:fs';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
+import type { ProviderCall } from './provider.js';
 
 /** Each record is a complete gzip member containing one JSONL line. Consumers
  * can decompress the concatenated members as a stream, even after a stop. */
@@ -36,5 +37,27 @@ export function privateEvaluationRecords(directory: string) {
         closeSync(calls);
       }
     },
+  };
+}
+
+/** Retain accounting and correlation evidence while keeping raw payloads private. */
+export function sanitizedProviderCall(call: ProviderCall): ProviderCall {
+  return {
+    ...call,
+    request: {},
+    response: call.response
+      ? {
+          id: call.response.id,
+          model: call.response.model,
+          service_tier: call.response.service_tier,
+          status: call.response.status,
+          usage: call.response.usage,
+          output: Array.isArray(call.response.output)
+            ? call.response.output
+                .filter((item) => item.type === 'function_call')
+                .map((item) => ({ type: item.type, call_id: item.call_id }))
+            : [],
+        }
+      : undefined,
   };
 }

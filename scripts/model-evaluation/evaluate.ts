@@ -31,7 +31,7 @@ import {
   playbackAssessor,
   verifiedPlaybackAssessor,
 } from './playback-assessor.js';
-import { privateEvaluationRecords } from './private-records.js';
+import { privateEvaluationRecords, sanitizedProviderCall } from './private-records.js';
 import registry from './profiles.json' with { type: 'json' };
 import {
   budgetedProvider,
@@ -317,24 +317,7 @@ export async function evaluateModels(
   const privateRecords = privateEvaluationRecords(directory);
   const record = (call: ProviderCall) => {
     privateRecords.call(call);
-    calls.set(call.id, {
-      ...call,
-      request: {},
-      response: call.response
-        ? {
-            id: call.response.id,
-            model: call.response.model,
-            service_tier: call.response.service_tier,
-            status: call.response.status,
-            usage: call.response.usage,
-            output: Array.isArray(call.response.output)
-              ? call.response.output
-                  .filter((item) => item.type === 'function_call')
-                  .map((item) => ({ type: item.type, call_id: item.call_id }))
-              : [],
-          }
-        : undefined,
-    });
+    calls.set(call.id, sanitizedProviderCall(call));
   };
   const cost = (kind: 'backend' | 'summary' | 'judge') => {
     const selected = [...calls.values()].filter((call) => call.kind === kind && call.endedAt);

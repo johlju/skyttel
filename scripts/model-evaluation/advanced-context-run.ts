@@ -4,7 +4,7 @@ import { EvaluationBudget } from './budget.js';
 import { runApplicationContextLimit } from './context-limit.js';
 import { contentJudge, verifyJudge } from './judge.js';
 import { modelMetrics } from './metrics.js';
-import { privateEvaluationRecords } from './private-records.js';
+import { privateEvaluationRecords, sanitizedProviderCall } from './private-records.js';
 import { budgetedProvider, type EvaluationProfile, type ProviderCall } from './provider.js';
 import { evaluationReporter } from './report.js';
 
@@ -33,19 +33,7 @@ export async function executeAdvancedContext(options: {
   const calls = new Map<string, ProviderCall>();
   const record = (call: ProviderCall) => {
     privateRecords.call(call);
-    calls.set(call.id, {
-      ...call,
-      request: {},
-      response: call.response
-        ? {
-            id: call.response.id,
-            model: call.response.model,
-            service_tier: call.response.service_tier,
-            status: call.response.status,
-            usage: call.response.usage,
-          }
-        : undefined,
-    });
+    calls.set(call.id, sanitizedProviderCall(call));
   };
   const provider = budgetedProvider(options.profile, budget, {
     transport: options.transport,
