@@ -56,6 +56,15 @@ npm run test:unit -- tests/unit/server/evaluation-advanced-campaign.test.ts test
 ```
 <!-- markdownlint-enable MD013 -->
 
+After the review-stage evidence-sanitization refactor, all **33 tests in
+four affected suites pass**:
+
+<!-- markdownlint-disable MD013 -->
+```sh
+npm run test:unit -- tests/unit/server/evaluation-advanced-campaign.test.ts tests/unit/server/evaluation-plans.test.ts tests/unit/server/evaluation-versions.test.ts tests/unit/server/evaluation-private-records.test.ts
+```
+<!-- markdownlint-enable MD013 -->
+
 Final typecheck passes. Repository lint passes with 83 existing warnings;
 the changed source files are warning-free. Unpaid preflight passes against
 the committed snapshot: 68 judge controls, four possible phase/model runs,
@@ -96,7 +105,8 @@ server suites above exercise the affected public HTTP application adapter.
 Reassessment after the passing runs and ceiling changes preserves this
 empty selection: no integration dependency changes. Earlier passing context,
 budget, judge, follow-up and application-adapter results remain valid; the
-changed campaign paths have fresh passing evidence from the targeted run.
+changed campaign paths and shared evidence projection have fresh passing
+evidence from the targeted runs.
 Any further affecting change requires reassessment.
 
 ## Remaining gates
@@ -116,3 +126,11 @@ counting, payload parity and separate authorization. An unresolved fee is
 unknown, never zero. Original historical verdicts and diagnostics remain
 unchanged, and the broader evaluation remains open for real execution and
 conclusions.
+
+## Review
+
+The two-axis review compares the cumulative change to the baseline above.
+Standards: no documented-rule violations; the duplicated sanitized provider
+projection is consolidated and the follow-up review has no remaining
+findings. Spec: no findings, including against the $25 ceiling and shortened
+context diagnostic. The final source freeze is refreshed after that refactor.

@@ -3,7 +3,7 @@
   "authorized": false,
   "approvedCeilings": null,
   "applicationCommit": "fa53b628882bac3db69c84c56a0ed90750158cb8",
-  "evaluatorSourceCommit": "5909f8563e23b6df36a9f103eabb5471b22e9b39",
+  "evaluatorSourceCommit": "d2c9f3dedacf5fa7182f14441f0ccd2b1f1e7bf1",
   "sourceIdentity": "sha256-of-working-source-files; execution additionally requires a clean committed evaluator",
   "fileHashes": {
     "migrations/001_initial.sql": "64484f3a48aa8a9ce5c0ee42eaeb60b8da5fda50d6b91e0e9f36a0cf0df60a90",
@@ -59,7 +59,7 @@
     "package-lock.json": "24c7ad2090b09919601ed0d957227e8e31a6d13609ecd2fd8144b5e45fa5f32d",
     "package.json": "bbdf0461350d27948f13b86c9656405516b5fad7285b937b4934ec52a979890a",
     "scripts/model-evaluation/advanced-campaign.ts": "f4cf02c1082b46eae5b86bf2b1a18e2ad4138204ae4f8ab67315f27917d5635d",
-    "scripts/model-evaluation/advanced-context-run.ts": "9dd2eac236691795271e7174c7331f0995832ffb912f8ca87ebefbba9caff5e6",
+    "scripts/model-evaluation/advanced-context-run.ts": "276d3c52ca803813559238a9e12a5dcd21c3cdcf1bb9963b19dd06754ce21f1d",
     "scripts/model-evaluation/application.ts": "2e30c98e64f3b879f1a9fd5512593585ec89a9f94aee70e65eba7f89fcb7d935",
     "scripts/model-evaluation/assessment.ts": "bde9e79a614eb0692cb6c813a963f91efb9aa55701eaaf990c741a22231921db",
     "scripts/model-evaluation/audio/manifest.json": "9e5ab8ebb966b0377ab13af77e53f85f8fd54e45854377781c055bd09524b6fa",
@@ -93,7 +93,7 @@
     "scripts/model-evaluation/dialog-timing.ts": "4a341029f9badc763eae89743a56a3f5de2983d5d40dbaa872e0160b7c16c8d2",
     "scripts/model-evaluation/direction-cases.json": "0913ad54d9e4a06b16ffb177438064a365a6f3954b6289108edd6cf66f5c1214",
     "scripts/model-evaluation/environment.ts": "924fe3adfdaeffa5b3362ef7d5d50587f861e4e2f166125e52a28d226d1ff7cc",
-    "scripts/model-evaluation/evaluate.ts": "64cf97c7517931a763ca9c1ed7c6859beaae2ad7a074115f7fe4359dc8c674b8",
+    "scripts/model-evaluation/evaluate.ts": "ed4ca43497fc95830f628431c5956fbf80dd620d8b03e6f232ca1e7dca9101b7",
     "scripts/model-evaluation/everyday-source.json": "7914d41e9bfb5f15ce19a414b60780b1bddd722f439a1dbc1a0341d8bae67285",
     "scripts/model-evaluation/follow-ups.ts": "672b93d6e3c920e6a5a865f8f04669b2689076f4f18ba49d6f54140a26e44cd6",
     "scripts/model-evaluation/generate-speech.ts": "4f78122f5dc88e89f6ac95afc64bc88952624355a98c2ab659fa35cfdef42586",
@@ -113,7 +113,7 @@
     "scripts/model-evaluation/pending-context.ts": "aa459b36b6f1a57c9125ef3b8c96cb84c408488a24442192099331e0418b143a",
     "scripts/model-evaluation/playback-assessor.ts": "f4333434883f776ca540f542e9358449f76d152ef8f6faca9d6151d42503d5da",
     "scripts/model-evaluation/playback.ts": "b3233d27e5b9542b00de59361b134fc573a1ee8f01d8ee59f721948c06a2bb7b",
-    "scripts/model-evaluation/private-records.ts": "1f60d1e9cbb9ecf0ff56a770b3982ca8d3b3c71a490ac37daf861bf012fe2d54",
+    "scripts/model-evaluation/private-records.ts": "28049ffbef9498afaca9fc7ce7623b46938043116bf479ae2b6ea41c69b975fe",
     "scripts/model-evaluation/profiles.json": "ca8858b2237609adda964c67b3bcfac2e22d87c989d977114be2b58c9a3f4aed",
     "scripts/model-evaluation/provider.ts": "69e494b0155dfb360127a38d2c6d2b023734a53a7404f7774218f944f25ca80d",
     "scripts/model-evaluation/public-output.ts": "9e75d4972ae83e2b65ebdf03bd9c62275ed676bf280922b6a319f4c4a884743b",
@@ -787,5 +787,5 @@
     "clean committed source matching this freeze",
     "separate explicit execution authorization with each phase/model ceiling"
   ],
-  "freezeSha256": "422ff9c9ba72031fd7e0cf9c81a5e0895967b7e4f862f99e6a4a7c7fa42cb5b8"
+  "freezeSha256": "4db1d7b9894ac95b6a14617fdf65fb0ac7acfc27dec8ee1d313bdff2bc3bf1a7"
 }

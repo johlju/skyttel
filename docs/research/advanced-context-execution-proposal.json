@@ -2,7 +2,7 @@
   "format": "skyttel-advanced-context-execution-proposal-v1",
   "authorized": false,
   "authorizationSource": null,
-  "freezeSha256": "422ff9c9ba72031fd7e0cf9c81a5e0895967b7e4f862f99e6a4a7c7fa42cb5b8",
+  "freezeSha256": "4db1d7b9894ac95b6a14617fdf65fb0ac7acfc27dec8ee1d313bdff2bc3bf1a7",
   "approvedCeilings": null,
   "maximumPermittedCeilingPerRunUsd": 25,
   "estimatedProviderCostOfPreparationUsd": 0,
