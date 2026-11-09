@@ -38,7 +38,8 @@ regexes = ['''^517c3e38ff302eb51a2bda795f72bf525eece3578193b71a352d9bc934c1cc32$
 paths = ['''^research/regression-baseline/environment\.json$''']
 
 # Verified SHA-256 values of the five named source files at fa53b628.
-# The frozen evaluation snapshot records these checksums, not credentials.
+# The deleted evaluation snapshot remains in Git history. These exact
+# checksums are not credentials; history scanning still requires this rule.
 [[rules.allowlists]]
 description = "Verified source checksums in the advanced evaluation snapshot"
 condition = "AND"

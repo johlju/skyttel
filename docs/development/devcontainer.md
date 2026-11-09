@@ -422,9 +422,7 @@ subagents. Start a new thread after changing these defaults. Explicit spawn
 settings and custom-agent configuration can override them; check the
 runtime model and effort when diagnosing a different selection.
 Run the two AI sync skills directly with their bundled scripts and preserve
-their output verification. The
-[agent routing evaluation](../research/codex-agent-routing.md) records the
-measurements, limitations, and conditions for reconsidering delegation.
+their output verification.
 
 Creation and rebuilding also install the latest Claude Code release in
 `~/.local/bin`. If you use it, run `claude` in the container and sign in.
