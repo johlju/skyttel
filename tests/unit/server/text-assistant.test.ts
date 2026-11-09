@@ -2271,10 +2271,13 @@ test('beginMessage retains unanswered questions through a queued draft update an
   ]);
   let final = working;
   await expect
-    .poll(async () => {
-      final = await (await browser.get(`${path}/${session.id}`)).json();
-      return final.phase;
-    })
+    .poll(
+      async () => {
+        final = await (await browser.get(`${path}/${session.id}`)).json();
+        return final.phase;
+      },
+      { timeout: 5_000 },
+    )
     .toBe('ready');
   expect(final).toMatchObject({ questionPending: true, questions: [question] });
   expect(final.completedReplies).toHaveLength(2);

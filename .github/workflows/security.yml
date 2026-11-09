@@ -12,7 +12,7 @@ defaults:
 
 jobs:
   codeql:
-    runs-on: ubuntu-latest
+    runs-on: avrea-ubuntu-latest
     timeout-minutes: 20
     env:
       # Match the existing main-branch baseline for both CI and release callers.
@@ -47,7 +47,7 @@ jobs:
           retention-days: 14
 
   dependencies:
-    runs-on: ubuntu-latest
+    runs-on: avrea-ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -66,7 +66,7 @@ jobs:
           comment-summary-in-pr: never
 
   configuration:
-    runs-on: ubuntu-latest
+    runs-on: avrea-ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -100,7 +100,7 @@ jobs:
           retention-days: 14
 
   secrets:
-    runs-on: ubuntu-latest
+    runs-on: avrea-ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -114,7 +114,7 @@ jobs:
           git /repo --config /repo/.gitleaks.toml --redact --no-banner --exit-code 1
 
   container:
-    runs-on: ubuntu-latest
+    runs-on: avrea-ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -162,7 +162,7 @@ jobs:
   scanner-gate:
     if: always()
     needs: [codeql, dependencies, configuration, secrets, container]
-    runs-on: ubuntu-latest
+    runs-on: avrea-ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

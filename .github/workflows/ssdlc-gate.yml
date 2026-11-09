@@ -16,7 +16,7 @@ permissions:
 jobs:
   ssdlc-gate:
     if: github.event.pull_request.user.login != 'dependabot[bot]'
-    runs-on: ubuntu-latest
+    runs-on: avrea-ubuntu-latest
     timeout-minutes: 5
     steps:
       # Execute the trusted base revision; PR files are read only as API data.
