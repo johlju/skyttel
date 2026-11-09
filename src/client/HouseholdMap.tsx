@@ -1170,9 +1170,6 @@ export function HouseholdMap({
     interruptedConversation.current ||
     Boolean(conversation.saveChecking || conversation.saveCheckFailed);
   beforeConnection.current = { blocked: Boolean(conversation.inputBlocked), ongoing };
-  const currentSecurityReference =
-    conversation.session?.securityReference ??
-    conversation.session?.completedReplies?.at(-1)?.securityReference;
   const securityReference =
     conversation.session?.securityReference ??
     conversation.session?.completedReplies?.findLast((reply) => reply.securityReference)
@@ -1190,7 +1187,7 @@ export function HouseholdMap({
       ),
       disconnectedIdle: Boolean(!conversation.revokedHere && conversation.disconnected && !ongoing),
       unavailable: !conversation.revokedHere && conversation.available === false,
-      taskFailed: Boolean((conversation.taskFailed || workFailure) && !currentSecurityReference),
+      taskFailed: Boolean(conversation.taskFailed || workFailure),
       actionBlocked: Boolean(securityReference),
       consentRevoked: Boolean(conversation.consentRevoked),
       contextFull: conversation.session?.contextSummaryState === 'failed',

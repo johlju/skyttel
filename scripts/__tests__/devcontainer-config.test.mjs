@@ -8,6 +8,20 @@ import { test } from 'node:test';
 const merge = new URL('../../.devcontainer/merge-codex-config.py', import.meta.url).pathname;
 const managed = new URL('../../.devcontainer/codex-config.toml', import.meta.url).pathname;
 
+function parseToml(path) {
+  const result = spawnSync(
+    'python3',
+    [
+      '-c',
+      'import json,sys,tomllib; print(json.dumps(tomllib.load(open(sys.argv[1], "rb"))))',
+      path,
+    ],
+    { encoding: 'utf8' },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  return JSON.parse(result.stdout);
+}
+
 async function fixture(t, contents) {
   const directory = await mkdtemp(join(tmpdir(), 'skyttel-config-test-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
@@ -15,21 +29,10 @@ async function fixture(t, contents) {
   if (contents !== undefined) await writeFile(path, contents, { mode: 0o640 });
   return {
     path,
-    run: () => spawnSync('python3', [merge, managed, path], { encoding: 'utf8' }),
+    directory,
+    run: (source = managed) => spawnSync('python3', [merge, source, path], { encoding: 'utf8' }),
     read: () => readFile(path, 'utf8'),
-    parse: () => {
-      const result = spawnSync(
-        'python3',
-        [
-          '-c',
-          'import json,sys,tomllib; print(json.dumps(tomllib.load(open(sys.argv[1], "rb"))))',
-          path,
-        ],
-        { encoding: 'utf8' },
-      );
-      assert.equal(result.status, 0, result.stderr);
-      return JSON.parse(result.stdout);
-    },
+    parse: () => parseToml(path),
   };
 }
 
@@ -42,6 +45,24 @@ test('first creation supplies defaults and private file permissions', async (t) 
   assert.equal(parsed.default_permissions, 'skyttel-development');
   assert.equal(parsed.projects['/workspace'].trust_level, 'trusted');
   assert.equal(parsed.permissions['skyttel-development'].filesystem['~/.codex/skills'], 'write');
+  const rules = parsed.skills.config;
+  assert.equal(rules.length, 39);
+  assert.ok(rules.every((rule) => rule.name && !rule.path && rule.enabled === false));
+  for (const name of [
+    'review-agent',
+    'cloud-environment:cloud-environment-runtime',
+    'cloud-environment:cloud-desktop',
+    'sites:sites',
+    'sites:sites-remix',
+    'pages:write-page',
+    'openai-templates:artifact-template-analytics-dashboard',
+    'work-pets:pets',
+  ]) {
+    assert.ok(
+      rules.some((rule) => rule.name === name),
+      `Missing exclusion: ${name}`,
+    );
+  }
   assert.equal((await stat(config.path)).mode & 0o777, 0o600);
 });
 
@@ -61,8 +82,17 @@ enabled = true
 path = "/synthetic/skills/SKILL.md"
 enabled = true
 [[skills.config]]
-path = "/home/vscode/.codex/skills/.system/review-agent/SKILL.md"
+name = "review-agent"
 enabled = true
+[[skills.config]]
+name = "pages:write-page"
+enabled = true
+[[skills.config]]
+name = "pages:write-page"
+enabled = true
+[[skills.config]]
+name = "personal-skill"
+enabled = false
 [projects."/other-project"]
 trust_level = "untrusted"
 [projects."/workspace"]
@@ -81,10 +111,8 @@ extends = ":read-only"
   expected.plugins['openai-templates'] = { enabled: false };
   expected.skills.config = [
     { path: '/synthetic/skills/SKILL.md', enabled: true },
-    ...['plugin-creator', 'review-agent', 'skill-creator', 'skill-installer'].map((name) => ({
-      path: `/home/vscode/.codex/skills/.system/${name}/SKILL.md`,
-      enabled: false,
-    })),
+    { name: 'personal-skill', enabled: false },
+    ...parseToml(managed).skills.config,
   ];
   expected.projects['/workspace'].trust_level = 'trusted';
   const first = config.run();
@@ -98,6 +126,55 @@ extends = ":read-only"
   assert.deepEqual(actual, expected);
   assert.match(once, /# Personal choices survive rebuilding\./);
   assert.equal((await stat(config.path)).mode & 0o777, 0o640);
+});
+
+test('path-based managed rules remain supported alongside name-based rules', async (t) => {
+  const config = await fixture(
+    t,
+    `[[skills.config]]
+path = "/synthetic/managed/SKILL.md"
+enabled = true
+[[skills.config]]
+name = "personal-skill"
+enabled = true
+`,
+  );
+  const source = join(config.directory, 'managed.toml');
+  await writeFile(
+    source,
+    `${await readFile(managed, 'utf8')}
+[[skills.config]]
+path = "/synthetic/managed/SKILL.md"
+enabled = false
+`,
+  );
+  const result = config.run(source);
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(config.parse().skills.config, [
+    { name: 'personal-skill', enabled: true },
+    ...parseToml(source).skills.config,
+  ]);
+  const once = await config.read();
+  assert.equal(config.run(source).status, 0);
+  assert.equal(await config.read(), once);
+});
+
+test('ambiguous managed skill selectors do not overwrite the user configuration', async (t) => {
+  const config = await fixture(t, 'model = "personal-sentinel"\n');
+  const source = join(config.directory, 'managed.toml');
+  await writeFile(
+    source,
+    `${await readFile(managed, 'utf8')}
+[[skills.config]]
+name = "ambiguous"
+path = "/synthetic/ambiguous/SKILL.md"
+enabled = false
+`,
+  );
+  const result = config.run(source);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /requires exactly one name or path/);
+  assert.equal(await config.read(), 'model = "personal-sentinel"\n');
 });
 
 test('first transition replaces legacy managed blocks and preserves personal settings outside them', async (t) => {
