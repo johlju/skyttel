@@ -372,7 +372,13 @@ export function useConversation({
           ),
         );
       if (next.revision !== previous?.revision || next.error !== previous?.error)
-        setTaskFailed(next.phase === 'error' && Boolean(next.error));
+        // A blocked action has its own notice. Classify this task's error so
+        // retained security references cannot hide a later, distinct failure.
+        setTaskFailed(
+          next.phase === 'error' &&
+            Boolean(next.error) &&
+            next.error !== 'assistant_action_out_of_scope',
+        );
       for (const reply of next.completedReplies ?? []) {
         if (
           hydratedReplies.current.has(reply.id) &&

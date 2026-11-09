@@ -1617,7 +1617,8 @@ Detta mäter inte en verklig modells kontextgräns.
    och välj **Lägg i utkastet och stäng**.
 3. Öppna textvyn och släpp sammanfattningen. Låt operatören föreslå den
    tidigare rättelsen och släppa kontrollens förtydligande svar enligt
-   förberedelsen. Läs förtydligandet och öppna Lo Manuell i utkastet.
+   förberedelsen. Välj **Läs mer** i **Samtalsnotis**, läs förtydligandet
+   och öppna Lo Manuell i utkastet.
 
 **Förväntat resultat:**
 

@@ -312,6 +312,29 @@ test('whole-draft discard and automatic summary arrive as retained conversation 
   ).toHaveLength(1);
 });
 
+test('a blocked action has no duplicate task failure, while a later error retains its notice despite the security reference', async () => {
+  let revision = 0;
+  const { result } = await setup((url) => {
+    if (!url.endsWith('/messages')) return Response.json(initial);
+    revision++;
+    return Response.json({
+      ...initial,
+      revision,
+      phase: 'error',
+      error: revision === 1 ? 'assistant_action_out_of_scope' : 'assistant_unavailable',
+      securityReference: 'retained-blocked-action',
+    });
+  });
+  act(() => result.current.setText('Läs kartan.'));
+  await act(async () => result.current.send());
+  expect(result.current.session?.securityReference).toBe('retained-blocked-action');
+  expect(result.current.taskFailed).toBe(false);
+  act(() => result.current.setText('Läs kartan igen.'));
+  await act(async () => result.current.send());
+  expect(result.current.session?.securityReference).toBe('retained-blocked-action');
+  expect(result.current.taskFailed).toBe(true);
+});
+
 test('checked replies preserve their own recovery and result provenance even when their current view also contains a receipt', async () => {
   const receipt = {
     operationId: 'original',

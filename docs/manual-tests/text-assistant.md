@@ -647,8 +647,9 @@ som stöd, skilt från hela det ordinarie fallet.
 6. Skriv **Beskriv de sparade objekten och vilket år uppgifterna gäller.
    Lägg till Kim som person. Spara hela utkastet.**
    Operatören släpper tillägget och sparandet och avbryter därefter
-   förklaringen. Läs **Sparat.**, **Vilket år gäller beskrivningen?** och
-   felbeskedet. Kontrollera samma besked i den kontrollerade
+   förklaringen. Läs **Sparat.** och **Vilket år gäller beskrivningen?**.
+   Välj **Läs mer** i **Samtalsnotis** och läs felbeskedet.
+   Kontrollera samma besked i den kontrollerade
    röstleveransen enligt förberedelsen.
 7. Läs ett tomt utkast samt Lo Exempel och Kim av typen Person i Tabell.
    Öppna **Rapporter → Ändringshistorik** och kontrollera att ett sparande
@@ -659,7 +660,8 @@ som stöd, skilt från hela det ordinarie fallet.
    mikrofonen. Skriv **Lägg till Kim och en kollega med samma objekttyp
    som Lo Exempel och förklara typen Person. Spara inte.**
 9. Operatören släpper utkaständringen och avbryter därefter förklaringen.
-   Läs **Kim lades till.**, **Vad heter kollegan?** och felbeskedet.
+   Läs **Kim lades till.** och **Vad heter kollegan?**. Välj **Läs mer**
+   i **Samtalsnotis** och läs felbeskedet.
    Kontrollera samma sakliga innehåll i den kontrollerade
    röstleveransen. Inget **Sparat.** ska finnas i text eller röstleverans.
 10. Läs Kim och Lo Exempel i utkastet. Öppna
@@ -750,9 +752,10 @@ TEXT-15.
 1. Öppna textvyn, börja samtalet och godkänn. Visa utkastet och läs Lo.
 2. Skicka **Lägg till Kim som person och spara.** Låt operatören
    släppa förslaget och avvisa sparandet enligt förberedelsen.
-3. Läs att ändringarna ligger kvar osparade och att ett nytt sparbesked
-   behövs. Läs både Lo Exempel och Kim i utkastet. Öppna Lo och
-   kontrollera att beskrivningen Påhittad uppgift finns kvar. Stäng detaljen.
+3. Välj **Läs mer** i **Samtalsnotis**. Läs att ändringarna ligger kvar
+   osparade och att ett nytt sparbesked behövs. Läs både Lo Exempel och
+   Kim i utkastet. Öppna Lo och kontrollera att beskrivningen Påhittad
+   uppgift finns kvar. Stäng detaljen.
 4. Skicka **Vad finns i utkastet?** Läs redovisningen av båda personerna.
    Utkastet finns kvar och inget **Sparat.** visas.
 5. Slå på **Prata med Skyttel** i samma samtal. Låt operatören förmedla
@@ -869,7 +872,7 @@ tillgängligt”.
   "reference": "Dator; kontrollerad leverantör och den angivna motiverade felgränsen.",
   "outcomes": [
     "Det verkliga meddelandet styr tillåtelsen att spara och ett leverantörsfel förstör inte utkastet.",
-    "Samtalstexten förklarar att modellen är tillfälligt otillgänglig, att valet är kvar och att återförsök kräver en egen handling."
+    "Felnotisen förklarar att modellen är tillfälligt otillgänglig, att valet är kvar och att återförsök kräver en egen handling."
   ]
 }
 ```
@@ -883,8 +886,8 @@ tillgängligt”.
    Låt operatören försöka spara efter varje meddelande. Vänta på den
    uttryckliga felnotisen före nästa meddelande.
 2. Skicka **Beskriv mitt utkast.** och låt operatören ge leverantörsfel.
-   Läs felnotisen, modellens felbesked i samtalstexten och kvarvarande
-   Lo-förslag.
+   Välj **Läs mer** i felnotisen och läs modellens felbesked. Kontrollera
+   att Lo-förslaget finns kvar.
 3. Stäng textvyn, välj **Tabell → Redigera Lo Exempel**, rätta Namn till
    **Lo Lind** och välj **Lägg i utkastet och stäng**. Läs Lo Lind med
    oförändrad **Påhittad uppgift** i utkastets fullständiga uppgifter.
@@ -893,7 +896,7 @@ tillgängligt”.
 
 - Ingen av de nekade, hypotetiska, uppskjutna eller citerade begärandena
   sparar kartan, även när ersättaren försöker anropa sparverktyget.
-- Vid leverantörsfelet visar både felnotisen och samtalstexten att modellen
+- Vid leverantörsfelet visar felnotisen att modellen
   är tillfälligt otillgänglig, att valet är kvar och att återförsök kräver en
   egen handling när felet är löst. Oavslutat arbete och senare kö väntar.
 - Utkastet och vanligt formulärarbete finns kvar. Provet är ett kontrollerat

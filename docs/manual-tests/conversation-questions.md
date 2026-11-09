@@ -380,7 +380,8 @@ FRAGA-13.
 1. Skriv
    **Lägg Lampan och dess nödvändiga samband i utkastet. Fråga om kortet.**
    Välj **Skicka** och låt operatören släppa felbatchen.
-1. Läs **Uppdraget kunde inte slutföras.** och **Vilket kort ska användas?**
+1. Välj **Läs mer** i **Samtalsnotis** och läs
+   **Uppdraget kunde inte slutföras.** Läs **Vilket kort ska användas?**
    i samtalstexten. Öppna utkastet och kontrollera att bara Lo Lind finns.
    **Spara hela utkastet** är spärrad. Öppna Lo Lind och läs samma
    namn, typ och tomma egenskapslista som före felet.
@@ -455,7 +456,8 @@ FRAGA-14.
 1. Välj **Prata med Skyttel**, invänta **Lyssnar** och säg
    **Lägg Lampan och dess nödvändiga samband i utkastet. Fråga om kortet.**
    Låt operatören släppa felbatchen.
-1. Läs **Uppdraget kunde inte slutföras.** och **Vilket kort ska användas?**
+1. Välj **Läs mer** i **Samtalsnotis** och läs
+   **Uppdraget kunde inte slutföras.** Läs **Vilket kort ska användas?**
    i samtalstexten. Öppna utkastet och kontrollera att bara Lo Lind finns.
    **Spara hela utkastet** är spärrad. Öppna Lo Lind och läs samma
    namn, typ och tomma egenskapslista som före felet.
