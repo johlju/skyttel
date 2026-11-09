@@ -38,6 +38,8 @@ test('unpaid preparation freezes exact subsets and rejects dispatch without sepa
     ['B-sol', []],
   ]);
   expect(freeze.judge.controlCount).toBe(68);
+  expect(freeze.phaseB).toMatchObject({ maximumGrowthMessages: 16, maximumUserMessages: 20 });
+  expect(freeze.runs.every((run) => run.proposedLimitUsd <= 25)).toBe(true);
   await expect(
     executeAdvancedCampaign(freeze, { authorized: false }, { transport }),
   ).rejects.toThrow('authorization');
@@ -143,7 +145,7 @@ test.each(['interpretation', 'checking', 'work', 'judging', 'summary'] as const)
           issue: 737,
           runs: [
             { id: first, limitUsd: 25 },
-            { id: 'B-sol', limitUsd: 100 },
+            { id: 'B-sol', limitUsd: 25 },
           ],
           localVerification: {
             passed: true,
@@ -165,7 +167,7 @@ test.each(['interpretation', 'checking', 'work', 'judging', 'summary'] as const)
   },
 );
 
-test.each(['freeze', 'scope', 'zero', 'negative', 'missing', 'nan', 'source'])(
+test.each(['freeze', 'scope', 'zero', 'negative', 'missing', 'nan', 'over-cap', 'source'])(
   'advanced execution refuses invalid %s before transport dispatch',
   { tags: ['technical'] },
   async (invalid) => {
@@ -185,6 +187,7 @@ test.each(['freeze', 'scope', 'zero', 'negative', 'missing', 'nan', 'source'])(
     if (invalid === 'source') execution.authorizationSource = '';
     if (invalid === 'zero') execution.runs[0].limitUsd = 0;
     if (invalid === 'negative') execution.runs[0].limitUsd = -1;
+    if (invalid === 'over-cap') execution.runs[0].limitUsd = 25.01;
     if (invalid === 'nan') execution.runs[0].limitUsd = Number.NaN;
     if (invalid === 'missing') delete (execution.runs[0] as { limitUsd?: number }).limitUsd;
     await expect(executeAdvancedCampaign(freeze, execution, { transport })).rejects.toThrow(
@@ -244,7 +247,7 @@ test('a phase cap cannot borrow a later model budget or restart the same executi
       issue: 737,
       runs: [
         { id: 'A-terra', limitUsd: 1 },
-        { id: 'A-sol', limitUsd: 100 },
+        { id: 'A-sol', limitUsd: 25 },
       ],
       localVerification: { passed: true, commands: ['controlled test'], evidence: 'controlled' },
     };

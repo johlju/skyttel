@@ -15,6 +15,7 @@ export async function executeAdvancedContext(options: {
   issue: number;
   apiKey: string;
   limitUsd: number;
+  maximumGrowthMessages: number;
   authorizationSource: string;
   profile: EvaluationProfile;
   judgeProfile: EvaluationProfile;
@@ -75,6 +76,7 @@ export async function executeAdvancedContext(options: {
           origin: options.transport ? 'controlled' : 'provider',
           contextTokens: options.profile.tokens,
           pendingWork: true,
+          maximumTurns: options.maximumGrowthMessages,
           profile: options.profile.id,
           repetition: 1,
           judge,

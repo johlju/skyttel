@@ -134,7 +134,7 @@ export async function prepareAdvancedCampaign() {
         phase: 'B' as const,
         profile,
         scenarioIds: [] as string[],
-        proposedLimitUsd: 100,
+        proposedLimitUsd: 25,
       })),
     ],
     phaseB: {
@@ -142,9 +142,9 @@ export async function prepareAdvancedCampaign() {
       startStateSha256: sha256(
         JSON.stringify({ base: catalog.base, variant: catalog.variants['known-cloud-user'] }),
       ),
-      growthSha256: contextLimitFixture().sha256,
-      maximumGrowthMessages: 2048,
-      maximumUserMessages: 2052,
+      growthSha256: contextLimitFixture(16).sha256,
+      maximumGrowthMessages: 16,
+      maximumUserMessages: 20,
       maximumRecallMessages: 1,
       maximumContinuationMessages: 1,
     },
@@ -182,7 +182,7 @@ const executionSchema = z
     directory: z.string().startsWith('/'),
     issue: z.number().int().positive(),
     runs: z
-      .array(z.object({ id: z.string(), limitUsd: z.number().positive().max(1_000_000) }).strict())
+      .array(z.object({ id: z.string(), limitUsd: z.number().positive().max(25) }).strict())
       .min(1),
     localVerification: z
       .object({
@@ -326,6 +326,7 @@ export async function executeAdvancedCampaign(
           issue: execution.issue,
           apiKey,
           limitUsd: ceiling.limitUsd,
+          maximumGrowthMessages: freeze.phaseB.maximumGrowthMessages,
           authorizationSource: execution.authorizationSource,
           profile: run.profile,
           judgeProfile: freeze.judge.profile,
