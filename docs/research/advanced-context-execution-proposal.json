@@ -1,0 +1,77 @@
+{
+  "format": "skyttel-advanced-context-execution-proposal-v1",
+  "authorized": false,
+  "authorizationSource": null,
+  "freezeSha256": "422ff9c9ba72031fd7e0cf9c81a5e0895967b7e4f862f99e6a4a7c7fa42cb5b8",
+  "approvedCeilings": null,
+  "maximumPermittedCeilingPerRunUsd": 25,
+  "estimatedProviderCostOfPreparationUsd": 0,
+  "runs": [
+    {
+      "id": "A-terra",
+      "model": "gpt-6.1-terra",
+      "scenarioCount": 10,
+      "dialogCount": null,
+      "repetitions": 1,
+      "calibrationControls": 68,
+      "proposedLimitUsd": 25,
+      "approvedLimitUsd": null,
+      "status": "not_run"
+    },
+    {
+      "id": "A-sol",
+      "model": "gpt-6.1-sol",
+      "scenarioCount": 3,
+      "dialogCount": null,
+      "repetitions": 1,
+      "calibrationControls": 68,
+      "proposedLimitUsd": 25,
+      "approvedLimitUsd": null,
+      "status": "not_run"
+    },
+    {
+      "id": "B-terra",
+      "model": "gpt-6.1-terra",
+      "scenarioCount": null,
+      "dialogCount": 1,
+      "repetitions": 1,
+      "calibrationControls": 68,
+      "proposedLimitUsd": 25,
+      "approvedLimitUsd": null,
+      "status": "not_run"
+    },
+    {
+      "id": "B-sol",
+      "model": "gpt-6.1-sol",
+      "scenarioCount": null,
+      "dialogCount": 1,
+      "repetitions": 1,
+      "calibrationControls": 68,
+      "proposedLimitUsd": 25,
+      "approvedLimitUsd": null,
+      "status": "not_run"
+    }
+  ],
+  "phaseB": {
+    "maximumGrowthMessages": 16,
+    "maximumUserMessages": 20,
+    "purpose": "Short pending-work preservation diagnostic; a natural boundary may remain unverified."
+  },
+  "historicalPhaseACostIllustrationUsd": {
+    "A-terra": 1.97,
+    "A-sol": 0.85,
+    "basis": "Same historical token/call assumption, dated rates; not a forecast."
+  },
+  "proposedCombinedCeilingUsd": 100,
+  "phaseC": {
+    "status": "blocked",
+    "countingFeeUsd": null,
+    "approvedLimitUsd": null
+  },
+  "constraints": [
+    "No paid dispatch without separate explicit authorization of this freeze and each selected run ceiling.",
+    "If evidence would require more than $25, simplify or redesign the test; do not raise the ceiling or automatically repeat it.",
+    "No borrowing, retries or counting probes.",
+    "Unknown usage retains the full hold and stops the campaign."
+  ]
+}
