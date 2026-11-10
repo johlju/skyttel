@@ -1606,7 +1606,7 @@ test.each([
                 matches.length === 1 &&
                 matches[0].id === previous.id
                 ? { decision: 'allow', complete: true, fulfillsRequest: true }
-                : { decision: 'clarify' },
+                : { decision: 'clarify', operation: 0, question: 'Menar du Lo Manuell?' },
             ),
           ),
         ];

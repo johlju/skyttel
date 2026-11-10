@@ -393,7 +393,7 @@ for (const renamed of [false, true]) {
                 data.draft.changes[0].after.name ===
                   data.queuedReference.draft.changes[0].after.name
                   ? { decision: 'allow', complete: true, fulfillsRequest: true }
-                  : { decision: 'clarify' },
+                  : { decision: 'clarify', operation: 0, question: 'Menar du Lo Manuell?' },
               ),
             ),
           ];
@@ -424,7 +424,7 @@ for (const renamed of [false, true]) {
       if (renamed) {
         const notice = page.getByRole('region', { name: 'Samtalsnotis', exact: true });
         await notice.getByRole('button', { name: 'Läs mer', exact: true }).click();
-        await expect(notice).toContainText('Förtydliga vilka ändringar du vill göra.');
+        await expect(notice).toContainText('Menar du Lo Manuell?');
       } else await expect(log(page)).toContainText('Lo Exempel bytte namn till Lo Klar.');
       await readVoiceProposal(
         page,

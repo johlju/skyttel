@@ -222,9 +222,11 @@ avslutas direkt med sitt resultatbesked; något extra `reply` släpps inte.
 I KONTEXT-22 har målets namn ändrats till Lo Manuell. Släpp i stället
 kontrollens svar som kräver förtydligande:
 
+<!-- markdownlint-disable MD013 -->
 ```text
-reply CHECK {"decision":"clarify"}
+reply CHECK {"decision":"clarify","operation":0,"question":"Menar du Lo Manuell?"}
 ```
+<!-- markdownlint-enable MD013 -->
 
 Detta styr den kontrollerade leverantörens verkliga kontrollsvar;
 det verifierar inte en verklig modells bedömningsförmåga. Serverns egna

@@ -19,7 +19,7 @@ test('literal whole-draft preparation reads omitted proposals before a rejected 
   const read = recipe?.match(/^tool REQUEST read_my_draft \{\}$/mu)?.[0];
   const batch = recipe?.match(/^tool REQUEST submit_changes .*"name":"Kim".*$/mu)?.[0];
   const allow = recipe?.match(/^reply CHECK .*"decision":"allow".*$/mu)?.[0];
-  const reject = recipe?.match(/^reply CHECK .*"decision":"clarify".*$/mu)?.[0];
+  const reject = recipe?.match(/^reply CHECK .*"decision":"unavailable".*$/mu)?.[0];
   const reading = recipe?.match(/^scope-read\nresponse-required off$/mu)?.[0];
   const report = recipe?.match(/^tool REQUEST report_result .*$/mu)?.[0];
   const speaking = recipe?.match(/^scope-work\nhold-check on\nuser .*\ndelegate$/mu)?.[0];
@@ -163,6 +163,9 @@ test('literal whole-draft preparation reads omitted proposals before a rejected 
     expect(after.draft.changes).toEqual(item.comparison?.untrusted.data.draft.changes);
     expect((await (await page.request.get(`${path}/operations`)).json()).operations).toEqual([]);
     expect((await (await page.request.get(`${path}/history`)).json()).history).toEqual([]);
+    await notice
+      .getByRole('button', { name: 'Avstå från det oavslutade arbetet', exact: true })
+      .click();
     command('hold-check off');
     command(reading);
     at = events.length;

@@ -6,7 +6,7 @@ import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
 import { liveProvider } from '../../support/live-provider.js';
-import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
+import { modelMessage, modelTool, textModel, verifiedAnswers } from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
 let client: APIRequestContext;
@@ -181,7 +181,7 @@ async function setup(
   ).toBe(200);
   session = await (await post('text-assistant', approvedForVisit)).json();
 }
-async function send(text: string) {
+async function send(text: string, answerTo?: { id: string; revision: number }[]) {
   const requestId = crypto.randomUUID();
   const response = await post(`text-assistant/${session.id}/messages`, {
     revision: session.revision,
@@ -189,6 +189,7 @@ async function send(text: string) {
     contentVersion: session.review.contentVersion,
     requestId,
     text,
+    answerTo,
   });
   expect(response.status(), await response.text()).toBe(202);
   await expect
@@ -211,6 +212,88 @@ async function stage(route: string, data: object) {
   expect(response.status(), await response.text()).toBe(200);
   session = await read();
 }
+
+test('checker clarification retains its request identity through a rephrased answer and requires fresh saving', async () => {
+  const questions = ['Vilken stol menar du?', 'Menar du Tidigare stol?'];
+  let checks = 0;
+  const model = textModel(
+    (body) => {
+      const { message, draft } = JSON.parse(
+        String(body.input.findLast((item) => item.role === 'user')?.content),
+      );
+      if (message === 'Ja, behåll Tidigare stol.')
+        return [
+          modelTool('ask_questions', {
+            questions: [],
+            updates: verifiedAnswers(body, [questions[1]]),
+          }),
+        ];
+      if (message === 'Rätta stolen.')
+        return [
+          modelTool('propose_object', {
+            version: draft.version,
+            contentVersion: draft.contentVersion,
+            id: 'earlier',
+            baseRevision: null,
+            value: {
+              ...draft.changes.find((change: { id: string }) => change.id === 'earlier').after,
+              name: 'Rättad stol',
+            },
+          }),
+        ];
+      return [
+        modelTool('save_draft', { version: draft.version, contentVersion: draft.contentVersion }),
+      ];
+    },
+    (body) => {
+      const input = JSON.parse(String(body.input[0].content));
+      if (body.instructions.startsWith('SKYTTEL_TURN_SCOPE'))
+        return [
+          modelMessage(
+            JSON.stringify({ mode: 'work', request: input.current, responseRequired: false }),
+          ),
+        ];
+      const question = questions[checks++];
+      return [
+        modelMessage(
+          JSON.stringify(
+            question
+              ? { decision: 'clarify', operation: 0, question }
+              : { decision: 'allow', complete: true, fulfillsRequest: true },
+          ),
+        ),
+      ];
+    },
+  );
+  await setup(model);
+  const originalDraft = (await map()).draft;
+  const first = await send('Spara hela utkastet.');
+  const part = first.pendingParts?.[0];
+  expect(part).toMatchObject({
+    request: 'Spara hela utkastet.',
+    status: 'waiting',
+    question: questions[0],
+  });
+  if (!part) throw new Error('Missing pending checker question');
+  const second = await send('Rätta stolen.', [{ id: part.id, revision: part.revision }]);
+  expect(second.pendingParts).toHaveLength(1);
+  expect(second.pendingParts?.[0]).toMatchObject({
+    id: part.id,
+    request: part.request,
+    status: 'waiting',
+    question: questions[1],
+  });
+  const answered = await send('Ja, behåll Tidigare stol.');
+  expect(answered.error).toBeUndefined();
+  expect(answered.pendingParts?.some((part) => part.status === 'waiting')).toBe(false);
+  expect(answered.receipt).toBeUndefined();
+  expect((await map()).draft).toEqual(originalDraft);
+  expect((await map()).objects).toEqual([]);
+  expect((await (await client.get(`${base}/map/history`)).json()).history).toEqual([]);
+  const saved = await send('Spara hela utkastet.');
+  expect(saved.receipt).toBeDefined();
+  expect((await map()).objects).toHaveLength(2);
+});
 
 test('a rejected whole-draft check preserves both earlier proposals and the applied edit without registering a save', {
   tags: ['technical'],
@@ -248,6 +331,13 @@ test('a rejected whole-draft check preserves both earlier proposals and the appl
       const names = untrusted.data.draft.changes.map(
         (change: { after: { name: string } }) => change.after.name,
       );
+      if (saving) {
+        expect(untrusted.data.initialDraft.changes).toMatchObject([
+          { id: 'earlier', after: { name: 'Tidigare stol' } },
+          { id: 'untouched', after: { name: 'Tidigare lampa' } },
+        ]);
+        expect(untrusted.data.initialDraft.version).toBeLessThan(untrusted.data.draft.version);
+      }
       if (
         saving &&
         names.includes('Rättad stol') &&
@@ -262,7 +352,15 @@ test('a rejected whole-draft check preserves both earlier proposals and the appl
           (change: { id: string }) => change.id === 'earlier-link-type',
         )
       )
-        return [modelMessage(JSON.stringify({ decision: 'clarify' }))];
+        return [
+          modelMessage(
+            JSON.stringify({
+              decision: 'clarify',
+              operation: 0,
+              question: 'Ska den tidigare lampan också ingå i sparandet?',
+            }),
+          ),
+        ];
       return [modelMessage(JSON.stringify({ decision: 'allow', complete: true }))];
     },
   );
@@ -291,6 +389,15 @@ test('a rejected whole-draft check preserves both earlier proposals and the appl
   expect(final.receipt).toBeUndefined();
   expect(final.operations).toEqual([]);
   expect(final.reply).toContain('utkast');
+  expect(final.reply).toContain('Ska den tidigare lampan också ingå i sparandet?');
+  expect(final.pendingParts).toMatchObject([
+    {
+      kind: 'change',
+      status: 'waiting',
+      request: 'Ändra namnet till Rättad stol och spara.',
+      question: 'Ska den tidigare lampan också ingå i sparandet?',
+    },
+  ]);
   const state = await map();
   expect(state.objects).toEqual([]);
   expect(state.draft.changes).toHaveLength(2);
@@ -429,7 +536,7 @@ test('rejected automatic saving describes the already applied draft edit as unsa
           untrusted.operations.every((operation: { name: string }) =>
             ['prepare_save', 'save_draft'].includes(operation.name),
           )
-            ? '{"decision":"clarify"}'
+            ? '{"decision":"clarify","operation":0,"question":"Ska den tidigare lampan också sparas?"}'
             : '{"decision":"allow","complete":true}',
         ),
       ];
@@ -438,6 +545,10 @@ test('rejected automatic saving describes the already applied draft edit as unsa
   await setup(model);
   const final = await send('Ändra namnet till Rättad stol och spara.');
   expect(final.error).toBe('assistant_scope_unclear');
+  expect(final.reply).toContain('Ska den tidigare lampan också sparas?');
+  expect(final.pendingParts).toMatchObject([
+    { status: 'waiting', request: 'Ändra namnet till Rättad stol och spara.' },
+  ]);
   expect(final.reply).toContain('Ändringarna ligger kvar osparade i ditt utkast.');
   expect(final.receipt).toBeUndefined();
   expect(final.operations).toEqual([]);

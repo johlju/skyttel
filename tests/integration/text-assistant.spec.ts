@@ -41,6 +41,7 @@ import {
   modelMessage,
   modelTool,
   textModel,
+  verifiedAnswers,
 } from '../support/text-model.js';
 
 function completionAuthorization(body: ModelRequest) {
@@ -566,7 +567,7 @@ test('TEXT-15: avvisat sparande bevarar utkastet före ett nytt talat sparbesked
             expect.objectContaining({ id: 'kim' }),
           ]),
         );
-        if (checks++ === 0) return [modelMessage('{"decision":"clarify"}')];
+        if (checks++ === 0) return [modelMessage('{"decision":"unavailable"}')];
         checkingSave = true;
         await heldCheck;
       }
@@ -607,6 +608,9 @@ test('TEXT-15: avvisat sparande bevarar utkastet före ett nytt talat sparbesked
       'Påhittad uppgift',
     );
     await closeSupportDialog(page, 'Lo Exempel');
+    await notice
+      .getByRole('button', { name: 'Avstå från det oavslutade arbetet', exact: true })
+      .click();
     await send(page, 'Vad finns i utkastet?');
     await expect.poll(() => model.requests.length).toBe(3);
     const report = transcript(page).getByRole('listitem').filter({ hasText: 'Utkast:' });
@@ -659,6 +663,59 @@ test('TEXT-15: avvisat sparande bevarar utkastet före ett nytt talat sparbesked
     expect(operations[0].status).toBe('succeeded');
   } finally {
     releaseCheck();
+    await app.close();
+  }
+});
+
+test('TEXT-19: kontrollens konkreta fråga kan besvaras före en ny sparbegäran', async ({
+  page,
+}) => {
+  const question = 'Vilken beskrivning ska Lo ha?';
+  let checks = 0;
+  const model = textModel(
+    (body) => {
+      const { message, draft } = JSON.parse(
+        String(body.input.findLast((item) => item.role === 'user')?.content),
+      );
+      if (message.startsWith('Behåll'))
+        return [
+          modelTool('ask_questions', { questions: [], updates: verifiedAnswers(body, [question]) }),
+        ];
+      return [
+        modelTool('save_draft', { version: draft.version, contentVersion: draft.contentVersion }),
+      ];
+    },
+    (body) => {
+      const input = JSON.parse(String(body.input[0].content));
+      if (body.instructions.startsWith('SKYTTEL_TURN_SCOPE'))
+        return [
+          modelMessage(
+            JSON.stringify({ mode: 'work', request: input.current, responseRequired: false }),
+          ),
+        ];
+      if (input.untrusted.data.wholeDraft && checks++ === 0)
+        return [modelMessage(JSON.stringify({ decision: 'clarify', operation: 0, question }))];
+      return [modelMessage('{"decision":"allow","complete":true,"fulfillsRequest":true}')];
+    },
+  );
+  const app = await createInstallation(undefined, { modelFetch: model.provider });
+  try {
+    await arrange(page, app);
+    await consent(page);
+    await send(page, 'Spara hela utkastet.');
+    await notice(page).getByRole('button', { name: 'Läs mer', exact: true }).click();
+    await expect(notice(page)).toContainText(question);
+    await expect(notice(page)).toContainText('Be om sparande igen');
+    await expect(await showDraft(page)).toContainText('Lo Exempel');
+    await send(page, 'Behåll beskrivningen Påhittad uppgift.');
+    await expect(transcript(page).locator('.working')).toHaveCount(0);
+    await expect(transcript(page)).not.toContainText('Sparat.');
+    await expect(await showDraft(page)).toContainText('Lo Exempel');
+    await send(page, 'Spara hela utkastet.');
+    await expect(page.locator('.draft-save-toast')).toHaveText('Utkastet är sparat');
+    await expect(await showDraft(page)).toContainText('Utkastet är tomt.');
+    await expect(await readTableObject(page, 'Lo Exempel')).toContainText('Påhittad uppgift');
+  } finally {
     await app.close();
   }
 });

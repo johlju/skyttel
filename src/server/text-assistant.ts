@@ -43,6 +43,7 @@ import {
 import { assistantReadCache, assistantReadKey } from './assistant-read-cache.js';
 import { assistantStartDraft } from './assistant-start-facts.js';
 import {
+  ActionClarification,
   type CheckTurnActions,
   compareTurnActions,
   interpretTurnScope,
@@ -1881,13 +1882,13 @@ export function textAssistantRoutes({
       ? ' Ändringarna ligger kvar osparade i ditt utkast.'
       : '';
   }
-  function failureMessages(session: Session, error: string) {
+  function failureMessages(session: Session, error: string, clarification?: ActionClarification) {
     const saveRequested = !!session.state.saveIntent;
     const unsavedNotice = saveRequested ? unsavedDraftNotice(session) : '';
     const failure =
       error === 'operation_conflict' && !session.state.pendingSave
         ? 'Ändringsuppdraget stämmer inte med den tidigare begäran. Granska ditt aktuella utkast innan du fortsätter.'
-        : assistantFailureMessage(error);
+        : (clarification?.question ?? assistantFailureMessage(error));
     return {
       ordinary:
         failure +
@@ -2396,6 +2397,7 @@ export function textAssistantRoutes({
     let scopeJob: Promise<NonNullable<typeof scopeOutcome>> | undefined;
     let admitted = false;
     let workContextStarted = false;
+    let initialDraft: TextAssistantReview | undefined;
     const attempts: {
       id?: string;
       used?: boolean;
@@ -2610,7 +2612,7 @@ export function textAssistantRoutes({
               catalog,
             ),
             draft: session.state.review,
-            ...(wholeDraft ? { wholeDraft: true } : {}),
+            ...(wholeDraft ? { wholeDraft: true, initialDraft } : {}),
             queuedReference:
               reference && checksQueuedTarget
                 ? queuedActionReference(reference, operations)
@@ -2621,7 +2623,35 @@ export function textAssistantRoutes({
         guard();
         if (decision.decision === 'deny')
           rejectAction(operations[decision.operation].name, 'outside_requested_work');
-        if (decision.decision === 'clarify') throw new MapError('assistant_scope_unclear', 409);
+        if (decision.decision === 'unavailable')
+          throw new MapError('assistant_scope_unavailable', 409);
+        if (decision.decision === 'clarify') {
+          const message = session.state.activeMessage;
+          if (!message) throw new MapError('assistant_scope_unavailable', 409);
+          const answers = message.answerProgress ?? message.answerTo;
+          updateParts(
+            session,
+            answers?.length
+              ? []
+              : [
+                  {
+                    kind: 'change',
+                    request: text,
+                    question: decision.question,
+                    dependsOnDraft: true,
+                  },
+                ],
+            answers?.map((part) => ({
+              ...part,
+              action: 'rephrase' as const,
+              messageId: message.id,
+              evidence: text,
+              question: decision.question,
+            })) ?? [],
+            'turn-action-clarification',
+          );
+          throw new ActionClarification(decision.question);
+        }
         if (decision.decision === 'incomplete')
           throw new MapError('assistant_batch_incomplete', 409);
         checkedWorkComplete = decision.decision === 'allow' && decision.fulfillsRequest;
@@ -2643,6 +2673,7 @@ export function textAssistantRoutes({
         throw new MapError('assistant_draft_changed', 409);
       }
       session.state.review = review;
+      initialDraft = structuredClone(review);
       session.state.operations = saveState.operations;
       if (session.state.operations.some((operation) => operation.status === 'pending'))
         throw new MapError('operation_pending', 409);
@@ -3696,7 +3727,11 @@ export function textAssistantRoutes({
           ? error.code
           : 'assistant_provider_failed';
       if (session.state.error === 'assistant_context_capacity') pauseCapacity(session);
-      const messages = failureMessages(session, session.state.error);
+      const messages = failureMessages(
+        session,
+        session.state.error,
+        error instanceof ActionClarification ? error : undefined,
+      );
       session.state.previousFailure = messages.ordinary;
       if (session.state.saveIntent) session.state.saveIntent = undefined;
       appendConversation(session, {
@@ -4553,7 +4588,11 @@ export function textAssistantRoutes({
               ? error.code
               : 'assistant_draft_changed';
         if (session.state.error === 'assistant_context_capacity') pauseCapacity(session);
-        const messages = failureMessages(session, session.state.error);
+        const messages = failureMessages(
+          session,
+          session.state.error,
+          error instanceof ActionClarification ? error : undefined,
+        );
         session.state.reply = messages.ordinary;
         session.state.saveIntent = undefined;
         if (messages.security) {

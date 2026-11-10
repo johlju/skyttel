@@ -1622,7 +1622,7 @@ Detta mäter inte en verklig modells kontextgräns.
 
 **Förväntat resultat:**
 
-- Skyttel säger ”Förtydliga vilka ändringar du vill göra.”.
+- Skyttel frågar ”Menar du Lo Manuell?”.
 - Namnet är Lo Manuell och Beskrivning är Påhittad uppgift. Ingenting sparas.
 - Den ursprungliga köade begäran finns kvar i samtalstexten.
 
