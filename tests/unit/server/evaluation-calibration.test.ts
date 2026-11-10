@@ -118,21 +118,21 @@ test('complete calibration is reusable with provenance and no new cost', {
   ).rejects.toThrow('evaluation_judge_calibration_changed');
 });
 
-test('non-call voice dispatch records do not invalidate complete calibration', {
-  tags: ['technical'],
-}, async () => {
-  const { directory, calls } = await fixture();
-  await writeFile(
-    join(directory, 'private-calls.jsonl.gz'),
-    gzipSync(
-      [...calls, { kind: 'voice_dispatch', at: Date.now() }]
-        .map((call) => JSON.stringify(call))
-        .join('\n'),
-    ),
-  );
-  const reference = await prepareJudgeCalibration(directory, identity);
-  expect((await reuseJudgeCalibration(reference, identity)).controls).toBe(68);
-});
+test.each(['voice_dispatch', 'playback_transcription'])(
+  'non-provider %s records do not invalidate complete calibration',
+  {
+    tags: ['technical'],
+  },
+  async (kind) => {
+    const { directory, calls } = await fixture();
+    await writeFile(
+      join(directory, 'private-calls.jsonl.gz'),
+      gzipSync([...calls, { kind, at: Date.now() }].map((call) => JSON.stringify(call)).join('\n')),
+    );
+    const reference = await prepareJudgeCalibration(directory, identity);
+    expect((await reuseJudgeCalibration(reference, identity)).controls).toBe(68);
+  },
+);
 
 test.each(['gzip', 'json', 'null', 'request', 'id', 'commit'])(
   'malformed %s evidence fails with the calibration error before reuse',

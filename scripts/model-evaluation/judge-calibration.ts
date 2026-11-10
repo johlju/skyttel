@@ -150,7 +150,7 @@ async function inspectCalibrationEvidence(
           record &&
           typeof record === 'object' &&
           'kind' in record &&
-          record.kind === 'voice_dispatch'
+          (record.kind === 'voice_dispatch' || record.kind === 'playback_transcription')
         ),
     )
     .map((record) => callSchema.parse(record));
