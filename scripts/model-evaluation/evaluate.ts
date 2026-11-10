@@ -31,7 +31,7 @@ import {
   playbackAssessor,
   verifiedPlaybackAssessor,
 } from './playback-assessor.js';
-import { privateEvaluationRecords } from './private-records.js';
+import { privateEvaluationRecords, sanitizedProviderCall } from './private-records.js';
 import registry from './profiles.json' with { type: 'json' };
 import {
   budgetedProvider,
@@ -92,7 +92,13 @@ export type EvaluationPlan = {
 
 /** Agent-callable support. Reports remain local until the agent publishes each
  * Markdown artifact on the already-created model-evaluation run issue. */
-export async function evaluateModels(plan: EvaluationPlan) {
+export async function evaluateModels(
+  plan: EvaluationPlan,
+  runtime: {
+    transport?: typeof fetch;
+    conversationWorkMode?: 'sequential' | 'overlap';
+  } = {},
+) {
   if (
     !plan.authorized ||
     !plan.apiKey ||
@@ -245,6 +251,7 @@ export async function evaluateModels(plan: EvaluationPlan) {
   if (plan.continuation && (!comparisonRun || plan.voice))
     throw new Error('evaluation_continuation_text_comparison_required');
   const sharedManifest = {
+    origin: runtime.transport ? 'controlled' : 'provider',
     applicationComparison: comparisonManifest,
     catalog: {
       source: rawCatalog.source,
@@ -310,23 +317,7 @@ export async function evaluateModels(plan: EvaluationPlan) {
   const privateRecords = privateEvaluationRecords(directory);
   const record = (call: ProviderCall) => {
     privateRecords.call(call);
-    calls.set(call.id, {
-      ...call,
-      request: {},
-      response: call.response
-        ? {
-            id: call.response.id,
-            model: call.response.model,
-            status: call.response.status,
-            usage: call.response.usage,
-            output: Array.isArray(call.response.output)
-              ? call.response.output
-                  .filter((item) => item.type === 'function_call')
-                  .map((item) => ({ type: item.type, call_id: item.call_id }))
-              : [],
-          }
-        : undefined,
-    });
+    calls.set(call.id, sanitizedProviderCall(call));
   };
   const cost = (kind: 'backend' | 'summary' | 'judge') => {
     const selected = [...calls.values()].filter((call) => call.kind === kind && call.endedAt);
@@ -359,6 +350,7 @@ export async function evaluateModels(plan: EvaluationPlan) {
   const judgeProvider = budgetedProvider(judgeProfile, budget, {
     record,
     countInput: counted,
+    transport: runtime.transport,
   });
   const judge = contentJudge(plan.apiKey, judgeProvider);
   const assessPlayback = voiceSelection
@@ -513,7 +505,11 @@ export async function evaluateModels(plan: EvaluationPlan) {
         const order = repetition % 2 ? [...profiles] : [...profiles].reverse();
         for (const id of order) {
           const profile = backendProfile(id);
-          const provider = budgetedProvider(profile, budget, { record, countInput: counted });
+          const provider = budgetedProvider(profile, budget, {
+            record,
+            countInput: counted,
+            transport: runtime.transport,
+          });
           if (
             continuation &&
             application &&
@@ -547,7 +543,12 @@ export async function evaluateModels(plan: EvaluationPlan) {
           try {
             const run = await runTextScenario(
               scenario,
-              { providerApiKey: plan.apiKey, modelProfile: profile, modelFetch: provider.fetch },
+              {
+                providerApiKey: plan.apiKey,
+                modelProfile: profile,
+                modelFetch: provider.fetch,
+                conversationWorkMode: runtime.conversationWorkMode,
+              },
               {
                 profile: id,
                 repetition,
@@ -644,7 +645,11 @@ export async function evaluateModels(plan: EvaluationPlan) {
             },
           );
           const profile = backendProfile(voiceProfile.backend);
-          const provider = budgetedProvider(profile, budget, { record, countInput: counted });
+          const provider = budgetedProvider(profile, budget, {
+            record,
+            countInput: counted,
+            transport: runtime.transport,
+          });
           const run = await runVoiceScenario(
             scenario,
             {
@@ -817,6 +822,8 @@ export async function evaluateModels(plan: EvaluationPlan) {
     const diagnostics = [...calls.values()].map((call) => ({
       id: call.id,
       requestId: call.requestId ?? null,
+      responseId: call.response?.id ?? null,
+      actualServiceTier: call.response?.service_tier ?? null,
       context: call.context ?? null,
       profile: call.profile,
       model: call.model,

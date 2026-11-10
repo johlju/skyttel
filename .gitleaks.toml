@@ -36,3 +36,19 @@ condition = "AND"
 regexTarget = "secret"
 regexes = ['''^517c3e38ff302eb51a2bda795f72bf525eece3578193b71a352d9bc934c1cc32$''']
 paths = ['''^research/regression-baseline/environment\.json$''']
+
+# Verified SHA-256 values of the five named source files at fa53b628.
+# The deleted evaluation snapshot remains in Git history. These exact
+# checksums are not credentials; history scanning still requires this rule.
+[[rules.allowlists]]
+description = "Verified source checksums in the advanced evaluation snapshot"
+condition = "AND"
+regexTarget = "secret"
+regexes = [
+  '''^edb845633910a4dd4dbc99e0c20e3c9c6d1e580e7e80e4eb3926195c93cb56d9$''', # src/client/access.css
+  '''^db3ea4fd98e9c676f74e6983f327e4cd0a6b59c902a5973e4ca56bda075afe51$''', # src/server/assistant-auth.ts
+  '''^a2fb78b4cc624af861062bbf4e2eefa1c232c0194b3e4ad1a15eb4818aeca1f4$''', # src/server/auth.ts
+  '''^b954e43a85f7ba06a8c4bec9219e080acd7b80286cff78cff84a000e5dfb83fd$''', # src/server/oauth-parameters.ts
+  '''^f0e876744e7f0f32b6841c275522a2759bb7189c38f590ee2ba587edeaad0395$''', # tests/support/legacy-auth.ts
+]
+paths = ['''^docs/research/advanced-context-evaluation-plan\.json$''']
