@@ -23,8 +23,7 @@ if (command === 'prepare' && !executionPath) {
       freezeSha256: freeze.freezeSha256,
       calibrationControls: freeze.judge.controlCount,
       runs: freeze.runs.map(({ id }: { id: string }) => id),
-      maximumGrowthMessages: freeze.phaseB.maximumGrowthMessages,
-      maximumUserMessages: freeze.phaseB.maximumUserMessages,
+      excludedCoverage: freeze.excludedCoverage,
     }),
   );
 } else if (command === 'run' && executionPath) {

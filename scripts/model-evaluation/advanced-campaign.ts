@@ -5,16 +5,13 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { z } from 'zod';
-import { executeAdvancedContext } from './advanced-context-run.js';
 import { evaluatorVersion } from './application.js';
 import type { EvaluationBudget } from './budget.js';
 import catalog from './catalog.json' with { type: 'json' };
-import { contextLimitFixture } from './context-limit.js';
 import { evaluateModels } from './evaluate.js';
 import { judgeInstructions } from './judge.js';
 import controls from './judge-controls.json' with { type: 'json' };
 import profiles from './optimization-campaign-profiles.json' with { type: 'json' };
-import { pendingContext } from './pending-context.js';
 import { type EvaluationProfile, verifiedProfile } from './provider.js';
 import type { Catalog } from './types.js';
 
@@ -95,7 +92,7 @@ export async function prepareAdvancedCampaign() {
     };
   });
   const frozen = {
-    format: 'skyttel-advanced-context-preparation-v1',
+    format: 'skyttel-advanced-scenarios-preparation-v2',
     authorized: false,
     approvedCeilings: null,
     applicationCommit: git('log', '-1', '--format=%H', '--', 'src', 'migrations', 'tests/support'),
@@ -127,38 +124,8 @@ export async function prepareAdvancedCampaign() {
     },
     cachePolicy: profiles.cachePolicy,
     ratesStatus: 'dated research from 2026-11-04; no fresh provider verification or authorization',
-    runs: [
-      ...runs,
-      ...backendProfiles.map((profile, index) => ({
-        id: index ? 'B-sol' : 'B-terra',
-        phase: 'B' as const,
-        profile,
-        scenarioIds: [] as string[],
-        proposedLimitUsd: 25,
-      })),
-    ],
-    phaseB: {
-      ...pendingContext,
-      startStateSha256: sha256(
-        JSON.stringify({ base: catalog.base, variant: catalog.variants['known-cloud-user'] }),
-      ),
-      growthSha256: contextLimitFixture(16).sha256,
-      maximumGrowthMessages: 16,
-      maximumUserMessages: 20,
-      maximumRecallMessages: 1,
-      maximumContinuationMessages: 1,
-    },
-    phaseC: {
-      status: 'blocked',
-      countingFeeUsd: null,
-      approvedCeiling: null,
-      prerequisites: [
-        'verified counting fee',
-        'exact complete payload count',
-        'count/generation payload parity',
-        'separate execution authorization',
-      ],
-    },
+    runs,
+    excludedCoverage: ['natural_context_saturation', 'physical_provider_limit'],
     measurement: {
       physicalProviderMaximum: 'unverified',
       waitingCompletionTime: null,
@@ -233,25 +200,16 @@ export async function executeAdvancedCampaign(
       status: 'not_run',
       reason: 'not_selected',
       budget: null as ReturnType<EvaluationBudget['snapshot']> | null,
-      outcomes: (run.phase === 'A'
-        ? catalog.scenarios
-            .filter(({ id }) => run.scenarioIds.includes(id))
-            .flatMap((scenario) =>
-              scenario.steps.map((step) => ({
-                scenario: scenario.id,
-                step: step.id,
-                outcome: 'not_run',
-                reason: 'pending_execution',
-              })),
-            )
-        : [
-            {
-              scenario: 'pending-context-growth',
-              step: 'dialog',
-              outcome: 'not_run',
-              reason: 'pending_execution',
-            },
-          ]) as { scenario: string; step: string; outcome: string; reason?: string }[],
+      outcomes: catalog.scenarios
+        .filter(({ id }) => run.scenarioIds.includes(id))
+        .flatMap((scenario) =>
+          scenario.steps.map((step) => ({
+            scenario: scenario.id,
+            step: step.id,
+            outcome: 'not_run',
+            reason: 'pending_execution',
+          })),
+        ) as { scenario: string; step: string; outcome: string; reason?: string }[],
     })),
   };
   const save = () =>
@@ -273,80 +231,49 @@ export async function executeAdvancedCampaign(
     await save();
     const directory = join(execution.directory, run.id);
     try {
-      if (run.phase === 'A') {
-        const result = await evaluateModels(
-          {
-            issue: execution.issue,
-            directory,
-            apiKey,
-            authorized: true,
-            limitUsd: ceiling.limitUsd,
-            priorUsd: 0,
-            priorSource: execution.authorizationSource,
-            commit: freeze.evaluatorSourceCommit,
-            localVerification: execution.localVerification,
-            textProfiles: [run.profile.id],
-            backendProfiles: [run.profile],
-            judgeProfile: freeze.judge.profile,
-            baselineProfiles: {},
-            repetitions: [1],
-            followUps: true,
-            voice: false,
-            scenarioSet: (catalog as Catalog).scenarios.filter(({ id }) =>
-              run.scenarioIds.includes(id),
-            ),
-          },
-          { transport: options.transport, conversationWorkMode: 'sequential' },
-        );
-        item.budget = result.budget;
-        item.outcomes = result.attempts.map(({ scenario, step, outcome, reason }) => ({
-          scenario,
-          step,
-          outcome,
-          reason,
-        }));
-        // Preserve unrun selection even if setup or reporting aborts before the runner.
-        for (const scenario of catalog.scenarios.filter(({ id }) => run.scenarioIds.includes(id)))
-          for (const step of scenario.steps)
-            if (
-              !item.outcomes.some(
-                (value) => value.scenario === scenario.id && value.step === step.id,
-              )
-            )
-              item.outcomes.push({
-                scenario: scenario.id,
-                step: step.id,
-                outcome: 'not_run',
-                reason: result.budget.reason ?? 'execution_incomplete',
-              });
-      } else {
-        await mkdir(directory);
-        const result = await executeAdvancedContext({
-          directory,
+      const result = await evaluateModels(
+        {
           issue: execution.issue,
+          directory,
           apiKey,
+          authorized: true,
           limitUsd: ceiling.limitUsd,
-          maximumGrowthMessages: freeze.phaseB.maximumGrowthMessages,
-          authorizationSource: execution.authorizationSource,
-          profile: run.profile,
+          priorUsd: 0,
+          priorSource: execution.authorizationSource,
+          commit: freeze.evaluatorSourceCommit,
+          localVerification: execution.localVerification,
+          textProfiles: [run.profile.id],
+          backendProfiles: [run.profile],
           judgeProfile: freeze.judge.profile,
-          transport: options.transport,
-        });
-        item.budget = result.budget;
-        item.outcomes = result.context?.turns.map((turn) => ({
-          scenario: 'pending-context-growth',
-          step: turn.stage,
-          outcome: turn.outcome,
-          reason: turn.reason,
-        })) ?? [
-          {
-            scenario: 'pending-context-growth',
-            step: 'dialog',
-            outcome: 'not_run',
-            reason: result.budget.reason ?? 'execution_incomplete',
-          },
-        ];
-      }
+          baselineProfiles: {},
+          repetitions: [1],
+          followUps: true,
+          voice: false,
+          scenarioSet: (catalog as Catalog).scenarios.filter(({ id }) =>
+            run.scenarioIds.includes(id),
+          ),
+        },
+        { transport: options.transport, conversationWorkMode: 'sequential' },
+      );
+      item.budget = result.budget;
+      item.outcomes = result.attempts.map(({ scenario, step, outcome, reason }) => ({
+        scenario,
+        step,
+        outcome,
+        reason,
+      }));
+      // Preserve unrun selection even if setup or reporting aborts before the runner.
+      for (const scenario of catalog.scenarios.filter(({ id }) => run.scenarioIds.includes(id)))
+        for (const step of scenario.steps)
+          if (
+            !item.outcomes.some((value) => value.scenario === scenario.id && value.step === step.id)
+          )
+            item.outcomes.push({
+              scenario: scenario.id,
+              step: step.id,
+              outcome: 'not_run',
+              reason: result.budget.reason ?? 'execution_incomplete',
+            });
       item.status = item.budget.stopped ? 'stopped' : 'recorded';
       item.reason = item.budget.reason ?? 'evidence_recorded_not_model_qualification';
       if (item.budget.stopped) evidence.stopReason = item.budget.reason;

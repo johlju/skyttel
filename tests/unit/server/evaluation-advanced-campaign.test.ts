@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, vi } from 'vitest';
@@ -6,8 +6,10 @@ import {
   executeAdvancedCampaign,
   prepareAdvancedCampaign,
 } from '../../../scripts/model-evaluation/advanced-campaign.js';
+import { executeAdvancedContext } from '../../../scripts/model-evaluation/advanced-context-run.js';
 import { judgeInstructions } from '../../../scripts/model-evaluation/judge.js';
 import controls from '../../../scripts/model-evaluation/judge-controls.json' with { type: 'json' };
+import { pendingContext } from '../../../scripts/model-evaluation/pending-context.js';
 import { modelMessage, modelTool, pricedProvider, textModel } from '../../support/text-model.js';
 
 test('unpaid preparation freezes exact subsets and rejects dispatch without separate authorization', {
@@ -34,11 +36,12 @@ test('unpaid preparation freezes exact subsets and rejects dispatch without sepa
       ],
     ],
     ['A-sol', ['save-last', 'unknown-user', 'no-user']],
-    ['B-terra', []],
-    ['B-sol', []],
   ]);
   expect(freeze.judge.controlCount).toBe(68);
-  expect(freeze.phaseB).toMatchObject({ maximumGrowthMessages: 16, maximumUserMessages: 20 });
+  expect(freeze.excludedCoverage).toEqual([
+    'natural_context_saturation',
+    'physical_provider_limit',
+  ]);
   expect(freeze.runs.every((run) => run.proposedLimitUsd <= 25)).toBe(true);
   await expect(
     executeAdvancedCampaign(freeze, { authorized: false }, { transport }),
@@ -61,7 +64,7 @@ test.each(['interpretation', 'checking', 'work', 'judging', 'summary'] as const)
           const message = JSON.parse(
             String(body.input.findLast((item) => item.role === 'user')?.content),
           ).message;
-          if (message === freeze.phaseB.request)
+          if (message === pendingContext.request)
             return [
               modelTool('ask_questions', {
                 questions: [
@@ -134,7 +137,30 @@ test.each(['interpretation', 'checking', 'work', 'judging', 'summary'] as const)
         }
         return response;
       };
-      const first = category === 'summary' ? 'B-terra' : 'A-sol';
+      if (category === 'summary') {
+        // Keep the generic accounting regression without scheduling a paid
+        // context-growth phase in the model-evaluation campaign.
+        const contextDirectory = join(directory, 'controlled-context');
+        await mkdir(contextDirectory);
+        const result = await executeAdvancedContext({
+          directory: contextDirectory,
+          issue: 737,
+          apiKey: 'controlled',
+          limitUsd: 25,
+          maximumGrowthMessages: 2,
+          authorizationSource: 'Controlled summary accounting only',
+          profile: freeze.runs[0].profile,
+          judgeProfile: freeze.judge.profile,
+          transport,
+        });
+        expect(calibration).toBe(68);
+        expect(uncertain).toBe(1);
+        expect(laterDispatches).toBe(0);
+        expect(result.budget).toMatchObject({ stopped: true, reason: 'evaluation_usage_unknown' });
+        expect(result.budget.reservedUsd).toBeGreaterThan(0);
+        return;
+      }
+      const first = 'A-terra';
       const result = await executeAdvancedCampaign(
         freeze,
         {
@@ -145,7 +171,7 @@ test.each(['interpretation', 'checking', 'work', 'judging', 'summary'] as const)
           issue: 737,
           runs: [
             { id: first, limitUsd: 25 },
-            { id: 'B-sol', limitUsd: 25 },
+            { id: 'A-sol', limitUsd: 25 },
           ],
           localVerification: {
             passed: true,
@@ -160,14 +186,25 @@ test.each(['interpretation', 'checking', 'work', 'judging', 'summary'] as const)
       expect(laterDispatches).toBe(0);
       expect(result.stopReason).toBe('evaluation_usage_unknown');
       expect(result.runs.find(({ id }) => id === first)?.budget?.reservedUsd).toBeGreaterThan(0);
-      expect(result.runs.find(({ id }) => id === 'B-sol')?.status).toBe('not_run');
+      expect(result.runs.find(({ id }) => id === 'A-sol')?.status).toBe('not_run');
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
   },
 );
 
-test.each(['freeze', 'scope', 'zero', 'negative', 'missing', 'nan', 'over-cap', 'source'])(
+test.each([
+  'freeze',
+  'scope',
+  'B-terra',
+  'B-sol',
+  'zero',
+  'negative',
+  'missing',
+  'nan',
+  'over-cap',
+  'source',
+])(
   'advanced execution refuses invalid %s before transport dispatch',
   { tags: ['technical'] },
   async (invalid) => {
@@ -184,6 +221,7 @@ test.each(['freeze', 'scope', 'zero', 'negative', 'missing', 'nan', 'over-cap', 
     };
     if (invalid === 'freeze') execution.freezeSha256 = 'stale';
     if (invalid === 'scope') execution.runs[0].id = 'C-terra';
+    if (invalid === 'B-terra' || invalid === 'B-sol') execution.runs[0].id = invalid;
     if (invalid === 'source') execution.authorizationSource = '';
     if (invalid === 'zero') execution.runs[0].limitUsd = 0;
     if (invalid === 'negative') execution.runs[0].limitUsd = -1;
