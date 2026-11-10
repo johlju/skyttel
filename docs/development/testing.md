@@ -62,6 +62,20 @@ after help separately from the original verdict, including extra time and
 cost. A successful follow-up does not by itself establish qualification.
 Voice runs require reviewed audio for every possible reply before payment.
 
+Reuse a successful judge calibration when its model, settings, instructions,
+controls, implementation and dependencies match. Prepare a reference with
+`prepareJudgeCalibration(directory, { profile, origin })` from
+`scripts/model-evaluation/judge-calibration.ts` and include it as
+`EvaluationPlan.judgeCalibration`. Use the original run directory containing
+all control records, its manifest and private call capture. The default
+freshness window is 24 hours; an explicit `maxAgeHours` selects another window.
+Recheck freshness when dispatching because model aliases can change.
+The harness rejects incomplete, failed, changed or expired evidence before
+provider calls; controlled evidence cannot qualify a provider run. It records
+the original source, age and historical cost separately, with no new calibration
+calls or charges. Omit the reference only when fresh calibration is needed;
+invalid references never trigger paid recalibration automatically.
+
 Model calls and test steps have no fixed processing deadline. Record elapsed
 time for each call and response; assess correctness before speed and cost.
 The user decides whether the measured speed is reasonable for its cost.
