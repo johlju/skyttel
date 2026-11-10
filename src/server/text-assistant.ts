@@ -2628,7 +2628,23 @@ export function textAssistantRoutes({
         if (decision.decision === 'clarify') {
           const message = session.state.activeMessage;
           if (!message) throw new MapError('assistant_scope_unavailable', 409);
-          const answers = message.answerProgress ?? message.answerTo;
+          let answers = message.answerProgress ?? message.answerTo;
+          if (answers?.length) {
+            const pending = [...session.execution.parts.values()]
+              .filter(
+                (part) =>
+                  (part.status === 'waiting' || part.status === 'ready') &&
+                  answers?.some((ref) => ref.id === part.id && ref.revision === part.revision),
+              )
+              .map(({ id, revision, request, question }) => ({ id, revision, request, question }));
+            const target = await matchClarification(respond, text, pending, task.signal, {
+              operation: operations[decision.operation],
+              question: decision.question,
+            });
+            guard();
+            if (target.decision === 'unclear') throw new ActionClarification(target.question);
+            answers = target.decision === 'rephrase' ? target.parts : undefined;
+          }
           updateParts(
             session,
             answers?.length

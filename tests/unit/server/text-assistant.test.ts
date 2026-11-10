@@ -447,7 +447,11 @@ test.each([
 function displayedVersion(session: Pick<TextAssistantView, 'review'>) {
   return { draftVersion: session.review.version, contentVersion: session.review.contentVersion };
 }
-async function message(session: TextAssistantView, text: string) {
+async function message(
+  session: TextAssistantView,
+  text: string,
+  answerTo?: { id: string; revision: number }[],
+) {
   const result = await browser.post(`${path}/${session.id}/messages`, {
     headers: { origin: app.origin },
     data: {
@@ -455,6 +459,7 @@ async function message(session: TextAssistantView, text: string) {
       ...displayedVersion(session),
       requestId: crypto.randomUUID(),
       text,
+      answerTo,
     },
   });
   expect(result.status(), await result.text()).toBe(202);
@@ -2740,6 +2745,142 @@ test.each(['before', 'after'])(
       { id: 'bike', after: { name: 'Blå cykeln' } },
     ]);
     expect(completed.receipt).toBeUndefined();
+  },
+);
+
+test.each(['rephrase', 'unclear', 'new', 'stale', 'unrelated', 'multiple'] as const)(
+  'an action clarification (%s) preserves unrelated waiting and ready parts',
+  async (association) => {
+    let turn = 0;
+    let typeId = '';
+    let beforeCheck: TextAssistantView['pendingParts'];
+    const question = 'Vilken av de gröna cyklarna menar du?';
+    const model = textModel(
+      (request) => {
+        const input = JSON.parse(
+          String(request.input.findLast((row) => row.role === 'user')?.content),
+        );
+        if (turn++ === 0)
+          return [
+            modelTool('ask_questions', {
+              questions: ['Vilken hjälm?', 'Vilken cykel?', 'Vilken bil?'],
+            }),
+          ];
+        if (turn === 2)
+          return [
+            modelTool('ask_questions', {
+              questions: [],
+              updates: input.pendingParts
+                .slice(0, 2)
+                .map((part: { id: string; revision: number }) => ({
+                  id: part.id,
+                  revision: part.revision,
+                  action: 'clarify',
+                  messageId: input.messageId,
+                  evidence: input.message,
+                })),
+              continueResponse: true,
+            }),
+          ];
+        beforeCheck = lastToolResult(request).pendingParts;
+        return [
+          modelTool('submit_changes', {
+            version: input.draft.version,
+            contentVersion: input.draft.contentVersion,
+            completion: 'draft',
+            operations: ['helmet', 'bike'].map((id) => ({
+              name: 'propose_object',
+              arguments: { id, baseRevision: null, value: { typeId, name: id } },
+            })),
+          }),
+        ];
+      },
+      (request) => {
+        if (request.instructions.startsWith('SKYTTEL_TURN_SCOPE'))
+          return [modelMessage(JSON.stringify({ mode: 'work', request: 'Uppdatera föremålen.' }))];
+        if (request.instructions.startsWith('SKYTTEL_TURN_CLARIFICATION')) {
+          const { untrusted } = JSON.parse(String(request.input[0].content));
+          expect(untrusted.checked).toEqual({
+            operation: {
+              name: 'propose_object',
+              arguments: { id: 'bike', baseRevision: null, value: { typeId, name: 'bike' } },
+            },
+            question,
+          });
+          const { id, revision } = untrusted.parts[1];
+          return [
+            modelMessage(
+              JSON.stringify(
+                association === 'unclear'
+                  ? { decision: 'unclear', question: 'Vilken uppgift menar du?' }
+                  : association === 'new'
+                    ? { decision: 'new' }
+                    : {
+                        decision: 'rephrase',
+                        parts:
+                          association === 'multiple'
+                            ? untrusted.parts.map(
+                                ({ id, revision }: { id: string; revision: number }) => ({
+                                  id,
+                                  revision,
+                                }),
+                              )
+                            : [
+                                {
+                                  id: association === 'unrelated' ? 'unrelated-part' : id,
+                                  revision: association === 'stale' ? revision - 1 : revision,
+                                },
+                              ],
+                      },
+              ),
+            ),
+          ];
+        }
+        return [modelMessage(JSON.stringify({ decision: 'clarify', operation: 1, question }))];
+      },
+    );
+    await setup(model.provider);
+    typeId = (await webProposal()).typeId;
+    const waiting = await message(await start(), 'Uppdatera hjälmen, cykeln och bilen.');
+    const result = await message(
+      waiting,
+      'Den blå hjälmen och den gröna cykeln. Bilen vet jag inte.',
+      waiting.pendingParts.map(({ id, revision }: { id: string; revision: number }) => ({
+        id,
+        revision,
+      })),
+    );
+    expect(beforeCheck).toMatchObject([
+      { status: 'ready' },
+      { status: 'ready' },
+      { status: 'waiting' },
+    ]);
+    expect(result.pendingParts[0]).toEqual(beforeCheck?.[0]);
+    expect(result.pendingParts[2]).toEqual(beforeCheck?.[2]);
+    if (association === 'rephrase') {
+      expect(result.pendingParts).toHaveLength(3);
+      expect(result.pendingParts[1]).toMatchObject({
+        id: beforeCheck?.[1].id,
+        revision: 2,
+        question,
+        status: 'waiting',
+      });
+      expect(result.questions).toEqual([question, 'Vilken bil?']);
+    } else {
+      expect(result.pendingParts.slice(0, 3)).toEqual(beforeCheck);
+      if (association === 'new') {
+        expect(result.pendingParts).toHaveLength(4);
+        expect(result.pendingParts[3]).toMatchObject({ question, status: 'waiting' });
+      } else expect(result.pendingParts).toHaveLength(3);
+    }
+    expect(result.error).toBe(
+      ['stale', 'unrelated', 'multiple'].includes(association)
+        ? 'assistant_pending_part_changed'
+        : 'assistant_scope_unclear',
+    );
+    if (association === 'unclear') expect(result.reply).toContain('Vilken uppgift menar du?');
+    expect(result.review).toEqual(waiting.review);
+    expect(result.receipt).toBeUndefined();
   },
 );
 
