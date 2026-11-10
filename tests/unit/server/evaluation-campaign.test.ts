@@ -26,6 +26,7 @@ test('optimization preparation preserves exact models and high effort without gr
     priorUsd: 0,
     priorSource: 'No paid controlled execution.',
     localVerification: { passed: false, commands: [], evidence: '' },
+    judgeCalibration: { directory: '/controlled/prior', sha256: 'b'.repeat(64) },
   });
   expect(plan.authorized).toBe(false);
   expect(plan).not.toHaveProperty('limitUsd');
@@ -41,7 +42,18 @@ test('optimization preparation preserves exact models and high effort without gr
   expect(verifiedProfile('terra-high').model).toBe('gpt-5.6-terra');
   expect(plan.judgeProfile.maxOutputTokens).toBe(4096);
   expect(plan.followUps).toBe(true);
+  expect(plan.judgeCalibration).toEqual({ directory: '/controlled/prior', sha256: 'b'.repeat(64) });
   expect(campaign.runs).toHaveLength(4);
+  expect(campaign).not.toHaveProperty('contextLimitSupplement');
+  expect(campaign.excludedCoverage).toEqual([
+    'natural_context_saturation',
+    'physical_provider_limit',
+  ]);
+  expect(campaign.contextLimits).toMatchObject({
+    application: 'unverified',
+    provider: 'unverified',
+    voice: 'unverified',
+  });
   expect(
     campaign.runs.every(
       (run) => run.status === 'not_run' && run.calibrationCalls === controls.cases.length,

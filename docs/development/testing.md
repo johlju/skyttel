@@ -76,6 +76,13 @@ the original source, age and historical cost separately, with no new calibration
 calls or charges. Omit the reference only when fresh calibration is needed;
 invalid references never trigger paid recalibration automatically.
 
+Both campaign drivers accept the same `judgeCalibration` reference in their
+execution JSON. The advanced campaign validates it before dispatch and reuses
+it for each selected model. Without a reference, it calibrates once and reuses
+that original evidence for later selected models. An invalid or expired
+reference stops execution without paid fallback. Include `limitUsd` for a
+selected run only when the user specifies that ceiling; omission sets no cap.
+
 Model calls and test steps have no fixed processing deadline. Record elapsed
 time for each call and response; assess correctness before speed and cost.
 The user decides whether the measured speed is reasonable for its cost.

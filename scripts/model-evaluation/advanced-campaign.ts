@@ -10,6 +10,11 @@ import type { EvaluationBudget } from './budget.js';
 import catalog from './catalog.json' with { type: 'json' };
 import { evaluateModels } from './evaluate.js';
 import { judgeInstructions } from './judge.js';
+import {
+  judgeCalibrationReferenceSchema,
+  prepareJudgeCalibration,
+  reuseJudgeCalibration,
+} from './judge-calibration.js';
 import controls from './judge-controls.json' with { type: 'json' };
 import profiles from './optimization-campaign-profiles.json' with { type: 'json' };
 import { type EvaluationProfile, verifiedProfile } from './provider.js';
@@ -88,7 +93,6 @@ export async function prepareAdvancedCampaign() {
       phase: 'A' as const,
       profile,
       scenarioIds,
-      proposedLimitUsd: 25,
     };
   });
   const frozen = {
@@ -110,6 +114,7 @@ export async function prepareAdvancedCampaign() {
     judge: {
       profile: judgeProfile,
       controlCount: controls.cases.length,
+      calibrationPolicy: 'reuse selected evidence; otherwise calibrate once for selected runs',
       sha256: sha256(
         JSON.stringify({
           provider: judgeProfile.provider,
@@ -135,7 +140,7 @@ export async function prepareAdvancedCampaign() {
     prerequisites: [
       'controlled verification evidence',
       'clean committed source matching this freeze',
-      'separate explicit execution authorization with each phase/model ceiling',
+      'separate explicit execution authorization; a ceiling only when supplied by the user',
     ],
   };
   return { ...frozen, freezeSha256: sha256(JSON.stringify(frozen)) };
@@ -149,8 +154,9 @@ const executionSchema = z
     directory: z.string().startsWith('/'),
     issue: z.number().int().positive(),
     runs: z
-      .array(z.object({ id: z.string(), limitUsd: z.number().positive().max(25) }).strict())
+      .array(z.object({ id: z.string(), limitUsd: z.number().positive().optional() }).strict())
       .min(1),
+    judgeCalibration: judgeCalibrationReferenceSchema.optional(),
     localVerification: z
       .object({
         passed: z.literal(true),
@@ -181,6 +187,9 @@ export async function executeAdvancedCampaign(
   if (origin === 'provider') await evaluatorVersion(git('rev-parse', 'HEAD'));
   const apiKey = options.transport ? 'controlled' : options.apiKey;
   if (!apiKey) throw new Error('evaluation_advanced_credentials_missing');
+  let calibration = execution.judgeCalibration;
+  if (calibration)
+    await reuseJudgeCalibration(calibration, { profile: freeze.judge.profile, origin });
   // Exclusive creation makes this a single-use execution scope: no retries or
   // implicit continuation can silently reset any ledger.
   await mkdir(execution.directory);
@@ -207,7 +216,7 @@ export async function executeAdvancedCampaign(
             scenario: scenario.id,
             step: step.id,
             outcome: 'not_run',
-            reason: 'pending_execution',
+            reason: 'not_selected',
           })),
         ) as { scenario: string; step: string; outcome: string; reason?: string }[],
     })),
@@ -216,7 +225,10 @@ export async function executeAdvancedCampaign(
     writeFile(join(execution.directory, 'campaign.json'), `${JSON.stringify(evidence, null, 2)}\n`);
   await writeFile(join(execution.directory, 'freeze.json'), `${JSON.stringify(freeze, null, 2)}\n`);
   for (const run of evidence.runs)
-    if (execution.runs.some(({ id }) => id === run.id)) run.reason = 'pending_execution';
+    if (execution.runs.some(({ id }) => id === run.id)) {
+      run.reason = 'pending_execution';
+      for (const outcome of run.outcomes) outcome.reason = run.reason;
+    }
   await save();
   for (const run of fresh.runs) {
     const ceiling = execution.runs.find(({ id }) => id === run.id);
@@ -225,6 +237,7 @@ export async function executeAdvancedCampaign(
     if (!item) throw new Error('evaluation_advanced_scope_invalid');
     if (evidence.stopReason) {
       item.reason = evidence.stopReason;
+      for (const outcome of item.outcomes) outcome.reason = item.reason;
       continue;
     }
     item.status = 'started';
@@ -245,6 +258,7 @@ export async function executeAdvancedCampaign(
           textProfiles: [run.profile.id],
           backendProfiles: [run.profile],
           judgeProfile: freeze.judge.profile,
+          judgeCalibration: calibration,
           baselineProfiles: {},
           repetitions: [1],
           followUps: true,
@@ -277,10 +291,20 @@ export async function executeAdvancedCampaign(
       item.status = item.budget.stopped ? 'stopped' : 'recorded';
       item.reason = item.budget.reason ?? 'evidence_recorded_not_model_qualification';
       if (item.budget.stopped) evidence.stopReason = item.budget.reason;
+      else if (
+        !calibration &&
+        evidence.runs.some((run) => run.status === 'not_run' && run.reason === 'pending_execution')
+      )
+        calibration = await prepareJudgeCalibration(directory, {
+          profile: freeze.judge.profile,
+          origin,
+        });
     } catch (error) {
       item.status = 'error';
       item.reason = 'evaluation_advanced_execution_error';
       evidence.stopReason = item.reason;
+      for (const outcome of item.outcomes)
+        if (outcome.outcome === 'not_run') outcome.reason = item.reason;
       await writeFile(
         join(execution.directory, 'private-error.json'),
         JSON.stringify({ error: String(error) }),

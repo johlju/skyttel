@@ -488,9 +488,15 @@ export function HouseholdMap({
         if (column && composer && header) {
           // The notice slot can push the composer down. Use the bounded
           // column height so expanding a report cannot grow its own limit.
+          const modelControl = column.querySelector('.text-view-model');
+          const modelHeight =
+            modelControl && getComputedStyle(modelControl).position !== 'absolute'
+              ? modelControl.getBoundingClientRect().height
+              : 0;
           const available =
             column.getBoundingClientRect().bottom -
             composer.getBoundingClientRect().height -
+            modelHeight -
             Math.max(column.getBoundingClientRect().top, header.getBoundingClientRect().bottom);
           card.style.setProperty('--notice-available-height', `${Math.max(46, available - 28)}px`);
         }

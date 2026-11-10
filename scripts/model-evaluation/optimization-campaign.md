@@ -87,10 +87,10 @@ cases in the everyday group and investigate their outcomes.
 For the full comparison, each model and modality uses five repetitions in this
 version order:
 original/proposed, proposed/original, original/proposed, proposed/original,
-original/proposed. Each combination uses one persistent ledger including its
-45 calibration controls and all repetitions of both versions. Derive planned
+original/proposed. Each combination uses one persistent ledger including any
+new calibration and all repetitions of both versions. Derive planned
 attempt counts from the frozen scenario selection and repetition plan.
-Conditional replies and separate context supplements add attempts.
+Declared conditional replies add attempts.
 Dependent work after failure remains unrun; planned counts are not successes.
 
 Text target scenarios are `everyday-question`, `everyday-change` and
@@ -127,57 +127,28 @@ sample rate and existing listening provenance. Integrity verification does not
 create new listening approval. Ordinary dialogs remain connected; close before
 final judging and summary, then reopen after summary installation.
 
-## Actual context limits
+## Context coverage
 
-The existing summary hook and eight neutral retained posts test summary
-behavior. They do not establish an actual model boundary.
+The catalog's bounded summary scenarios verify retained information and
+summary correctness. They do not establish an actual model context boundary.
 
-`context-limit.ts` provides a separate bounded ordinary-message growth fixture
-and concrete authenticated application adapter. It preserves real SQLite/MCP,
-uses at most 2,048 growth messages of at most 3,900 characters each, and tests
-recall of a declared early sentinel after a natural context transition. Every
-turn checks unchanged state and saving safety. Growth stops at the first
-observed summary or context-generation increase, including during the seed,
-and attempts at most one recall. A terminal failure stops immediately without
-dependent turns. Failed or unverified recall remains inconclusive. With
-verified recall, input usage below 95 percent of capacity or missing usage is
-configuration-limited; usage at or above that threshold establishes only an
-application boundary. Classification includes usage observed during the
-transition turn. This supplement retains all outcomes, provider-measured input,
-request identities, natural summary calls and context generation. Byte
-estimates, low-usage summaries and controlled usage never establish a physical
-provider boundary. The physical maximum stays unverified.
-
-The separate provider capability probe preserves a captured full application
-request and appends deterministic bounded history. It requires an exact count
-of that entire outgoing payload, with independently verified counting fee,
-before provider dispatch. Its reservation uses the counted oversized input
-and maximum output under the applicable worst input/cache-write and output
-rates. It does not use the normal 922,000-input hold or change the published
-context limit. The probe can establish an observed provider context rejection
-only from an explicit provider `context_length_exceeded` response and request
-identity. It cannot establish application correctness or successful latency.
-
-Run capability probes last, separately from everyday timing, once per model
-and application source request. Exact counting fee/support is unresolved, so
-no probe is executable yet. Missing usage on a rejected request retains the
-full hold and stops new payment; rejection is never assumed free. Preserve
-unrun probes and any unresolved charge in the final report. A text backend
-probe does not establish the separate Live context limit. Actual Live-boundary
-execution remains unrun and requires a further approved-audio growth contract;
-do not turn ordinary summary evidence into a substitute claim.
+Natural context saturation and physical provider-limit experiments are
+excluded from this campaign and its remaining-work lists. Report application,
+provider and Live context limits as unverified. Do not schedule growth fixtures,
+counting calls or capability probes as follow-up work. A separate context-limit
+experiment requires a new explicit user request and its own payment scope.
 
 ## Cost and execution gates
 
 All prices are USD. For normal backend/summary requests, conservative maximum
 holds are $3.265 Terra and $6.53 Sol. The judge maximum is $4.67144 per call;
-45-control calibration has a $210.21480 maximum hold basis per independent
-run. These are conservative reservations, not expected or actual charges and
+These are conservative reservations, not expected or actual charges and
 not a user spending ceiling. Actual costs use verified provider usage. Calls
 vary with checking, clarification, summaries and partial failures; do not
-multiply by an invented fixed model-call count. Four comparison runs include
-172 calibration calls before candidate attempts. Capability counting and probes
-are additional paid layers and require their own explicit cost basis.
+multiply by an invented fixed model-call count. Reuse a valid calibration
+reference through `judgeCalibration` in the execution file. Without eligible
+evidence, fresh calibration runs all current checked-in controls. Record its
+actual cost once; do not charge reused evidence again.
 
 The proposed application explicitly selects a 30-minute cache lifetime. The
 original application and judge omit that setting and explicit breakpoint
@@ -212,9 +183,11 @@ Run all commands from the final clean common evaluator worktree. Replace the
 commit and directory arguments with the frozen final identities. The output
 preparation file must not exist; the driver writes with exclusive creation.
 
+<!-- markdownlint-disable MD013 -->
 ```bash
 npm_config_cache=/workspace/tmp/npm-cache npm run test:env -- tsx scripts/model-evaluation/campaign-driver.ts prepare model-evaluation-results/optimization-preparation.json EVALUATOR_COMMIT ORIGINAL_WORKTREE PROPOSED_WORKTREE
 ```
+<!-- markdownlint-enable MD013 -->
 
 Copy `optimization-execution-template.json` to private storage and fill one
 exact profile/modality, a separately created result issue, its directory,
@@ -222,12 +195,15 @@ verified prior consumption and final local verification. Set authorization and
 its source only after explicit approval for this comparison. Loading a private
 environment file or setting opt-in flags grants no authorization. Then use:
 
+<!-- markdownlint-disable MD013 -->
 ```bash
 npm_config_cache=/workspace/tmp/npm-cache npm run test:env -- tsx scripts/model-evaluation/campaign-driver.ts run model-evaluation-results/optimization-preparation.json PRIVATE_EXECUTION_JSON
 ```
+<!-- markdownlint-enable MD013 -->
 
 The driver checks the frozen preparation before dispatch. The evaluator checks
-clean source and calibrates before candidate work. Voice remains blocked by
+clean source and validates reused calibration or calibrates before candidate
+work. Voice remains blocked by
 the documented billing gaps. Never use a controlled test's synthetic price or
 provider profile for paid execution.
 

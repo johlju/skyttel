@@ -8,14 +8,17 @@ import { gunzipSync } from 'node:zlib';
 import { z } from 'zod';
 import { judgeInstructions } from './judge.js';
 import controls from './judge-controls.json' with { type: 'json' };
-import type { EvaluationProfile, ProviderCall } from './provider.js';
+import type { EvaluationProfile } from './provider.js';
 
-export type JudgeCalibrationReference = {
-  directory: string;
-  sha256: string;
-  /** Explicit freshness window; defaults to one day for mutable model aliases. */
-  maxAgeHours?: number;
-};
+export const judgeCalibrationReferenceSchema = z
+  .object({
+    directory: z.string().startsWith('/'),
+    sha256: z.string().regex(/^[a-f0-9]{64}$/),
+    /** Explicit freshness window; defaults to one day for mutable model aliases. */
+    maxAgeHours: z.number().positive().optional(),
+  })
+  .strict();
+export type JudgeCalibrationReference = z.infer<typeof judgeCalibrationReferenceSchema>;
 
 type Identity = { profile: EvaluationProfile; origin: 'provider' | 'controlled' };
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -45,6 +48,15 @@ const controlSchema = z.object({
   result: verdicts,
   costUsd: z.number().nonnegative(),
 });
+const callSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(['backend', 'summary', 'judge']),
+  startedAt: z.number(),
+  endedAt: z.number().optional(),
+  outcome: z.string(),
+  costUsd: z.number().nonnegative().nullable(),
+  request: z.record(z.string(), z.unknown()),
+});
 
 export function judgeCalibrationIdentity(profile: EvaluationProfile) {
   return createHash('sha256')
@@ -65,6 +77,20 @@ export function judgeCalibrationIdentity(profile: EvaluationProfile) {
 /** Read only original, complete calibration evidence, never a reuse chain.
  * Preparing and consuming both validate it; the digest binds the intervening plan. */
 async function inspectCalibration(directory: string, identity: Identity, maxAgeHours: number) {
+  try {
+    return await inspectCalibrationEvidence(directory, identity, maxAgeHours);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'evaluation_judge_calibration_expired')
+      throw error;
+    throw new Error('evaluation_judge_calibration_invalid', { cause: error });
+  }
+}
+
+async function inspectCalibrationEvidence(
+  directory: string,
+  identity: Identity,
+  maxAgeHours: number,
+) {
   const invalid = () => new Error('evaluation_judge_calibration_invalid');
   if (!Number.isFinite(maxAgeHours) || maxAgeHours <= 0) throw invalid();
   const names = (await readdir(directory))
@@ -117,7 +143,17 @@ async function inspectCalibration(directory: string, identity: Identity, maxAgeH
     .toString()
     .trim()
     .split('\n')
-    .map((line) => JSON.parse(line) as ProviderCall);
+    .map((line): unknown => JSON.parse(line))
+    .filter(
+      (record) =>
+        !(
+          record &&
+          typeof record === 'object' &&
+          'kind' in record &&
+          record.kind === 'voice_dispatch'
+        ),
+    )
+    .map((record) => callSchema.parse(record));
   const calls = [...new Map(snapshots.map((call) => [call.id, call])).values()]
     .filter((call) => call.kind === 'judge')
     .sort((a, b) => a.startedAt - b.startedAt)

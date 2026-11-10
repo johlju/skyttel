@@ -118,6 +118,49 @@ test('complete calibration is reusable with provenance and no new cost', {
   ).rejects.toThrow('evaluation_judge_calibration_changed');
 });
 
+test('non-call voice dispatch records do not invalidate complete calibration', {
+  tags: ['technical'],
+}, async () => {
+  const { directory, calls } = await fixture();
+  await writeFile(
+    join(directory, 'private-calls.jsonl.gz'),
+    gzipSync(
+      [...calls, { kind: 'voice_dispatch', at: Date.now() }]
+        .map((call) => JSON.stringify(call))
+        .join('\n'),
+    ),
+  );
+  const reference = await prepareJudgeCalibration(directory, identity);
+  expect((await reuseJudgeCalibration(reference, identity)).controls).toBe(68);
+});
+
+test.each(['gzip', 'json', 'null', 'request', 'id', 'commit'])(
+  'malformed %s evidence fails with the calibration error before reuse',
+  { tags: ['technical'] },
+  async (kind) => {
+    const { directory, calls, manifest } = await fixture();
+    let capture = calls.map((call) => JSON.stringify(call)).join('\n');
+    if (kind === 'json') capture = '{';
+    if (kind === 'null') capture = `null\n${capture}`;
+    if (kind === 'request' || kind === 'id') {
+      const first = JSON.parse(JSON.stringify(calls[0]));
+      delete first[kind];
+      capture = [first, ...calls.slice(1)].map((call) => JSON.stringify(call)).join('\n');
+    }
+    if (kind === 'commit') {
+      manifest.data.commit = '0'.repeat(40);
+      await writeFile(join(directory, '0001-manifest.json'), JSON.stringify(manifest));
+    }
+    await writeFile(
+      join(directory, 'private-calls.jsonl.gz'),
+      kind === 'gzip' ? 'invalid' : gzipSync(capture),
+    );
+    await expect(prepareJudgeCalibration(directory, identity)).rejects.toThrow(
+      'evaluation_judge_calibration_invalid',
+    );
+  },
+);
+
 test('dispatch rechecks changed evidence and elapsed freshness after preparation', {
   tags: ['technical'],
 }, async () => {
