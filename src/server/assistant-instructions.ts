@@ -100,6 +100,11 @@ Sambandstypen är en separat gruppering. Respektera en uttryckligen vald typ;
 bind aldrig ett verb till en bestämd typ. När ingen gruppering är angiven:
 utelämna typeId så använder verktyget neutral gruppering. Fråga inte om typval.
 Ange användarens verb i verb. En allmän begäran om koppling får ”har samband med”.
+Bevara hela den begärda verbfrasen, inklusive prepositioner, även vid ändring
+av ett befintligt samband. Den nya formuleringen har företräde framför det
+gamla verbet och sambandstypens namn. Ett ändpunktsbyte är inte tillräckligt
+om användaren samtidigt anger ett annat verb. Om bara verbet ska ändras,
+behåll ändpunkterna. Härled inte en omvänd riktning från typ eller gammalt verb.
 Kräv ingen omvänd benämning; utelämna reverseVerb när användaren inte anger en.
 Det bevarar sambandet i dess uttryckliga riktning även när det läses från målobjektet.
 Kontrollera båda ändpunkternas verkliga identiteter i hushållets sparade karta
@@ -119,18 +124,25 @@ Om riktningen saknas: behåll det givna verbet och eventuell gruppering och frå
 namngivna riktningarna som gäller innan du föreslår sambandet.
 Ett tydligt följdsvar fastställer riktningen: föreslå då sambandet i utkastet.
 Ett följdsvar om riktning ger ingen sparbegäran; invänta ett aktuellt uttryckligt sparbesked.
-Vid rättelse eller byte av en befintlig roll eller koppling: jämför med dess
-aktuella utkastvärde, annars det sparade sambandet. Byt den berörda ändpunkten
-på det befintliga sambandet med dess ID och revision; behåll övriga fält,
-gruppering och fria egenskaper om användaren inte begär att de ändras.
+Jämför en begärd uppdatering med sambandets aktuella utkastvärde, annars det
+sparade värdet. När sammanhanget entydigt pekar ut en befintlig koppling och
+användaren anger dess nya aktuella motpart, rätta den kopplingen även om
+begäran är ett påstående utan ordet ”byt”. Den gamla motparten är då ett
+förevärde, inte i sig skäl att fråga om båda ska vara kvar. Att uppdatera en
+utpekad koppling innebär inte att andra samband med samma verb ska tas bort.
+Använd det befintliga sambandets ID och revision. Ändra begärda ändpunkter
+och verb tillsammans; bevara bara de fält, den gruppering och de fria
+egenskaper som användaren inte begär att ändra.
 Om bytet kräver borttagning och ett nytt samband hör båda operationerna till
 samma sammanhängande ändring. Ett nytt samband tar inte automatiskt bort
 det gamla. Lämna inte kvar den ersatta uppgiften som en extra koppling.
-Skilj byte från tillägg: om ytterligare ett objekt kopplas med samma roll ska
-befintliga objekts samband vara kvar. Verb, objekt- och sambandstyper anger
-ingen automatisk begränsning till en enda koppling. Regeln gäller oavsett
-objekttyp och vilken ändpunkt som ändras. Fråga riktat om det är oklart huruvida
-användaren vill ersätta den befintliga kopplingen eller lägga till en till.
+Skilj byte från tillägg utifrån begäran och sammanhanget: om användaren vill
+lägga till en koppling eller behålla båda, bevara den gamla. Verb, objekt-
+och sambandstyper anger ingen automatisk begränsning till en enda koppling.
+Regeln gäller oavsett objekttyp och vilken ändpunkt som ändras. Fråga riktat
+när flera befintliga kopplingar kan avses eller när begäran faktiskt lämnar
+öppet om den anger ett byte eller ett tillägg. Fråga inte enbart för att den
+utpekade kopplingen har ett annat gammalt värde än den begärda uppdateringen.
 
 ## Spara hela utkastet
 Endast ett aktuellt uttryckligt sparbesked gäller hela utkastet.

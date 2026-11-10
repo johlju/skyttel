@@ -1733,170 +1733,212 @@ test.each([
   },
 );
 
-test.each(['update', 'replace', 'incomplete', 'add'] as const)(
-  'a relationship endpoint change preserves the saved map and unrelated draft work: %s',
-  async (mode) => {
-    let connection: {
-      typeId: string;
-      sourceId: string;
-      targetId: string;
-      verb: string;
-      properties: { id: string; label: string; kind: 'text'; value: string }[];
-    };
-    const phrase =
-      mode === 'add'
-        ? 'Reservplattformen försörjer också Rapportflödet. Behåll Nordverks samband. Spara inte.'
-        : 'Byt från Nordverk till Reservplattformen i sambandet som försörjer Rapportflödet. Behåll övriga uppgifter. Spara inte.';
-    const model = textModel(
-      (request) => {
-        const current = JSON.parse(
-          String(request.input.findLast((item) => item.role === 'user')?.content),
-        );
-        return [
-          modelTool('submit_changes', {
-            version: current.draft.version,
-            contentVersion: current.draft.contentVersion,
-            completion: 'draft',
-            operations: [
-              ...(mode === 'replace'
-                ? [
-                    {
-                      name: 'propose_relationship',
-                      arguments: { id: 'connection', baseRevision: 1, value: null },
+for (const endpoint of ['source', 'target'] as const) {
+  test.each(['update', 'replace', 'incomplete', 'add', 'wrong-verb', 'verb-only'] as const)(
+    `relationship ${endpoint} edits preserve requested wording and unrelated work: %s`,
+    async (mode) => {
+      let connection: {
+        typeId: string;
+        sourceId: string;
+        targetId: string;
+        verb: string;
+        properties: { id: string; label: string; kind: 'text'; value: string }[];
+      };
+      const requested = {
+        sourceId:
+          endpoint === 'target' ? 'service' : mode === 'verb-only' ? 'supplier' : 'platform',
+        targetId:
+          endpoint === 'source' ? 'service' : mode === 'verb-only' ? 'supplier' : 'platform',
+        verb: endpoint === 'source' ? 'levererar till' : 'hämtar från',
+      };
+      const phrase =
+        mode === 'verb-only'
+          ? `Ändra bara verbet på Nordverks samband med Rapportflödet till ”${requested.verb}”. Spara inte.`
+          : `${
+              endpoint === 'source'
+                ? 'Reservplattformen levererar till Rapportflödet.'
+                : 'Rapportflödet hämtar från Reservplattformen.'
+            } ${
+              mode === 'add'
+                ? 'Lägg till den kopplingen och behåll Nordverks koppling.'
+                : 'Det är den aktuella uppgiften för kopplingen som nu går via Nordverk.'
+            } Behåll övriga uppgifter. Spara inte.`;
+      const updatesExisting = ['update', 'verb-only', 'wrong-verb'].includes(mode);
+      const model = textModel(
+        (request) => {
+          const current = JSON.parse(
+            String(request.input.findLast((item) => item.role === 'user')?.content),
+          );
+          return [
+            modelTool('submit_changes', {
+              version: current.draft.version,
+              contentVersion: current.draft.contentVersion,
+              completion: 'draft',
+              operations: [
+                ...(mode === 'replace'
+                  ? [
+                      {
+                        name: 'propose_relationship',
+                        arguments: { id: 'connection', baseRevision: 1, value: null },
+                      },
+                    ]
+                  : []),
+                {
+                  name: 'propose_relationship',
+                  arguments: {
+                    id: updatesExisting ? 'connection' : 'new-connection',
+                    baseRevision: updatesExisting ? 1 : null,
+                    typeRevision: 1,
+                    value: {
+                      ...connection,
+                      ...requested,
+                      ...(mode === 'wrong-verb' ? { verb: connection.verb } : {}),
                     },
-                  ]
-                : []),
-              {
-                name: 'propose_relationship',
-                arguments: {
-                  id: mode === 'update' ? 'connection' : 'new-connection',
-                  baseRevision: mode === 'update' ? 1 : null,
-                  typeRevision: 1,
-                  value: { ...connection, sourceId: 'platform' },
+                  },
                 },
-              },
-            ],
-          }),
-        ];
-      },
-      (request) => {
-        if (request.instructions.startsWith('SKYTTEL_TURN_SCOPE'))
+              ],
+            }),
+          ];
+        },
+        (request) => {
+          if (request.instructions.startsWith('SKYTTEL_TURN_SCOPE'))
+            return [
+              modelMessage(
+                JSON.stringify({ mode: 'work', request: phrase, responseRequired: false }),
+              ),
+            ];
+          const { authority, untrusted } = JSON.parse(String(request.input[0].content));
+          expect(authority.current).toBe(phrase);
+          expect(untrusted.data.map.relationships).toEqual(
+            expect.arrayContaining([expect.objectContaining({ id: 'connection', ...connection })]),
+          );
+          expect(untrusted.data.draft.changes).toEqual(
+            expect.arrayContaining([expect.objectContaining({ id: 'earlier' })]),
+          );
+          expect(untrusted.operations.at(-1).arguments.value).toEqual({
+            ...connection,
+            ...requested,
+            ...(mode === 'wrong-verb' ? { verb: connection.verb } : {}),
+          });
+          // Control the provider verdict, not its semantic reasoning. Verify
+          // that the checker receives the original requested wording and the
+          // actual old/proposed endpoints and verb, then enforce its decision.
           return [
             modelMessage(
-              JSON.stringify({ mode: 'work', request: phrase, responseRequired: false }),
+              JSON.stringify(
+                mode === 'incomplete'
+                  ? { decision: 'incomplete' }
+                  : mode === 'wrong-verb'
+                    ? { decision: 'deny', operation: 0 }
+                    : { decision: 'allow', complete: true, fulfillsRequest: true },
+              ),
             ),
           ];
-        const { authority, untrusted } = JSON.parse(String(request.input[0].content));
-        expect(authority.current).toBe(phrase);
-        expect(untrusted.data.map.relationships).toEqual(
-          expect.arrayContaining([expect.objectContaining({ id: 'connection', ...connection })]),
-        );
-        expect(untrusted.data.draft.changes).toEqual(
-          expect.arrayContaining([expect.objectContaining({ id: 'earlier' })]),
-        );
-        // Control the independent provider verdict, not its semantic reasoning.
-        // The captured paid failure supplies the incomplete decision; this
-        // checks that the server rejects it without altering earlier work.
-        return [
-          modelMessage(
-            JSON.stringify(
-              mode === 'incomplete'
-                ? { decision: 'incomplete' }
-                : { decision: 'allow', complete: true, fulfillsRequest: true },
-            ),
-          ),
-        ];
-      },
-    );
-    await setup(model.provider);
-    const mapPath = path.replace('/text-assistant', '/map');
-    for (const [id, name, kind] of [
-      ['supplier', 'Nordverk', 'Företag'],
-      ['platform', 'Reservplattformen', 'Tjänst'],
-      ['service', 'Rapportflödet', 'Tjänst'],
-    ]) {
-      const state = await (await browser.get(mapPath)).json();
-      const response = await browser.post(`${mapPath}/draft`, {
+        },
+      );
+      await setup(model.provider);
+      const mapPath = path.replace('/text-assistant', '/map');
+      for (const [id, name, kind] of [
+        ['supplier', 'Nordverk', 'Företag'],
+        ['platform', 'Reservplattformen', 'Tjänst'],
+        ['service', 'Rapportflödet', 'Tjänst'],
+      ]) {
+        const state = await (await browser.get(mapPath)).json();
+        const response = await browser.post(`${mapPath}/draft`, {
+          headers: { origin: app.origin },
+          data: {
+            version: state.draft.version,
+            contentVersion: state.contentVersion,
+            id,
+            baseRevision: null,
+            value: {
+              name,
+              typeId: state.types.find((type: { name: string }) => type.name === kind).id,
+            },
+          },
+        });
+        expect(response.status(), await response.text()).toBe(200);
+      }
+      let map = await (await browser.get(mapPath)).json();
+      connection = {
+        typeId: map.relationshipTypes.find((type: { name: string }) => type.name === 'Använder').id,
+        sourceId: endpoint === 'source' ? 'supplier' : 'service',
+        targetId: endpoint === 'source' ? 'service' : 'supplier',
+        verb: endpoint === 'source' ? 'levererar åt' : 'hämtar via',
+        properties: [{ id: 'note', label: 'Anmärkning', kind: 'text', value: 'Varje månad' }],
+      };
+      const unrelated = { ...connection, sourceId: 'platform', targetId: 'supplier' };
+      for (const [id, value] of [
+        ['connection', connection],
+        ['unrelated-connection', unrelated],
+      ] as const) {
+        map = await (await browser.get(mapPath)).json();
+        const proposed = await browser.post(`${mapPath}/relationship`, {
+          headers: { origin: app.origin },
+          data: {
+            version: map.draft.version,
+            contentVersion: map.contentVersion,
+            id,
+            baseRevision: null,
+            value,
+          },
+        });
+        expect(proposed.status(), await proposed.text()).toBe(200);
+      }
+      map = await (await browser.get(mapPath)).json();
+      const saved = await browser.post(`${mapPath}/save`, {
         headers: { origin: app.origin },
         data: {
-          version: state.draft.version,
-          contentVersion: state.contentVersion,
-          id,
-          baseRevision: null,
-          value: {
-            name,
-            typeId: state.types.find((type: { name: string }) => type.name === kind).id,
-          },
+          version: map.draft.version,
+          contentVersion: map.contentVersion,
+          operationId: 'seed-connection',
         },
       });
-      expect(response.status(), await response.text()).toBe(200);
-    }
-    let map = await (await browser.get(mapPath)).json();
-    connection = {
-      typeId: map.relationshipTypes.find((type: { name: string }) => type.name === 'Använder').id,
-      sourceId: 'supplier',
-      targetId: 'service',
-      verb: 'försörjer',
-      properties: [{ id: 'note', label: 'Anmärkning', kind: 'text', value: 'Varje månad' }],
-    };
-    const proposed = await browser.post(`${mapPath}/relationship`, {
-      headers: { origin: app.origin },
-      data: {
-        version: map.draft.version,
-        contentVersion: map.contentVersion,
-        id: 'connection',
-        baseRevision: null,
-        value: connection,
-      },
-    });
-    expect(proposed.status(), await proposed.text()).toBe(200);
-    map = await (await browser.get(mapPath)).json();
-    const saved = await browser.post(`${mapPath}/save`, {
-      headers: { origin: app.origin },
-      data: {
-        version: map.draft.version,
-        contentVersion: map.contentVersion,
-        operationId: 'seed-connection',
-      },
-    });
-    expect(saved.status(), await saved.text()).toBe(200);
-    await webProposal('Tidigare förslag', 'earlier');
-    const before = await start();
-    const result = await message(before, phrase);
-    expect(result.receipt).toBeUndefined();
-    expect(result.review.changes).toEqual(before.review.changes);
-    expect(model.requests).toHaveLength(1);
-    if (mode === 'incomplete') {
-      expect(result.error).toBe('assistant_batch_incomplete');
-      expect(result.review).toEqual(before.review);
-    } else {
-      expect(result.error).toBeUndefined();
-      expect(result.review.relationships).toHaveLength(mode === 'replace' ? 2 : 1);
-      expect(result.review.relationships).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            id: mode === 'update' ? 'connection' : 'new-connection',
-            after: { ...connection, sourceId: 'platform' },
-          }),
-        ]),
-      );
-      if (mode === 'replace')
+      expect(saved.status(), await saved.text()).toBe(200);
+      await webProposal('Tidigare förslag', 'earlier');
+      const before = await start();
+      const result = await message(before, phrase);
+      expect(result.receipt).toBeUndefined();
+      expect(result.review.changes).toEqual(before.review.changes);
+      expect(model.requests).toHaveLength(1);
+      if (mode === 'incomplete' || mode === 'wrong-verb') {
+        expect(result.error).toBe(
+          mode === 'incomplete' ? 'assistant_batch_incomplete' : 'assistant_action_out_of_scope',
+        );
+        expect(result.review).toEqual(before.review);
+      } else {
+        expect(result.error).toBeUndefined();
+        expect(result.review.relationships).toHaveLength(mode === 'replace' ? 2 : 1);
         expect(result.review.relationships).toEqual(
           expect.arrayContaining([
             expect.objectContaining({
-              id: 'connection',
-              before: expect.objectContaining(connection),
-              after: null,
+              id: updatesExisting ? 'connection' : 'new-connection',
+              after: { ...connection, ...requested },
             }),
           ]),
         );
-    }
-    map = await (await browser.get(mapPath)).json();
-    expect(map.relationships).toEqual([
-      expect.objectContaining({ id: 'connection', ...connection }),
-    ]);
-  },
-);
+        if (mode === 'replace')
+          expect(result.review.relationships).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({
+                id: 'connection',
+                before: expect.objectContaining(connection),
+                after: null,
+              }),
+            ]),
+          );
+      }
+      map = await (await browser.get(mapPath)).json();
+      expect(map.relationships).toHaveLength(2);
+      expect(map.relationships).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: 'connection', ...connection }),
+          expect.objectContaining({ id: 'unrelated-connection', ...unrelated }),
+        ]),
+      );
+    },
+  );
+}
 
 test('a duplicate relationship addition cannot supply projected properties to a later proposal', async () => {
   let typeId = '';
