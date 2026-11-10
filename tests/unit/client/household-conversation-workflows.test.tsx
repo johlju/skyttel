@@ -450,8 +450,13 @@ test('a later work failure retains recovery controls behind an open blocked-acti
   );
   await userEvent.click(within(failure).getByRole('button', { name: /^Försök igen$/ }));
   await waitFor(() => expect(home.model.requests).toHaveLength(3));
-  const abandon = await screen.findByRole('button', { name: 'Avstå från det oavslutade arbetet' });
-  await waitFor(() => expect(abandon.hasAttribute('disabled')).toBe(false));
+  // Retry can replace the diagnostic and its controls. Query the current
+  // button on each attempt instead of waiting on a detached disabled button.
+  const abandon = await waitFor(() => {
+    const button = screen.getByRole('button', { name: 'Avstå från det oavslutade arbetet' });
+    expect(button.hasAttribute('disabled')).toBe(false);
+    return button;
+  });
   await userEvent.click(abandon);
   await waitFor(() => expect(screen.queryByRole('region', { name: 'Samtalsnotis' })).toBeNull());
   expect(document.activeElement).toBe(field);
