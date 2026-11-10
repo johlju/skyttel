@@ -118,6 +118,17 @@ Om riktningen saknas: behåll det givna verbet och eventuell gruppering och frå
 namngivna riktningarna som gäller innan du föreslår sambandet.
 Ett tydligt följdsvar fastställer riktningen: föreslå då sambandet i utkastet.
 Ett följdsvar om riktning ger ingen sparbegäran; invänta ett aktuellt uttryckligt sparbesked.
+Vid rättelse eller byte av en befintlig roll eller koppling: jämför med dess
+aktuella utkastvärde, annars det sparade sambandet. Byt den berörda ändpunkten
+på det befintliga sambandet med dess ID och revision; behåll övriga fält,
+gruppering och fria egenskaper om användaren inte begär att de ändras.
+Om bytet kräver borttagning och ett nytt samband hör båda operationerna till
+samma sammanhängande ändring. Ett nytt samband tar inte automatiskt bort
+det gamla. Lämna inte kvar den ersatta uppgiften som en extra koppling.
+Skilj byte från tillägg: om ytterligare en person får samma roll ska befintliga
+personers samband vara kvar. Verb och sambandstyper anger ingen automatisk
+begränsning till en enda person. Fråga riktat om det är oklart huruvida
+användaren vill ersätta den befintliga kopplingen eller lägga till en till.
 
 ## Spara hela utkastet
 Endast ett aktuellt uttryckligt sparbesked gäller hela utkastet.
@@ -197,7 +208,9 @@ Att ta bort ett enskilt förslag använder fortfarande discard_proposal.
 ## Ändringsbatch
 Använd submit_changes för en sammanhängande entydig del av ändringsuppdraget.
 Lägg beroende operationer i samma batch och i beroendeordning: ett nytt objekt
-och dess nödvändiga samband ska lyckas tillsammans. Hela batchen genomförs
+och dess nödvändiga samband ska lyckas tillsammans. Detsamma gäller borttagning
+och tillägg som tillsammans ersätter ett samband; skicka inte bara tillägget
+och lämna borttagningen till en senare batch. Hela batchen genomförs
 atomiskt eller lämnar utkastet oförändrat. Använd separata batcher för
 självständiga delar; tidigare slutförda batcher bevaras vid ett senare fel.
 Anropa inte flera enskilda ändringsverktyg i samma svar; använd submit_changes

@@ -1733,6 +1733,154 @@ test.each([
   },
 );
 
+test.each(['update', 'replace', 'incomplete', 'add'] as const)(
+  'a payer change preserves the saved map and unrelated draft work: %s',
+  async (mode) => {
+    let payer: {
+      typeId: string;
+      sourceId: string;
+      targetId: string;
+      verb: string;
+      properties: { id: string; label: string; kind: 'text'; value: string }[];
+    };
+    const phrase =
+      mode === 'add'
+        ? 'Lo betalar också Molnlagring Plus. Behåll Alex som betalare. Spara inte.'
+        : 'Byt betalare för Molnlagring Plus från Alex till Lo. Behåll övriga uppgifter. Spara inte.';
+    const model = textModel(
+      (request) => {
+        const current = JSON.parse(
+          String(request.input.findLast((item) => item.role === 'user')?.content),
+        );
+        return [
+          modelTool('submit_changes', {
+            version: current.draft.version,
+            contentVersion: current.draft.contentVersion,
+            completion: 'draft',
+            operations: [
+              ...(mode === 'replace'
+                ? [
+                    {
+                      name: 'propose_relationship',
+                      arguments: { id: 'payer', baseRevision: 1, value: null },
+                    },
+                  ]
+                : []),
+              {
+                name: 'propose_relationship',
+                arguments: {
+                  id: mode === 'update' ? 'payer' : 'new-payer',
+                  baseRevision: mode === 'update' ? 1 : null,
+                  typeRevision: 1,
+                  value: { ...payer, sourceId: 'lo' },
+                },
+              },
+            ],
+          }),
+        ];
+      },
+      (request) => {
+        if (request.instructions.startsWith('SKYTTEL_TURN_SCOPE'))
+          return [
+            modelMessage(
+              JSON.stringify({ mode: 'work', request: phrase, responseRequired: false }),
+            ),
+          ];
+        const { authority, untrusted } = JSON.parse(String(request.input[0].content));
+        expect(authority.current).toBe(phrase);
+        expect(untrusted.data.map.relationships).toEqual(
+          expect.arrayContaining([expect.objectContaining({ id: 'payer', ...payer })]),
+        );
+        expect(untrusted.data.draft.changes).toEqual(
+          expect.arrayContaining([expect.objectContaining({ id: 'earlier' })]),
+        );
+        // Control the independent provider verdict, not its semantic reasoning.
+        // The captured paid failure supplies the incomplete decision; this
+        // checks that the server rejects it without altering earlier work.
+        return [
+          modelMessage(
+            JSON.stringify(
+              mode === 'incomplete'
+                ? { decision: 'incomplete' }
+                : { decision: 'allow', complete: true, fulfillsRequest: true },
+            ),
+          ),
+        ];
+      },
+    );
+    await setup(model.provider);
+    for (const [id, name] of [
+      ['alex', 'Alex'],
+      ['lo', 'Lo'],
+      ['cloud', 'Molnlagring Plus'],
+    ])
+      await webProposal(name, id);
+    const mapPath = path.replace('/text-assistant', '/map');
+    let map = await (await browser.get(mapPath)).json();
+    payer = {
+      typeId: map.relationshipTypes.find((type: { name: string }) => type.name === 'Betalar').id,
+      sourceId: 'alex',
+      targetId: 'cloud',
+      verb: 'betalar',
+      properties: [{ id: 'note', label: 'Anmärkning', kind: 'text', value: 'Varje månad' }],
+    };
+    const proposed = await browser.post(`${mapPath}/relationship`, {
+      headers: { origin: app.origin },
+      data: {
+        version: map.draft.version,
+        contentVersion: map.contentVersion,
+        id: 'payer',
+        baseRevision: null,
+        value: payer,
+      },
+    });
+    expect(proposed.status(), await proposed.text()).toBe(200);
+    map = await (await browser.get(mapPath)).json();
+    const saved = await browser.post(`${mapPath}/save`, {
+      headers: { origin: app.origin },
+      data: {
+        version: map.draft.version,
+        contentVersion: map.contentVersion,
+        operationId: 'seed-payer',
+      },
+    });
+    expect(saved.status(), await saved.text()).toBe(200);
+    await webProposal('Tidigare förslag', 'earlier');
+    const before = await start();
+    const result = await message(before, phrase);
+    expect(result.receipt).toBeUndefined();
+    expect(result.review.changes).toEqual(before.review.changes);
+    expect(model.requests).toHaveLength(1);
+    if (mode === 'incomplete') {
+      expect(result.error).toBe('assistant_batch_incomplete');
+      expect(result.review).toEqual(before.review);
+    } else {
+      expect(result.error).toBeUndefined();
+      expect(result.review.relationships).toHaveLength(mode === 'replace' ? 2 : 1);
+      expect(result.review.relationships).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: mode === 'update' ? 'payer' : 'new-payer',
+            after: { ...payer, sourceId: 'lo' },
+          }),
+        ]),
+      );
+      if (mode === 'replace')
+        expect(result.review.relationships).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              id: 'payer',
+              before: expect.objectContaining(payer),
+              after: null,
+            }),
+          ]),
+        );
+    }
+    map = await (await browser.get(mapPath)).json();
+    expect(map.relationships).toEqual([expect.objectContaining({ id: 'payer', ...payer })]);
+  },
+);
+
 test('a duplicate relationship addition cannot supply projected properties to a later proposal', async () => {
   let typeId = '';
   const properties = [
