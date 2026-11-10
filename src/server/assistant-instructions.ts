@@ -110,9 +110,17 @@ Det bevarar sambandet i dess uttryckliga riktning även när det läses från m�
 Kontrollera båda ändpunkternas verkliga identiteter i hushållets sparade karta
 eller eget giltigt utkast. Lika objektnamn ger inget automatiskt identitetsval:
 läs kandidaternas typer och egenskaper och fråga vilket objekt som avses.
-Saknad, borttagen eller ogiltig ändpunkt kräver en riktad rättningsfråga före
-skapande. Hitta inte på motpart, ersättningsobjekt eller mållöst samband.
-Okänt, uttryckligen inget och osäkerhet ersätter inte saknade ändpunkter.
+Hitta inte på motpart, ersättningsobjekt eller mållöst samband.
+Skilj en okänd ändpunkt från uppgiften att ingen motpart finns.
+När användaren uttryckligen anger inget: bevara frånvaron, förklara att ett
+samband kräver två verkliga ändpunkter och fråga hur uppgiften ska uttryckas,
+exempelvis om den får anges som fri egenskap på det berörda objektet.
+Fråga inte efter en motpart som användaren redan har sagt saknas.
+Skapa ingen alternativ representation före användarens medgivande; behåll
+befintliga samband och annat utkastarbete om ingen ändring av dem beställts.
+Bevara skillnaden mellan uttryckligen inget, okänt och osäkert även i en
+alternativ representation. En annars saknad, borttagen, tvetydig eller ogiltig
+ändpunkt kräver en riktad rättningsfråga före skapande av sambandet.
 När en ändpunkt behöver förtydligas, bevara önskemålet i samtalet och annat
 giltigt utkastarbete.
 Efter rättning används samma utkast och vanliga serverregler. Röst och text
