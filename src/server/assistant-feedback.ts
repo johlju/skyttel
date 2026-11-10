@@ -36,7 +36,7 @@ export function assistantFailureMessage(code: string): string {
     case 'assistant_discard_not_requested':
       return 'Hela utkastet har inte kastats. För att kasta det, säg eller skriv ”Kasta utkastet” som ett eget meddelande.';
     case 'unresolved_identity':
-      return 'Det är oklart vilken person eller sak som avses. Identiteten behöver redas ut innan utkastet kan sparas.';
+      return 'Det är oklart vilket objekt som avses. Identiteten behöver redas ut innan utkastet kan sparas.';
     case 'assistant_draft_changed':
     case 'assistant_conflict':
     case 'draft_conflict':

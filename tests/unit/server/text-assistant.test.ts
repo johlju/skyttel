@@ -1734,9 +1734,9 @@ test.each([
 );
 
 test.each(['update', 'replace', 'incomplete', 'add'] as const)(
-  'a payer change preserves the saved map and unrelated draft work: %s',
+  'a relationship endpoint change preserves the saved map and unrelated draft work: %s',
   async (mode) => {
-    let payer: {
+    let connection: {
       typeId: string;
       sourceId: string;
       targetId: string;
@@ -1745,8 +1745,8 @@ test.each(['update', 'replace', 'incomplete', 'add'] as const)(
     };
     const phrase =
       mode === 'add'
-        ? 'Lo betalar också Molnlagring Plus. Behåll Alex som betalare. Spara inte.'
-        : 'Byt betalare för Molnlagring Plus från Alex till Lo. Behåll övriga uppgifter. Spara inte.';
+        ? 'Reservplattformen försörjer också Rapportflödet. Behåll Nordverks samband. Spara inte.'
+        : 'Byt från Nordverk till Reservplattformen i sambandet som försörjer Rapportflödet. Behåll övriga uppgifter. Spara inte.';
     const model = textModel(
       (request) => {
         const current = JSON.parse(
@@ -1762,17 +1762,17 @@ test.each(['update', 'replace', 'incomplete', 'add'] as const)(
                 ? [
                     {
                       name: 'propose_relationship',
-                      arguments: { id: 'payer', baseRevision: 1, value: null },
+                      arguments: { id: 'connection', baseRevision: 1, value: null },
                     },
                   ]
                 : []),
               {
                 name: 'propose_relationship',
                 arguments: {
-                  id: mode === 'update' ? 'payer' : 'new-payer',
+                  id: mode === 'update' ? 'connection' : 'new-connection',
                   baseRevision: mode === 'update' ? 1 : null,
                   typeRevision: 1,
-                  value: { ...payer, sourceId: 'lo' },
+                  value: { ...connection, sourceId: 'platform' },
                 },
               },
             ],
@@ -1789,7 +1789,7 @@ test.each(['update', 'replace', 'incomplete', 'add'] as const)(
         const { authority, untrusted } = JSON.parse(String(request.input[0].content));
         expect(authority.current).toBe(phrase);
         expect(untrusted.data.map.relationships).toEqual(
-          expect.arrayContaining([expect.objectContaining({ id: 'payer', ...payer })]),
+          expect.arrayContaining([expect.objectContaining({ id: 'connection', ...connection })]),
         );
         expect(untrusted.data.draft.changes).toEqual(
           expect.arrayContaining([expect.objectContaining({ id: 'earlier' })]),
@@ -1809,19 +1809,34 @@ test.each(['update', 'replace', 'incomplete', 'add'] as const)(
       },
     );
     await setup(model.provider);
-    for (const [id, name] of [
-      ['alex', 'Alex'],
-      ['lo', 'Lo'],
-      ['cloud', 'Molnlagring Plus'],
-    ])
-      await webProposal(name, id);
     const mapPath = path.replace('/text-assistant', '/map');
+    for (const [id, name, kind] of [
+      ['supplier', 'Nordverk', 'Företag'],
+      ['platform', 'Reservplattformen', 'Tjänst'],
+      ['service', 'Rapportflödet', 'Tjänst'],
+    ]) {
+      const state = await (await browser.get(mapPath)).json();
+      const response = await browser.post(`${mapPath}/draft`, {
+        headers: { origin: app.origin },
+        data: {
+          version: state.draft.version,
+          contentVersion: state.contentVersion,
+          id,
+          baseRevision: null,
+          value: {
+            name,
+            typeId: state.types.find((type: { name: string }) => type.name === kind).id,
+          },
+        },
+      });
+      expect(response.status(), await response.text()).toBe(200);
+    }
     let map = await (await browser.get(mapPath)).json();
-    payer = {
-      typeId: map.relationshipTypes.find((type: { name: string }) => type.name === 'Betalar').id,
-      sourceId: 'alex',
-      targetId: 'cloud',
-      verb: 'betalar',
+    connection = {
+      typeId: map.relationshipTypes.find((type: { name: string }) => type.name === 'Använder').id,
+      sourceId: 'supplier',
+      targetId: 'service',
+      verb: 'försörjer',
       properties: [{ id: 'note', label: 'Anmärkning', kind: 'text', value: 'Varje månad' }],
     };
     const proposed = await browser.post(`${mapPath}/relationship`, {
@@ -1829,9 +1844,9 @@ test.each(['update', 'replace', 'incomplete', 'add'] as const)(
       data: {
         version: map.draft.version,
         contentVersion: map.contentVersion,
-        id: 'payer',
+        id: 'connection',
         baseRevision: null,
-        value: payer,
+        value: connection,
       },
     });
     expect(proposed.status(), await proposed.text()).toBe(200);
@@ -1841,7 +1856,7 @@ test.each(['update', 'replace', 'incomplete', 'add'] as const)(
       data: {
         version: map.draft.version,
         contentVersion: map.contentVersion,
-        operationId: 'seed-payer',
+        operationId: 'seed-connection',
       },
     });
     expect(saved.status(), await saved.text()).toBe(200);
@@ -1860,8 +1875,8 @@ test.each(['update', 'replace', 'incomplete', 'add'] as const)(
       expect(result.review.relationships).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            id: mode === 'update' ? 'payer' : 'new-payer',
-            after: { ...payer, sourceId: 'lo' },
+            id: mode === 'update' ? 'connection' : 'new-connection',
+            after: { ...connection, sourceId: 'platform' },
           }),
         ]),
       );
@@ -1869,15 +1884,17 @@ test.each(['update', 'replace', 'incomplete', 'add'] as const)(
         expect(result.review.relationships).toEqual(
           expect.arrayContaining([
             expect.objectContaining({
-              id: 'payer',
-              before: expect.objectContaining(payer),
+              id: 'connection',
+              before: expect.objectContaining(connection),
               after: null,
             }),
           ]),
         );
     }
     map = await (await browser.get(mapPath)).json();
-    expect(map.relationships).toEqual([expect.objectContaining({ id: 'payer', ...payer })]);
+    expect(map.relationships).toEqual([
+      expect.objectContaining({ id: 'connection', ...connection }),
+    ]);
   },
 );
 
