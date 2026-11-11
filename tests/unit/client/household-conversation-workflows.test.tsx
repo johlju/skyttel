@@ -26,7 +26,7 @@ import {
   startConversationWithVoice,
 } from '../../support/conversation-dom.js';
 import { createInstallation } from '../../support/installation.js';
-import { liveProvider } from '../../support/live-provider.js';
+import { isVoiceAnswerRelease, liveProvider } from '../../support/live-provider.js';
 import { openDraftReview, openNewObjectForm } from '../../support/native-household-unit.js';
 import {
   lastToolResult,
@@ -672,9 +672,7 @@ test('a necessary question is retained across microphone OFF and text closure wi
     expect(screen.getByRole('log', { name: 'Samtalstext' }).textContent).toContain(question),
   );
   await waitFor(() =>
-    expect(home.live.sent.some(({ event }) => event.type === 'session.commentary.append')).toBe(
-      true,
-    ),
+    expect(home.live.sent.some(({ event }) => isVoiceAnswerRelease(event))).toBe(true),
   );
   act(() =>
     home.media.peers[0].channel.emit({

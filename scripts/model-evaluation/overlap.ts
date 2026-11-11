@@ -410,7 +410,13 @@ export function compareOverlap(
             version.repetitions.some((repetition) => !repetition.valid) ||
             version.timing?.relativeRange == null ||
             version.timing.relativeRange > plan.maximumRelativeRange ||
-            Object.values(version.costs).some((cost) => cost === null),
+            // Optional estimates do not invalidate known settled charges.
+            [
+              version.costs.backend,
+              version.costs.judge,
+              version.costs.voice,
+              version.costs.recognition,
+            ].some((cost) => cost === null),
         ),
     );
   return {
