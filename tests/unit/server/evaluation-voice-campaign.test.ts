@@ -5,6 +5,31 @@ import audioManifest from '../../../scripts/model-evaluation/audio/manifest.json
 import { judgeCalibrationIdentity } from '../../../scripts/model-evaluation/judge-calibration.js';
 import { prepareVoiceCampaign } from '../../../scripts/model-evaluation/voice-campaign.js';
 
+test('explicit estimate preparation exposes uncertain billing without inventing a quantum or granting payment', {
+  tags: ['technical'],
+}, async () => {
+  const campaign = await prepareVoiceCampaign({
+    evaluatorCommit: 'a'.repeat(40),
+    voiceCostAccounting: 'usage-estimate',
+  });
+  expect(campaign.authorized).toBe(false);
+  expect(campaign.blockers).not.toContain('voice_billing_semantics_unresolved');
+  expect(campaign.costs.accounting).toBe('usage-estimate');
+  for (const run of campaign.runs) {
+    expect(run.plan).toMatchObject({
+      authorized: false,
+      voiceCostAccounting: 'usage-estimate',
+      playbackAssessorProfile: { billingMode: 'usage-estimate', billingQuantumSeconds: null },
+      voiceProfile: { billingMode: 'usage-estimate' },
+    });
+    expect(
+      run.overlap.variants.every(
+        (variant) => variant.plan.voiceCostAccounting === 'usage-estimate',
+      ),
+    ).toBe(true);
+  }
+});
+
 test('local preparation evidence cannot grant payment or clear provider billing blockers', {
   tags: ['technical'],
 }, async () => {

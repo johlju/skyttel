@@ -20,7 +20,9 @@ import selection from './voice-campaign-selection.json' with { type: 'json' };
 export async function prepareVoiceCampaign(options: {
   evaluatorCommit: string;
   localVerification?: EvaluationPlan['localVerification'];
+  voiceCostAccounting?: 'usage-estimate';
 }) {
+  const estimated = options.voiceCostAccounting === 'usage-estimate';
   if (!/^[a-f0-9]{40}$/.test(options.evaluatorCommit))
     throw new Error('evaluation_campaign_evaluator_required');
   if (selection.referenceVoice !== 'marin')
@@ -112,7 +114,7 @@ export async function prepareVoiceCampaign(options: {
     judgeSha256: judgeCalibrationIdentity(judge),
     audio,
     blockers: [
-      'voice_billing_semantics_unresolved',
+      ...(!estimated ? ['voice_billing_semantics_unresolved'] : []),
       'live_context_capacity_unverified',
       'playback_assessor_threshold_calibration_required',
       ...(!locallyVerified ? ['local_verification_not_bound'] : []),
@@ -124,7 +126,10 @@ export async function prepareVoiceCampaign(options: {
     selection,
     runs: profiles.backendProfiles.map(({ id }) => {
       const backend = optimizationBackend(id);
-      const voice = optimizationVoice(id);
+      const voice = {
+        ...optimizationVoice(id),
+        ...(estimated ? { billingMode: 'usage-estimate' as const } : {}),
+      };
       const plan = {
         commit: options.evaluatorCommit,
         authorized: false,
@@ -132,7 +137,13 @@ export async function prepareVoiceCampaign(options: {
         textProfiles: [],
         backendProfiles: [backend],
         voiceProfile: voice,
-        playbackAssessorProfile: profiles.playbackAssessor,
+        playbackAssessorProfile: {
+          ...profiles.playbackAssessor,
+          ...(estimated
+            ? { billingMode: 'usage-estimate' as const, status: 'estimated_billing_unresolved' }
+            : {}),
+        },
+        ...(estimated ? { voiceCostAccounting: 'usage-estimate' as const } : {}),
         judgeProfile: judge,
         baselineProfiles: { voice: voice.id },
         referenceVoice,
@@ -160,6 +171,7 @@ export async function prepareVoiceCampaign(options: {
       };
     }),
     costs: {
+      accounting: estimated ? 'usage-estimate' : 'verified-only',
       estimatedTotalUsd: null,
       unknownUsage:
         'Retain full reservation and stop; no zero-cost substitution or automatic retry.',

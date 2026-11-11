@@ -75,6 +75,9 @@ export type EvaluationPlan = {
   judgeCalibration?: JudgeCalibrationReference;
   baselineProfiles: Partial<Record<'text' | 'voice', string>>;
   voice?: boolean;
+  /** Explicit user-approved departure from verified voice billing. Estimates
+   * remain separate from settled charges and retain their ledger holds. */
+  voiceCostAccounting?: 'usage-estimate';
   voiceProfile?: LiveEvaluationProfile;
   playbackAssessorProfile?: PlaybackAssessorProfile;
   referenceVoice?: ReferenceVoice;
@@ -118,6 +121,14 @@ export async function evaluateModels(
   if (new Set(plan.textProfiles).size !== plan.textProfiles.length)
     throw new Error('evaluation_duplicate_profiles');
   const selected = plan.textProfiles.length + (plan.voice ? 1 : 0);
+  const estimates = plan.voiceCostAccounting === 'usage-estimate';
+  if (
+    (estimates && !plan.voice) ||
+    ((plan.voiceProfile?.billingMode === 'usage-estimate' ||
+      plan.playbackAssessorProfile?.billingMode === 'usage-estimate') &&
+      !estimates)
+  )
+    throw new Error('evaluation_estimate_not_authorized');
   if (!selected) throw new Error('evaluation_models_required');
   if (selected !== 1) throw new Error('evaluation_one_model_per_issue');
   let repetitions = plan.repetitions ?? [1];
@@ -288,6 +299,7 @@ export async function evaluateModels(
     judgeSha256,
     repetitions,
     voice: plan.voice ?? false,
+    voiceCostAccounting: plan.voiceCostAccounting ?? 'verified-only',
     followUps: plan.followUps ?? false,
     referenceVoice: plan.referenceVoice ?? 'marin',
     audio: audioManifest,
@@ -306,7 +318,7 @@ export async function evaluateModels(
     : undefined;
   await mkdir(directory, { recursive: true });
   const db = new Database(join(directory, 'budget.sqlite'));
-  const budget = new EvaluationBudget(db, plan);
+  const budget = new EvaluationBudget(db, { ...plan, allowEstimates: estimates });
   const report = evaluationReporter(directory, plan.issue);
   const published: string[] = [];
   async function emit(...args: Parameters<typeof report>) {
@@ -464,7 +476,9 @@ export async function evaluateModels(
               : 'Text including counting.',
             playbackTranscriptionMaximumUsd: plan.voice ? null : 0,
             playbackReservation: plan.voice
-              ? 'Before every recognition call, reserve the actual captured WAV duration rounded by the verified billing quantum. A future aggregate voice estimate needs the observed output sample rate and per-scenario session limits; no missing cost is zero.'
+              ? estimates
+                ? 'Voice amounts are usage-based estimates, not settled charges. Transcription holds use a whole-minute allowance; Live estimates use max(15, final reported seconds). Unresolved billing retains holds; absent usage stops new calls.'
+                : 'Before every recognition call, reserve the actual captured WAV duration rounded by the verified billing quantum. A future aggregate voice estimate needs the observed output sample rate and per-scenario session limits; no missing cost is zero.'
               : undefined,
             textTechnicalMaximumUsd: plan.voice
               ? null
@@ -737,6 +751,7 @@ export async function evaluateModels(
             repetition,
             sessions: finalUsage,
             costUsd:
+              voiceProfile.billingMode !== 'usage-estimate' &&
               finalUsage.length &&
               finalUsage.every(
                 (usage) =>

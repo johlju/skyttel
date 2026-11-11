@@ -84,6 +84,36 @@ ranking or a general percentage improvement.
 
 ## Cost and execution gate
 
+### Explicit estimate mode
+
+The caller may prepare this campaign with
+`voiceCostAccounting: 'usage-estimate'` only when the user accepts estimated
+voice accounting for the selected test. This is an explicit departure from
+the verified-billing prerequisite, not verification of missing provider facts.
+The executable plan must carry the same option and explicit paid authorization.
+Default preparation and historical optimization plans retain their strict gate.
+
+In this mode, Whisper estimates use provider-reported duration at USD 0.006
+per minute. No billing quantum is invented. The reservation rounds the captured
+duration up to a whole minute as a planning allowance, not a provider rule.
+Live estimates use the greater of 15 seconds and final reported duration at
+USD 0.05 per minute. The 15-second allowance is not a claimed minimum charge
+or refund policy and is not added to longer sessions.
+
+The persistent ledger keeps `estimatedUsd` and `estimatedCharges` separate
+from `spentUsd`. Estimated charges retain their original reservation until
+reconciled; `reservedUsd` is not additional spending. Missing usage still
+stops new calls. Backend, summary and judgment charges continue to use their
+reported token usage and verified prices. Reports cannot rank exact costs
+while voice billing remains unresolved.
+
+The existing Live context value is an application configuration value, not
+a verified provider limit. These selected dialogs do not establish context
+capacity. The transcription confidence thresholds need controlled checks and
+an initial assessment of approved recordings before candidate execution.
+
+### Strict accounting
+
 A defensible total estimate is unavailable until billing semantics, selected
 audio and session assumptions are resolved. Unknown amounts are null, never
 zero. Per-call whole-context reservations are conservative holds, not expected
