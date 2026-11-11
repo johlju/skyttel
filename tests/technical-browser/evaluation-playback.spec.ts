@@ -9,7 +9,7 @@ import type { PlaybackRecording } from '../../scripts/model-evaluation/playback.
 import profiles from '../../scripts/model-evaluation/profiles.json' with { type: 'json' };
 import { verifiedProfile } from '../../scripts/model-evaluation/provider.js';
 import { runVoiceScenario } from '../../scripts/model-evaluation/voice-runner.js';
-import { renderedToneWindows } from '../support/evaluation-rendered-tone.js';
+import { renderedToneBoundary, renderedToneWindows } from '../support/evaluation-rendered-tone.js';
 import { evaluationVoiceApplication } from '../support/evaluation-voice-application.js';
 import { evaluationVoiceProvider } from '../support/evaluation-voice-provider.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
@@ -321,8 +321,8 @@ for (const mode of [
       const input = attempt.playback?.input;
       const elapsed = attempt.elapsedMs;
       const observed = attempt.observedEndMs;
-      const sentAt = live.finalAudioSentAt;
-      if (!input || elapsed === null || observed === undefined || sentAt === undefined)
+      const renderedToneAt = renderedToneBoundary(recordings, 880);
+      if (!input || elapsed === null || observed === undefined)
         throw new Error('Missing source/rendered completion evidence.');
       if (application)
         expect(result.attempts[0]).toMatchObject({
@@ -331,14 +331,16 @@ for (const mode of [
         });
       if (mode === 'assessment-tail') {
         expect(result.attempts[0].playback?.candidates.length).toBeGreaterThanOrEqual(2);
-        expect(elapsed).toBeGreaterThanOrEqual(sentAt - input.ended.upper);
+        expect(elapsed).toBeGreaterThanOrEqual(renderedToneAt - input.ended.upper);
       }
       if (mode === 'final-judge-tail') {
         expect(finalJudgePerturbed).toBe(true);
         expect(lateTail).toBeDefined();
         expect(attempt.playback?.candidates.length).toBeGreaterThanOrEqual(2);
         expect(recordings.some((recording) => hasTone(recording, 1100))).toBe(true);
-        expect(elapsed).toBeGreaterThanOrEqual((lateTail?.endedAt ?? Infinity) - input.ended.upper);
+        expect(elapsed).toBeGreaterThanOrEqual(
+          renderedToneBoundary(recordings, 1100) - input.ended.upper,
+        );
         const finalCandidate = attempt.playback?.candidates.at(-1);
         expect(finalCandidate?.requiredResponse?.[0].outcome).toBe('pass');
         expect(finalCandidate?.recordingSha256).toBe(attempt.playback?.recordingSha256);
@@ -348,21 +350,23 @@ for (const mode of [
         const useful = attempt.timing?.firstUsefulMs;
         expect(useful).not.toBeNull();
         expect(useful).toBeGreaterThan(0);
-        expect(useful).toBeLessThan(sentAt - input.ended.upper - 1000);
+        expect(useful).toBeLessThan(renderedToneAt - input.ended.upper - 1000);
         expect(attempt.timing?.firstVerifiedUsefulMs).toBe(useful);
         expect(attempt.timing?.successfulCompletionMs).toBeGreaterThan(useful ?? Infinity);
         expect(attempt.playbackAssessmentElapsedMs).toBeGreaterThanOrEqual(600);
       }
       if (mode === 'useful-uncertain' || mode === 'useful-irrelevant') {
         expect(attempt.timing?.firstVerifiedUsefulMs).toBeGreaterThanOrEqual(
-          sentAt - input.ended.upper,
+          renderedToneAt - input.ended.upper,
         );
         if (mode === 'useful-uncertain') expect(attempt.timing?.firstUsefulMs).toBeNull();
         else expect(attempt.timing?.firstUsefulMs).toBe(attempt.timing?.firstVerifiedUsefulMs);
       }
       if (mode === 'delayed') {
         expect(attempt.playback?.candidates[0].usefulContent?.[0].outcome).toBe('fail');
-        expect(attempt.timing?.firstUsefulMs).toBeGreaterThanOrEqual(sentAt - input.ended.upper);
+        expect(attempt.timing?.firstUsefulMs).toBeGreaterThanOrEqual(
+          renderedToneAt - input.ended.upper,
+        );
       }
       expect(
         model.requests.every(

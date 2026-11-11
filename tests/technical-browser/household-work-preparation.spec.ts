@@ -57,6 +57,7 @@ test('literal household preparation completes the family tools on seeded public 
   const events: Event[] = [];
   let buffer = '';
   let diagnostics = '';
+  const diagnosticTimeline: { at: number; command?: string; stderr?: string }[] = [];
   child.stdout.on('data', (chunk) => {
     buffer += String(chunk);
     const lines = buffer.split('\n');
@@ -65,10 +66,14 @@ test('literal household preparation completes the family tools on seeded public 
   });
   child.stderr.on('data', (chunk) => {
     diagnostics += String(chunk);
+    diagnosticTimeline.push({ at: Date.now(), stderr: String(chunk) });
   });
   const memberContext = await createPreparedContext(browser);
   const member = await memberContext.newPage();
-  const command = (line: string) => child.stdin.write(`${line}\n`);
+  const command = (line: string) => {
+    diagnosticTimeline.push({ at: Date.now(), command: line });
+    child.stdin.write(`${line}\n`);
+  };
   async function held(after: number) {
     await expect.poll(() => events.slice(after).some((item) => item.event === 'held')).toBe(true);
     const result = events.slice(after).find((item) => item.event === 'held');
@@ -342,6 +347,10 @@ test('literal household preparation completes the family tools on seeded public 
     await expect.poll(() => child.exitCode).toBe(0);
     await test.info().attach('literal-household-preparation-events', {
       body: JSON.stringify(events, null, 2),
+      contentType: 'application/json',
+    });
+    await test.info().attach('household-preparation-diagnostic-timeline', {
+      body: JSON.stringify(diagnosticTimeline, null, 2),
       contentType: 'application/json',
     });
     await memberContext.close();

@@ -3,13 +3,14 @@ import { writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import catalog from '../../scripts/model-evaluation/catalog.json' with { type: 'json' };
 import type { LiveEvaluationProfile } from '../../scripts/model-evaluation/live.js';
+import type { PlaybackRecording } from '../../scripts/model-evaluation/playback.js';
 import profiles from '../../scripts/model-evaluation/profiles.json' with { type: 'json' };
 import { verifiedProfile } from '../../scripts/model-evaluation/provider.js';
 import { summarizeProfile } from '../../scripts/model-evaluation/report.js';
 import type { Catalog } from '../../scripts/model-evaluation/types.js';
 import { runVoiceScenario } from '../../scripts/model-evaluation/voice-runner.js';
 import type { MapState } from '../../src/shared/map.js';
-import { renderedToneWindows } from '../support/evaluation-rendered-tone.js';
+import { renderedToneBoundary, renderedToneWindows } from '../support/evaluation-rendered-tone.js';
 import { evaluationVoiceProvider } from '../support/evaluation-voice-provider.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
@@ -39,6 +40,7 @@ for (const mode of [
     let pollRequest: Request | undefined;
     let requests = 0;
     let recognitions = 0;
+    const recordings: PlaybackRecording[] = [];
     let inputs = 0;
     let selectionRequested = false;
     let heldUntil = 0;
@@ -158,6 +160,9 @@ for (const mode of [
           profile: liveProfile.id,
           repetition: 1,
           maximumSeconds: 34,
+          recordPlayback: (recording) => {
+            recordings.push(recording);
+          },
           recordInput: () => {
             inputs++;
           },
@@ -314,7 +319,9 @@ for (const mode of [
         expect(summary.qualified).toBe(false);
         expect(summary.finalQualified).toBe(false);
       } else {
-        expect(attempt.elapsedMs).toBeGreaterThanOrEqual(finalAudioSentAt - submitted);
+        expect(attempt.elapsedMs).toBeGreaterThanOrEqual(
+          renderedToneBoundary(recordings, 880) - submitted,
+        );
         if (late) {
           expect(attempt.elapsedMs).toBeLessThan(heldUntil - submitted - 2000);
           expect(attempt.observedEndMs).toBeGreaterThanOrEqual(heldUntil - submitted);

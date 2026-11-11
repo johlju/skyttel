@@ -3,9 +3,30 @@ import type { PlaybackRecording } from '../../scripts/model-evaluation/playback.
 /** Controlled external recognizer: inspect only the rendered WAV, with no
  * expected response words or server/transcript hints. */
 export function renderedToneWindows(recording: PlaybackRecording, frequency: number) {
+  return toneWindowEnds(recording, frequency).length;
+}
+
+/** A lower device-clock boundary for the last complete detected tone window.
+ * Detection resolves 100 ms windows; a partial final window is not included.
+ * Source callbacks cross browser/Node scheduling queues and are not playout
+ * timestamps. This oracle uses only rendered PCM and receiver clock samples. */
+export function renderedToneBoundary(recordings: PlaybackRecording[], frequency: number) {
+  let boundary: number | undefined;
+  for (const recording of recordings) {
+    const end = toneWindowEnds(recording, frequency).at(-1);
+    if (end === undefined) continue;
+    const position = (recording.firstFrame + end) / recording.sampleRate;
+    const clock = recording.clocks.findLast((sample) => sample.position <= position);
+    if (clock) boundary = Math.max(boundary ?? -Infinity, clock.at);
+  }
+  if (boundary !== undefined) return boundary;
+  throw new Error(`No rendered ${frequency} Hz tone with a device-clock boundary.`);
+}
+
+function toneWindowEnds(recording: PlaybackRecording, frequency: number) {
   const pcm = recording.wav.subarray(44);
   const windowFrames = Math.round(recording.sampleRate / 10);
-  let matching = 0;
+  const matching: number[] = [];
   for (let start = 0; start + windowFrames < recording.frames; start += windowFrames) {
     const cycleFrames: number[] = [];
     let previousCrossing: number | undefined;
@@ -30,7 +51,7 @@ export function renderedToneWindows(recording: PlaybackRecording, frequency: num
       period &&
       Math.abs(recording.sampleRate / period - frequency) < 50
     )
-      matching++;
+      matching.push(start + windowFrames);
   }
   return matching;
 }
