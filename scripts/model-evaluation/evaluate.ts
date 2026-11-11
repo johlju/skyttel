@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
-import type { LiveUsageAttempt } from '../../src/server/live-provider.js';
+import type { LiveSidebandFactory, LiveUsageAttempt } from '../../src/server/live-provider.js';
 import { type ApplicationVersion, applicationAdapter, evaluatorVersion } from './application.js';
 import audioManifest from './audio/manifest.json' with { type: 'json' };
 import { EvaluationBudget } from './budget.js';
@@ -105,6 +105,7 @@ export async function evaluateModels(
   plan: EvaluationPlan,
   runtime: {
     transport?: typeof fetch;
+    liveSideband?: LiveSidebandFactory;
     conversationWorkMode?: 'sequential' | 'overlap';
   } = {},
 ) {
@@ -367,8 +368,12 @@ export async function evaluateModels(
   });
   const judge = contentJudge(plan.apiKey, judgeProvider);
   const assessPlayback = voiceSelection
-    ? playbackAssessor(plan.apiKey, voiceSelection.assessor, budget, (value) =>
-        privateRecords.call(value),
+    ? playbackAssessor(
+        plan.apiKey,
+        voiceSelection.assessor,
+        budget,
+        (value) => privateRecords.call(value),
+        runtime.transport,
       )
     : undefined;
   const attempts: Attempt[] = [];
@@ -643,15 +648,15 @@ export async function evaluateModels(
             )
           ).reduce((sum, item) => sum + item.clip.frames / item.clip.sampleRate, 0);
           const utterances = scenarioUtterances(scenario, plan.followUps).length;
-          const maximumSeconds = Math.ceil(
+          const reservationSeconds = Math.ceil(
             audioSeconds + utterances * 180 + 32 + (utterances - 1) * 120,
           );
           const liveUsage: LiveUsageAttempt[] = [];
           const live = budgetedLive(
             budget,
-            maximumSeconds,
+            reservationSeconds,
             (usage) => liveUsage.push(usage),
-            fetch,
+            runtime.transport ?? fetch,
             voiceProfile,
             {
               requiredSession: commonLiveSession(voiceProfile),
@@ -679,6 +684,7 @@ export async function evaluateModels(
               modelProfile: profile,
               modelFetch: provider.fetch,
               liveFetch: live.fetch,
+              liveSideband: runtime.liveSideband,
               liveUsage: live.usage,
               liveProfile: voiceProfile,
               conversationWorkMode: runtime.conversationWorkMode,
@@ -689,8 +695,14 @@ export async function evaluateModels(
               comparisonContract: comparisonRun?.contractId,
               referenceVoice: plan.referenceVoice,
               followUps: plan.followUps,
-              maximumSeconds,
-              sessionTimeLimit: () => budget.stop('evaluation_live_time_limit'),
+              // A reservation estimate is not an authorized processing deadline.
+              // Retain the existing duration guard only for a finite budget.
+              ...(plan.limitUsd === undefined
+                ? {}
+                : {
+                    maximumSeconds: reservationSeconds,
+                    sessionTimeLimit: () => budget.stop('evaluation_live_time_limit'),
+                  }),
               repetition,
               judge,
               assessPlayback,
@@ -763,7 +775,8 @@ export async function evaluateModels(
           await emit('diagnostic', `Talkostnad: ${scenario.title}`, {
             sessions: liveUsage,
             estimatedCostUsd,
-            maximumSeconds,
+            reservationSeconds,
+            sessionTimeLimitSeconds: plan.limitUsd === undefined ? null : reservationSeconds,
             stepCost: 'Estimated allocations are not used to rank models.',
             observation: voicePlaybackInstrumentation,
           });

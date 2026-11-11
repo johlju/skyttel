@@ -7,6 +7,34 @@ import {
 } from '../../../scripts/model-evaluation/live.js';
 import profiles from '../../../scripts/model-evaluation/profiles.json' with { type: 'json' };
 
+test.each([undefined, 1])(
+  'known costs above a reservation stop only an explicit budget scope: %s',
+  { tags: ['technical'] },
+  (limitUsd) => {
+    const db = new Database(':memory:');
+    try {
+      const budget = new EvaluationBudget(db, {
+        authorized: true,
+        limitUsd,
+        priorUsd: 0,
+        priorSource: 'Controlled reservation overrun.',
+      });
+      const charge = budget.reserve('voice', 0.1);
+      budget.settle(charge, 0.2);
+      expect(budget.snapshot()).toMatchObject({
+        spentUsd: 0.2,
+        reservedUsd: 0,
+        stopped: limitUsd !== undefined,
+        reason: limitUsd === undefined ? null : 'evaluation_cost_above_reservation',
+      });
+      if (limitUsd === undefined) expect(() => budget.reserve('judge', 0.1)).not.toThrow();
+      else expect(() => budget.reserve('judge', 0.1)).toThrow('evaluation_cost_above_reservation');
+    } finally {
+      db.close();
+    }
+  },
+);
+
 test.each([5, 90, 125])(
   'Live estimates retain initialization uncertainty without adding it twice: %s seconds',
   {
@@ -51,8 +79,9 @@ test.each([5, 90, 125])(
         estimatedUsd: seconds === 5 ? 0.0125 : seconds === 90 ? 0.075 : 0.104167,
         reservedUsd: 0.1,
         estimatedCharges: 1,
-        stopped: seconds > 120,
+        stopped: false,
       });
+      expect(() => budget.reserve('judge', 0.01)).not.toThrow();
     } finally {
       db.close();
     }

@@ -140,7 +140,8 @@ export class EvaluationBudget {
       const amount = units(estimatedUsd);
       this.db.prepare('INSERT INTO evaluation_estimate VALUES (?, ?, ?)').run(id, amount, basis);
       this.db.prepare('UPDATE evaluation_charge SET uncertain = 1 WHERE id = ?').run(id);
-      if (amount > charge.reserved) this.stop('evaluation_cost_above_reservation');
+      if (this.snapshot().limitUsd !== null && amount > charge.reserved)
+        this.stop('evaluation_cost_above_reservation');
     })();
   }
   settle(id: string, actualUsd: number | null) {
@@ -156,7 +157,7 @@ export class EvaluationBudget {
         const actual = units(actualUsd);
         this.db.prepare('UPDATE evaluation_charge SET actual = ? WHERE id = ?').run(actual, id);
         const available = this.snapshot().availableUsd;
-        if (actual > charge.reserved || (available !== null && available < 0))
+        if (available !== null && (actual > charge.reserved || available < 0))
           this.stop('evaluation_cost_above_reservation');
       }
     })();
