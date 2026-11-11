@@ -1,0 +1,37 @@
+{
+  "id": "voice-current-application-v1",
+  "repetitions": [1],
+  "groups": {
+    "everyday": [
+      "everyday-01",
+      "everyday-09",
+      "everyday-25",
+      "everyday-29",
+      "everyday-30",
+      "change-price-payment",
+      "two-ambiguities",
+      "hypothetical-save"
+    ],
+    "long_conversation": ["summary-last-price"],
+    "complex": [
+      "late-price-correction",
+      "save-last",
+      "relationship-direction",
+      "questions-and-changes"
+    ]
+  },
+  "selectionReason": "Everyday work is the primary group: creation, relationship changes, reading, undo, explicit save, combined changes, clarification and hypothetical save safety. Long context and complex requests are separate supplementary groups. Selection precedes audio readiness; missing audio blocks execution rather than dropping scenarios.",
+  "coverageLimit": "Eight of sixty everyday scenarios; no full-catalog qualification, natural context saturation, provider-limit experiment or stable model ranking.",
+  "referenceVoice": "marin",
+  "followUps": true,
+  "clarificationPolicy": "catalog-unique-matching-reply-once; preserve-direct-and-assisted-v1",
+  "measurementContract": "voice-rendered-v1",
+  "overlap": {
+    "scenarios": ["overlap-success", "overlap-clarification", "overlap-early-stop"],
+    "repetitions": [1],
+    "variants": ["sequential", "overlap"],
+    "applicationRevision": "same locked current revision as the primary campaign",
+    "interpretation": "Observed outcomes only; no percentage target or stable speed ranking. Retain sequential default."
+  },
+  "authorization": "not authorized; preparation never grants payment permission"
+}
