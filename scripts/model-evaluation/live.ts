@@ -122,8 +122,9 @@ export function budgetedLive(
           usage.final &&
           usage.seconds !== null &&
           Number.isFinite(usage.seconds) &&
-          usage.seconds >= 0 &&
-          usage.seconds <= maximumSeconds;
+          usage.seconds >= 0;
+        // A final duration above the reservation is an overrun, not missing
+        // usage. Preserve the amount; the ledger independently stops overspend.
         if (known && estimated)
           budget.estimate(
             reservation,

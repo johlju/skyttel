@@ -7,7 +7,7 @@ import {
 } from '../../../scripts/model-evaluation/live.js';
 import profiles from '../../../scripts/model-evaluation/profiles.json' with { type: 'json' };
 
-test.each([5, 90])(
+test.each([5, 90, 125])(
   'Live estimates retain initialization uncertainty without adding it twice: %s seconds',
   {
     tags: ['technical'],
@@ -48,10 +48,10 @@ test.each([5, 90])(
       });
       expect(budget.snapshot()).toMatchObject({
         spentUsd: 0,
-        estimatedUsd: seconds === 5 ? 0.0125 : 0.075,
+        estimatedUsd: seconds === 5 ? 0.0125 : seconds === 90 ? 0.075 : 0.104167,
         reservedUsd: 0.1,
         estimatedCharges: 1,
-        stopped: false,
+        stopped: seconds > 120,
       });
     } finally {
       db.close();
