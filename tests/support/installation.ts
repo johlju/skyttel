@@ -125,6 +125,7 @@ export async function createInstallation(
   let database: ReturnType<typeof openDatabase>;
   let server: ServerType;
   const sockets = new Set<Socket>();
+  const handlers = new Set<Promise<Response>>();
   let activeRequests = 0;
   let drainConnections: (() => void) | undefined;
   let closeApp: () => Promise<void>;
@@ -235,7 +236,7 @@ export async function createInstallation(
     closeApp = app.close;
     attachTaskDelivery(server, config.origin, app.prepareTaskDelivery);
     summarizeForEvaluation = app.summarizeForEvaluation;
-    handle = async (request) => {
+    const handleRequest = async (request: Request) => {
       // Model the original login-only callback while arranging a legacy
       // installation. Production always applies all migrations before serving.
       if (
@@ -275,6 +276,15 @@ export async function createInstallation(
         ? databaseOptions.deliverResponse(request, response)
         : response;
     };
+    handle = (request) => {
+      const pending = handleRequest(request);
+      handlers.add(pending);
+      void pending.then(
+        () => handlers.delete(pending),
+        () => handlers.delete(pending),
+      );
+      return pending;
+    };
   }
   async function stop() {
     await closeApp();
@@ -294,6 +304,9 @@ export async function createInstallation(
       // Stop accepting first so no new connection can race this cleanup.
       drainConnections();
     });
+    // An aborted connection can close before its admitted handler finishes.
+    // Keep SQLite available through authentication and response delivery.
+    while (handlers.size) await Promise.allSettled(handlers);
     database.close();
   }
   await start();
