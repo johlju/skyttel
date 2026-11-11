@@ -41,14 +41,14 @@ export interface LangSmithDeliveryOptions {
   fetch?: typeof fetch;
 }
 
-/** Inspected published langsmith@0.11.1, imported from its tracing-client
+/** Inspected published langsmith@0.12.0, imported from its tracing-client
  * export. Direct create/update never use its batch queue or failed-trace dump.
  * The SDK forces four caller retries: DeliveryFailure's nonretryable prefix
  * disables them so this module owns retries. Only JSON snapshots reach its
  * serializer, avoiding fallback substitution and payload-bearing warnings.
  * Explicit defaults prevent ambient masking, sampling and runtime metadata.
  *
- * This does not wrap OpenAI (installed 7.43.0) or change ModelClient's custom
+ * This does not wrap OpenAI (installed 7.55.0) or change ModelClient's custom
  * long-running fetch/caller signal. Export cancellation belongs only here.
  * Direct ingestion derives trace_id and dotted_order from id/parent_run_id.
  * Omit both derived fields: supplying trace_id alone is rejected even on
