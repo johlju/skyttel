@@ -73,7 +73,8 @@ everyday recordings are `everyday-01-request`, `everyday-09-request`,
 Those five scenarios are not enabled for voice in the general catalog.
 The explicit preparation selection enables voice on copies of those scenarios;
 the shared catalog remains unchanged. Missing audio still blocks execution.
-Do not silently omit these scenarios or treat the selection as an executable plan.
+Do not silently omit these scenarios or treat the selection as an executable
+plan.
 
 Use one repetition per model on the current locked application revision.
 Keep Terra high and Sol high independent. The separate overlap experiment
@@ -157,13 +158,51 @@ npm run --silent test:env -- tsx \
   scripts/model-evaluation/voice-campaign.ts <evaluator-commit>
 ```
 
+The CLI accepts only the commit argument. To prepare an estimate-mode artifact,
+use the exported function with its accounting option:
+
+```sh
+npm run --silent test:env -- tsx -e '
+  import { mkdirSync, writeFileSync } from "node:fs";
+  import {
+    prepareVoiceCampaign
+  } from "./scripts/model-evaluation/voice-campaign.ts";
+  prepareVoiceCampaign({
+    evaluatorCommit: "<evaluator-commit>",
+    voiceCostAccounting: "usage-estimate"
+  }).then((artifact) => {
+    mkdirSync("model-evaluation-results", { recursive: true });
+    writeFileSync("model-evaluation-results/voice-estimate-preparation.json",
+      JSON.stringify(artifact, null, 2) + "\n");
+  });
+'
+```
+
+This artifact retains `authorized: false`, including in its primary and overlap
+plans. Before paid execution, obtain explicit user authorization for the
+selected run and estimated voice accounting, resolve the remaining blockers,
+and construct the executable `EvaluationPlan` using that run's prepared profiles
+and scenarios. Its fields must include both:
+
+```json
+{
+  "authorized": true,
+  "voiceCostAccounting": "usage-estimate"
+}
+```
+
+These fields are an excerpt, not a complete executable plan or payment approval.
+Keep the prepared `billingMode: "usage-estimate"` on both the voice and playback
+assessor profiles. Apply the same accounting option to each authorized overlap
+variant; preparation alone never authorizes execution.
+
 Keep the returned JSON under ignored `model-evaluation-results/`. It contains
 the exact primary and overlap scenarios, profiles, source and fixture hashes,
 audio checks, calibration holds and blockers. The SHA is a declared identity;
 the execution runner must independently verify a clean matching checkout.
 `status: blocked` and `authorized: false` are deliberate. These review plans
-are not executable `EvaluationPlan` objects. Billing verification, assessor
-calibration, approved audio and local evidence must be resolved and bound
+are not executable `EvaluationPlan` objects. Resolve the selected accounting
+mode's prerequisites, assessor calibration, approved audio and local evidence
 before constructing an authorized runner configuration. The old
 `run-overlap.ts` configuration remains a historical comparison workflow;
 do not use its five repetitions or thresholds for this observational campaign.

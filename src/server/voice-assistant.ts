@@ -957,6 +957,7 @@ export function voiceAssistantRoutes({
         return context.json({ error: 'invalid_request' }, 400);
       voice.work?.rendered(body);
       voice.work?.activity(body.microphoneActive === true && body.microphoneOn === true);
+      voice.work?.speaker(body.speakerActive === true);
       voice.work?.answer(voice.assistant, body.microphoneOn === true);
       voice.quietAt =
         body.microphoneActive !== true && body.speakerActive !== true ? now() : undefined;

@@ -114,10 +114,13 @@ test.each([false, true])(
     expect(completed.completedReplies).toMatchObject([
       { id: 'long-typed-reply', source: 'text', text },
     ]);
-    const consumed = await poll(microphoneOn);
-    expect(consumed.voice.replyDelivery).toEqual([
-      { id: 'long-typed-reply', voiced: microphoneOn },
-    ]);
+    let consumed = await poll(microphoneOn);
+    await expect
+      .poll(async () => {
+        consumed = await poll(microphoneOn);
+        return consumed.voice.replyDelivery;
+      })
+      .toEqual([{ id: 'long-typed-reply', voiced: microphoneOn }]);
     const commentary = voiceAnswerParts(live.sent);
     if (microphoneOn) {
       expect(commentary.length).toBeGreaterThan(1);

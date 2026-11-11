@@ -96,8 +96,23 @@ test('RÖSTTEXT-01: skrivet uppdrag med mikrofonen på får röst och text utan 
     await region(page).getByRole('button', { name: 'Nytt samtal', exact: true }).click();
     await expect(log(page)).toHaveText('Skyttel: Nytt samtal. Utkastet är tomt.');
     await expect
-      .poll(() => voiceAnswerParts(live.sent).join(''))
-      .toContain('Nytt samtal. Utkastet är tomt.');
+      .poll(() => {
+        const text = 'Nytt samtal. Utkastet är tomt.';
+        const answerIds = live.sent.flatMap(({ event }) => {
+          if (event.type !== 'session.thinking.append') return [];
+          const part = JSON.parse(event.content);
+          return part.text.includes(text) ? [part.answerId] : [];
+        });
+        return (
+          voiceAnswerParts(live.sent).join('').includes(text) &&
+          commentary().some((event) =>
+            event.type === 'session.commentary.append'
+              ? event.content.includes(text)
+              : answerIds.some((id) => event.content.includes(id)),
+          )
+        );
+      })
+      .toBe(true);
     await expect(announcement(page)).toBeEmpty();
   } finally {
     for (const release of held) release([]);

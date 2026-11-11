@@ -183,7 +183,12 @@ export function voiceWork({
       },
     ].filter(({ text }) => text);
   }
-  function append(delegationId: string | null, answer: VoiceAnswer, view?: VoiceCompletionView) {
+  function append(
+    delegationId: string | null,
+    answer: VoiceAnswer,
+    view?: VoiceCompletionView,
+    settled?: (voiced: boolean) => void,
+  ) {
     if (!allowed()) return;
     const content = voiceAnswerText(answer);
     observe?.('voice_commentary', { delegationId, content, revision: view?.revision });
@@ -202,6 +207,7 @@ export function voiceWork({
       view && !view.receipt && view.phase === 'ready' && !view.saveCheck
         ? 'unconfirmed'
         : undefined,
+      settled,
     );
     if (view) {
       answered.add(view.revision);
@@ -662,6 +668,9 @@ export function voiceWork({
     anchor = undefined;
   }
   return {
+    speaker(active: boolean) {
+      if (!stopped) commentary.speaker(active);
+    },
     activity(active: boolean) {
       if (stopped || (!active && !microphoneActive)) return;
       microphoneActive = active;
@@ -736,8 +745,9 @@ export function voiceWork({
                 { kind: 'conversation', text: reply.text },
               ];
         const hasContent = Boolean(voiceAnswerText(content));
-        if (hasContent) append(null, content, completed);
-        delivered?.({ id: reply.id, voiced: hasContent });
+        if (hasContent)
+          append(null, content, completed, (voiced) => delivered?.({ id: reply.id, voiced }));
+        else delivered?.({ id: reply.id, voiced: false });
       }
       if (!microphoneOn) {
         if (view.phase !== 'working') answered.add(view.revision);

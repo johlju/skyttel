@@ -30,11 +30,13 @@ function arrange() {
     action === 'messages' ? { ...initial, revision: 1, modelReply: 'Hela svaret.' } : initial,
   );
   const response = vi.fn();
+  const delivered = vi.fn();
   const work = voiceWork({
     channel: channel as unknown as LiveSideband,
     initial,
     request,
     response,
+    delivered,
     update: vi.fn(),
     interrupt: vi.fn(),
     failed: vi.fn(),
@@ -52,8 +54,65 @@ function arrange() {
       delegation: { id, target: 'client' },
     });
   const messages = () => request.mock.calls.filter(([action]) => action === 'messages');
-  return { work, fragment, delegate, messages, response, channel };
+  return { work, fragment, delegate, messages, response, channel, initial, delivered };
 }
+
+test.each(['timeout', 'error'] as const)(
+  'typed reply survives thinking %s and unblocks only its context handoff',
+  {
+    tags: ['technical'],
+  },
+  (failure) => {
+    const { work, channel, initial, delivered } = arrange();
+    const reply = { id: 'typed', text: 'Hela textsvaret.', source: 'text' as const, revision: 1 };
+    const view = { ...initial, revision: 1, completedReplies: [reply] };
+    work.answer(view);
+    expect(delivered).not.toHaveBeenCalled();
+    expect(work.readyForSummary()).toBe(false);
+    const parts = channel.send.mock.calls
+      .map(([event]) => event)
+      .filter((event) => event.type === 'session.thinking.append');
+    work.activity(true);
+    if (failure === 'timeout') vi.advanceTimersByTime(10_000);
+    else channel.emit('error', { error: { client_event_id: parts[0].event_id } });
+    expect(delivered).toHaveBeenCalledExactlyOnceWith({ id: reply.id, voiced: false });
+    expect(view.completedReplies).toEqual([reply]);
+    // A failed transport wait cannot bypass active microphone/input safeguards.
+    expect(work.readyForSummary()).toBe(false);
+    work.activity(false);
+    expect(work.readyForSummary()).toBe(true);
+    for (const part of parts)
+      channel.emit('session.thinking.appended', { client_event_id: part.event_id });
+    work.answer(view);
+    expect(delivered).toHaveBeenCalledTimes(1);
+    expect(
+      channel.send.mock.calls.every(([event]) => event.type === 'session.thinking.append'),
+    ).toBe(true);
+    work.retire();
+  },
+);
+
+test('a typed reply becomes voiced only after acknowledgement and preceding speech finish', {
+  tags: ['technical'],
+}, () => {
+  const { work, channel, initial, delivered } = arrange();
+  work.speaker(true);
+  work.answer({
+    ...initial,
+    revision: 1,
+    completedReplies: [{ id: 'typed', text: 'Svar.', source: 'text', revision: 1 }],
+  });
+  for (const [event] of [...channel.send.mock.calls])
+    if (event.type === 'session.thinking.append')
+      channel.emit('session.thinking.appended', { client_event_id: event.event_id });
+  expect(delivered).not.toHaveBeenCalled();
+  expect(work.readyForSummary()).toBe(false);
+  work.speaker(false);
+  expect(channel.send.mock.lastCall?.[0].type).toBe('session.instructions.append');
+  expect(delivered).toHaveBeenCalledExactlyOnceWith({ id: 'typed', voiced: true });
+  expect(work.readyForSummary()).toBe(true);
+  work.retire();
+});
 
 test('a delegation inside a word waits for the late suffix and delivers the complete answer', {
   tags: ['technical'],
