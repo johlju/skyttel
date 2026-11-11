@@ -300,6 +300,7 @@ export async function evaluateModels(
     repetitions,
     voice: plan.voice ?? false,
     voiceCostAccounting: plan.voiceCostAccounting ?? 'verified-only',
+    conversationWorkMode: runtime.conversationWorkMode ?? 'sequential',
     followUps: plan.followUps ?? false,
     referenceVoice: plan.referenceVoice ?? 'marin',
     audio: audioManifest,
@@ -680,6 +681,7 @@ export async function evaluateModels(
               liveFetch: live.fetch,
               liveUsage: live.usage,
               liveProfile: voiceProfile,
+              conversationWorkMode: runtime.conversationWorkMode,
             },
             {
               profile: id,
