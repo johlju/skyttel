@@ -388,7 +388,7 @@ förberedelse. Läs det verkliga held-anropets värden varje gång. Alla uppgift
    **Visa utkastet**, samt avsaknad av nytt kvitto och ny markering.
 3. Kör `sessions`. Läs senaste svarets `session.thinking.append`-paket.
    Gruppera deras JSON-innehåll efter `answerId` och sammanfoga `text` i
-   `part`-ordning. Efter delarna ska `session.commentary.append` ange att
+   `part`-ordning. Efter delarna ska `session.instructions.append` ange att
    samma svar är komplett. Beskedet **Utkast: 1 osparat förslag** ska
    beskriva det faktiska utkastet utan att bekräfta något sparande eller någon
    markering. Modellens svar ska stå separat, citerat under

@@ -11,7 +11,7 @@ import {
 } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
-import { liveProvider } from '../support/live-provider.js';
+import { isVoiceAnswerRelease, liveProvider } from '../support/live-provider.js';
 import { expect, test } from '../support/test.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
@@ -229,9 +229,7 @@ test('TEXTBRICKA-03: röstrutan ersätter brickan och samma olästa svar annonse
     await expect(button.locator('.text-button-marker')).toHaveCount(0);
     held[1]([modelMessage('Det talade svaret.')]);
     await expect
-      .poll(
-        () => live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-      )
+      .poll(() => live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
       .toBeGreaterThan(0);
     await openConversationText(page);
     await expect(page.getByRole('log', { name: 'Samtalstext' })).toContainText(

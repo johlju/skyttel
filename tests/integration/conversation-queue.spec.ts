@@ -14,7 +14,7 @@ import {
 import { readTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
-import { liveProvider } from '../support/live-provider.js';
+import { isVoiceAnswerRelease, liveProvider } from '../support/live-provider.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 import { readVoiceProposal } from '../support/voice-work-reading.js';
@@ -398,7 +398,7 @@ test('KÖ-03: röstrutans stopp avbryter talat arbete och textkön utan att änd
     await expect.poll(async () => (await read()).draft).toEqual(before);
     await readVoiceProposal(page);
     expect(
-      fixtures.live.sent.filter(({ event }) => event.type === 'session.commentary.append'),
+      fixtures.live.sent.filter(({ event }) => isVoiceAnswerRelease(event, true)),
     ).toHaveLength(0);
   } finally {
     for (const item of fixtures.held) item.release([]);

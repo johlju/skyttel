@@ -738,20 +738,41 @@ export async function evaluateModels(
               },
             },
           );
+          const finalUsage = [
+            ...new Map(liveUsage.map((usage) => [usage.attemptId, usage])).values(),
+          ];
+          const estimatedCostUsd =
+            voiceProfile.billingMode === 'usage-estimate'
+              ? finalUsage.length &&
+                finalUsage.every(
+                  (usage) =>
+                    usage.final &&
+                    usage.endedAt &&
+                    usage.model === voiceProfile.model &&
+                    usage.seconds !== null &&
+                    Number.isFinite(usage.seconds) &&
+                    usage.seconds >= 0,
+                )
+                ? finalUsage.reduce(
+                    (sum, usage) =>
+                      sum + (Math.max(15, usage.seconds ?? 0) * voiceProfile.usdPerMinute) / 60,
+                    0,
+                  )
+                : null
+              : undefined;
           await emit('diagnostic', `Talkostnad: ${scenario.title}`, {
             sessions: liveUsage,
+            estimatedCostUsd,
             maximumSeconds,
             stepCost: 'Estimated allocations are not used to rank models.',
             observation: voicePlaybackInstrumentation,
           });
-          const finalUsage = [
-            ...new Map(liveUsage.map((usage) => [usage.attemptId, usage])).values(),
-          ];
           scenarioVoiceUsage.push({
             scenario: scenario.id,
             applicationVersion: application?.id,
             repetition,
             sessions: finalUsage,
+            estimatedCostUsd,
             costUsd:
               voiceProfile.billingMode !== 'usage-estimate' &&
               finalUsage.length &&

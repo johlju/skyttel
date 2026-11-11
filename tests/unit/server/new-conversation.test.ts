@@ -319,7 +319,7 @@ test('a delayed spoken reset discard delivers its final outcome once after the r
     expect(
       live.sent.filter(
         ({ event }) =>
-          event.type === 'session.commentary.append' && event.content.startsWith('Svar '),
+          event.type === 'session.instructions.append' && event.content.startsWith('Svar '),
       ),
     ).toHaveLength(1);
     expect((await (await browser.get(map)).json()).draft.changes).toEqual([]);

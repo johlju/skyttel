@@ -6,7 +6,7 @@ import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation, robin } from '../../support/installation.js';
-import { liveProvider } from '../../support/live-provider.js';
+import { isVoiceAnswerRelease, liveProvider } from '../../support/live-provider.js';
 import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
@@ -396,9 +396,7 @@ test.each(['stop', 'transport loss'] as const)(
       .poll(async () => (await voice.poll()).voice.phase, { timeout: 4000 })
       .toBe(interruption === 'stop' ? 'closed' : 'error');
     expect(await (await browser.get(`${scene.householdPath}/map`)).json()).toEqual(before);
-    expect(
-      scene.live.sent.filter(({ event }) => event.type === 'session.commentary.append'),
-    ).toEqual([]);
+    expect(scene.live.sent.filter(({ event }) => isVoiceAnswerRelease(event, true))).toEqual([]);
     expect(scene.live.channels.size).toBe(0);
     if (interruption === 'transport loss')
       expect(scene.usage.at(-1)).toMatchObject({
@@ -470,9 +468,7 @@ test.each(['grant revocation', 'content replacement'] as const)(
     const denied = await voice.post('poll', voice.startBody);
     expect(denied.status(), await denied.text()).toBe(404);
     expect(await denied.text()).not.toMatch(/Privat syntetiskt|Sent privat/);
-    expect(
-      scene.live.sent.filter(({ event }) => event.type === 'session.commentary.append'),
-    ).toEqual([]);
+    expect(scene.live.sent.filter(({ event }) => isVoiceAnswerRelease(event, true))).toEqual([]);
     const after = await (await browser.get(`${scene.householdPath}/map`)).json();
     expect(after.draft).toEqual(before.draft);
     expect(after.objects).toEqual(before.objects);

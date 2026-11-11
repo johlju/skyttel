@@ -17,7 +17,7 @@ import {
 import { readTableObject } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
-import { liveProvider, voiceAnswerParts } from '../support/live-provider.js';
+import { isVoiceAnswerRelease, liveProvider, voiceAnswerParts } from '../support/live-provider.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 import {
   lastToolResult,
@@ -93,7 +93,7 @@ function speak(live: ReturnType<typeof liveProvider>, text: string) {
   });
 }
 const commentary = (live: ReturnType<typeof liveProvider>) =>
-  live.sent.filter(({ event }) => event.type === 'session.commentary.append');
+  live.sent.filter(({ event }) => isVoiceAnswerRelease(event));
 async function output(page: Page, text: string) {
   await page.evaluate(
     (delta) =>

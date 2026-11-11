@@ -277,6 +277,7 @@ export async function runVoiceScenario(
       let partialChecks: string[] = [];
       let playbackAssessmentElapsedMs: number | undefined;
       const playbackRecognitionCosts: (number | null)[] = [];
+      const playbackRecognitionEstimates: (number | null)[] = [];
       let observeState: StateObserver | undefined;
       async function measurePlaybackAssessment<T>(work: () => Promise<T>): Promise<T> {
         const began = Date.now();
@@ -599,15 +600,20 @@ export async function runVoiceScenario(
                 // A started recognition has unknown cost until it returns,
                 // independently of heartbeat and semantic completion.
                 const costIndex = playbackRecognitionCosts.push(null) - 1;
+                playbackRecognitionEstimates.push(null);
                 const { recognition, candidate } = await measurePlaybackAssessment(() =>
                   withHeartbeat(async () => {
                     const recognition = await assessPlayback(recording);
                     playbackRecognitionCosts[costIndex] = recognition.costUsd;
+                    playbackRecognitionEstimates[costIndex] = recognition.estimatedCostUsd ?? null;
                     const candidate: PlaybackEvidence['candidates'][number] = {
                       callId: recognition.callId,
                       profile: recognition.profile,
                       outcome: recognition.outcome,
                       costUsd: recognition.costUsd,
+                      ...(recognition.estimatedCostUsd !== undefined
+                        ? { estimatedCostUsd: recognition.estimatedCostUsd }
+                        : {}),
                       recordingSha256: recording.sha256,
                       alignmentMarginMs: recognition.alignmentMarginMs,
                       lastWordEndSeconds: recognition.lastWordEndSeconds,
@@ -875,8 +881,15 @@ export async function runVoiceScenario(
         ? playbackRecognitionCosts.some((cost) => cost === null)
           ? null
           : playbackRecognitionCosts.reduce<number>((sum, cost) => sum + (cost ?? 0), 0)
-        : undefined;
+        : 0;
       result.playbackAssessmentElapsedMs = playbackAssessmentElapsedMs;
+      if (!playbackRecognitionEstimates.length) result.estimatedPlaybackAssessmentCostUsd = 0;
+      else if (playbackRecognitionEstimates.some((cost) => cost !== null))
+        result.estimatedPlaybackAssessmentCostUsd = playbackRecognitionEstimates.some(
+          (cost) => cost === null,
+        )
+          ? null
+          : playbackRecognitionEstimates.reduce<number>((sum, cost) => sum + (cost ?? 0), 0);
       if (result.timing) {
         const request = observed.find((event) => event.kind === 'backend_request');
         const requestId = (request?.data as { requestId?: string } | undefined)?.requestId;

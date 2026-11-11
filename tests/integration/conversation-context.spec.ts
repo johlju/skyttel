@@ -13,7 +13,7 @@ import {
 import { editTableObject, readTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
-import { liveProvider } from '../support/live-provider.js';
+import { isVoiceAnswerRelease, liveProvider } from '../support/live-provider.js';
 import { expect, test } from '../support/test.js';
 import { type ModelRequest, modelMessage, modelTool, textModel } from '../support/text-model.js';
 import { readVoiceProposal } from '../support/voice-work-reading.js';
@@ -333,16 +333,16 @@ test('KONTEXT-03: skrivna och talade kommandon börjar om samtalet och kastar ut
     await readVoiceProposal(page);
     expect(live.requests[1].session.input).toBeUndefined();
     await turnMicrophoneOff(page);
-    const commentsBeforeTypedReset = live.sent.filter(
-      ({ event }) => event.type === 'session.commentary.append',
+    const commentsBeforeTypedReset = live.sent.filter(({ event }) =>
+      isVoiceAnswerRelease(event),
     ).length;
     await send(page, 'Nytt samtal');
     await expect.poll(() => live.requests.length).toBe(3);
     await expect(field(page)).toHaveValue('');
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
-    expect(
-      live.sent.filter(({ event }) => event.type === 'session.commentary.append'),
-    ).toHaveLength(commentsBeforeTypedReset);
+    expect(live.sent.filter(({ event }) => isVoiceAnswerRelease(event))).toHaveLength(
+      commentsBeforeTypedReset,
+    );
     expect((await read()).draft.changes).toHaveLength(1);
     await readVoiceProposal(page);
     await turnMicrophoneOn(page);
@@ -352,9 +352,7 @@ test('KONTEXT-03: skrivna och talade kommandon börjar om samtalet och kastar ut
     finish();
     await expect.poll(() => live.requests.length).toBe(4);
     await expect
-      .poll(
-        () => live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-      )
+      .poll(() => live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
       .toBe(commentsBeforeTypedReset + 1);
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
     await expect(field(page)).toHaveValue('Oskickat under avstängning');

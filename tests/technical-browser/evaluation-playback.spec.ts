@@ -201,7 +201,8 @@ for (const mode of [
               alignmentMarginMs: 100,
               profile: 'controlled-wave-assessor',
               callId: `candidate-${recording.frames}`,
-              costUsd: 0,
+              costUsd: mode === 'full' ? null : 0,
+              ...(mode === 'full' ? { estimatedCostUsd: 0.001 } : {}),
             };
           },
           judge: async (input) => {
@@ -308,6 +309,15 @@ for (const mode of [
       expect(live.finalAudioSentAt).toBeDefined();
       expect(result.attempts[0].elapsedMs).not.toBeNull();
       const attempt = result.attempts[0];
+      if (mode === 'full') {
+        expect(attempt.playback?.candidates).toEqual([
+          expect.objectContaining({ costUsd: null, estimatedCostUsd: 0.001 }),
+        ]);
+        expect(attempt).toMatchObject({
+          playbackAssessmentCostUsd: null,
+          estimatedPlaybackAssessmentCostUsd: 0.001,
+        });
+      }
       const input = attempt.playback?.input;
       const elapsed = attempt.elapsedMs;
       const observed = attempt.observedEndMs;

@@ -20,6 +20,39 @@ import voiceSelection from '../../../scripts/model-evaluation/voice-campaign-sel
   type: 'json',
 };
 
+test('transcription estimates remain separate from unresolved actual charges in summaries', {
+  tags: ['technical'],
+}, () => {
+  const summary = summarizeProfile(
+    [
+      {
+        scenario: 'daily',
+        step: 'a',
+        profile: 'voice',
+        repetition: 1,
+        modality: 'voice',
+        outcome: 'pass',
+        fixed: [],
+        elapsedMs: 1000,
+        backendCostUsd: 0.01,
+        playbackAssessmentCostUsd: null,
+        estimatedPlaybackAssessmentCostUsd: 0.001,
+      },
+    ],
+    [{ id: 'daily', group: 'everyday', steps: [{ id: 'a' }] }],
+    'voice',
+    'voice',
+    [1],
+  );
+  expect(summary).toMatchObject({
+    playbackAssessmentCostUsd: null,
+    estimatedPlaybackAssessmentCostUsd: 0.001,
+    groups: {
+      everyday: { playbackAssessmentCostUsd: null, estimatedPlaybackAssessmentCostUsd: 0.001 },
+    },
+  });
+});
+
 test('an everyday comparison keeps advanced costs visible without mixing them into its cost difference', {
   tags: ['technical'],
 }, () => {

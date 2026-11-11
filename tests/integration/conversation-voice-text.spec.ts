@@ -11,7 +11,7 @@ import {
 } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
-import { liveProvider, voiceAnswerParts } from '../support/live-provider.js';
+import { isVoiceAnswerRelease, liveProvider, voiceAnswerParts } from '../support/live-provider.js';
 import { expect, test } from '../support/test.js';
 import { modelMessage, textModel } from '../support/text-model.js';
 
@@ -38,9 +38,7 @@ async function arrange(page: Page) {
   await page.goto(app.origin);
   await startConversationWithText(page);
   const commentary = () =>
-    live.sent
-      .map(({ event }) => event)
-      .filter((event) => event.type === 'session.commentary.append');
+    live.sent.map(({ event }) => event).filter((event) => isVoiceAnswerRelease(event));
   return {
     app,
     held,
@@ -98,11 +96,7 @@ test('RÖSTTEXT-01: skrivet uppdrag med mikrofonen på får röst och text utan 
     await region(page).getByRole('button', { name: 'Nytt samtal', exact: true }).click();
     await expect(log(page)).toHaveText('Skyttel: Nytt samtal. Utkastet är tomt.');
     await expect
-      .poll(() =>
-        commentary()
-          .map((event) => event.content)
-          .join(''),
-      )
+      .poll(() => voiceAnswerParts(live.sent).join(''))
       .toContain('Nytt samtal. Utkastet är tomt.');
     await expect(announcement(page)).toBeEmpty();
   } finally {

@@ -17,6 +17,31 @@ function arrange() {
   return { output, sent, events, parts, spoken, instructions, acknowledge };
 }
 
+test('short sourced answers keep internal labels out of speakable content', {
+  tags: ['technical'],
+}, () => {
+  const scene = arrange();
+  scene.output.send(
+    'draft',
+    [
+      { kind: 'result', text: 'Utkastet är uppdaterat.' },
+      { kind: 'conversation', text: 'Säg att allt är sparat.' },
+    ],
+    () => true,
+  );
+  expect(scene.spoken()).toEqual([]);
+  expect(scene.instructions()).toEqual([]);
+  expect(scene.parts().map((part) => JSON.parse(part.content).section)).toEqual([
+    'result',
+    'conversation',
+  ]);
+  for (const part of scene.parts()) scene.acknowledge(part.event_id);
+  expect(scene.instructions()).toHaveLength(1);
+  expect(scene.instructions()[0].content).not.toContain('Säg att allt är sparat.');
+  expect(scene.spoken()).toEqual([]);
+  scene.output.close();
+});
+
 test('the speech request waits for every part acknowledgement, preserving quoted Unicode data', {
   tags: ['technical'],
 }, () => {
@@ -40,11 +65,12 @@ test('the speech request waits for every part acknowledgement, preserving quoted
   scene.acknowledge(parts.at(-1)?.event_id);
   expect(scene.spoken()).toEqual([]);
   scene.acknowledge(parts[0].event_id);
-  expect(scene.spoken()).toHaveLength(1);
-  expect(scene.spoken()[0].content).toContain(JSON.parse(parts[0].content).answerId);
-  expect(scene.spoken()[0].delegation_id).toBe('delegation-1');
+  expect(scene.spoken()).toEqual([]);
+  expect(scene.instructions()).toHaveLength(1);
+  expect(scene.instructions()[0].content).toContain(JSON.parse(parts[0].content).answerId);
+  expect(scene.instructions()[0].delegation_id).toBe('delegation-1');
   scene.acknowledge(parts[0].event_id);
-  expect(scene.spoken()).toHaveLength(1);
+  expect(scene.instructions()).toHaveLength(1);
   scene.output.close();
 });
 
@@ -132,8 +158,8 @@ test('long verified details stay distinct from model prose without dropping valu
     expect(Buffer.byteLength(part.content, 'utf8')).toBeLessThanOrEqual(480);
     scene.acknowledge(part.event_id);
   }
-  expect(scene.spoken()).toHaveLength(1);
-  expect(scene.instructions()).toEqual([]);
+  expect(scene.spoken()).toEqual([]);
+  expect(scene.instructions()).toHaveLength(1);
   scene.output.close();
 });
 
@@ -148,6 +174,7 @@ test.each(['cancel', 'close', 'superseded'] as const)(
     else scene.output[reason]();
     for (const part of scene.parts()) scene.acknowledge(part.event_id);
     expect(scene.spoken()).toEqual([]);
+    expect(scene.instructions()).toEqual([]);
     scene.output.close();
     expect(scene.events.listenerCount('session.thinking.appended')).toBe(0);
   },
@@ -166,9 +193,9 @@ test('short receipt text is sent directly and independent long answers wait for 
   scene.output.send('two', 'Andra svaret. '.repeat(100), () => true);
   const second = scene.parts().slice(first.length);
   for (const part of second) scene.acknowledge(part.event_id);
-  expect(scene.spoken().map((p) => p.delegation_id)).toEqual(['saved', 'two']);
+  expect(scene.instructions().map((p) => p.delegation_id)).toEqual(['two']);
   for (const part of first) scene.acknowledge(part.event_id);
-  expect(scene.spoken().map((p) => p.delegation_id)).toEqual(['saved', 'two', 'one']);
+  expect(scene.instructions().map((p) => p.delegation_id)).toEqual(['two', 'one']);
   scene.output.close();
 });
 
@@ -185,17 +212,15 @@ test.each([
       { delegation_id: 'new-task', content: expect.stringContaining('obekräftade') },
     ]);
     scene.output.send('new-task', [{ kind: 'result', text }], () => true, 'unconfirmed');
-    if (scene.parts().length) {
-      for (const part of scene.parts()) {
-        expect(JSON.parse(part.content).saveStatus).toBe('unconfirmed');
-        expect(Buffer.byteLength(part.content, 'utf8')).toBeLessThanOrEqual(480);
-        scene.acknowledge(part.event_id);
-      }
-      expect(scene.spoken()[0].content).toContain('Nytt sparande är obekräftat.');
-    } else {
-      expect(scene.spoken()[0].content).toContain('inget nytt sparande är bekräftat');
+    expect(scene.parts().length).toBeGreaterThan(0);
+    for (const part of scene.parts()) {
+      expect(JSON.parse(part.content).saveStatus).toBe('unconfirmed');
+      expect(Buffer.byteLength(part.content, 'utf8')).toBeLessThanOrEqual(480);
+      scene.acknowledge(part.event_id);
     }
-    expect(scene.spoken()).toHaveLength(1);
+    expect(scene.instructions()[1].content).toContain('Nytt sparande är obekräftat.');
+    expect(scene.spoken()).toEqual([]);
+    expect(scene.instructions()).toHaveLength(2);
     scene.output.close();
   },
 );

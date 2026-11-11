@@ -3,7 +3,11 @@ import { afterEach, expect, test } from 'vitest';
 import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
-import { liveProvider, voiceAnswerParts } from '../../support/live-provider.js';
+import {
+  isVoiceAnswerRelease,
+  liveProvider,
+  voiceAnswerParts,
+} from '../../support/live-provider.js';
 import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
@@ -168,9 +172,7 @@ test.each(['overlapping', 'late'])(
     await expect
       .poll(() => voiceAnswerParts(live.sent).join(''), { timeout: 5000 })
       .toContain(JSON.stringify(answer));
-    expect(
-      live.sent.filter(({ event }) => event.type === 'session.commentary.append'),
-    ).toHaveLength(1);
+    expect(live.sent.filter(({ event }) => isVoiceAnswerRelease(event))).toHaveLength(1);
     expect(await (await browser.get(`${base}/map`)).json()).toEqual(before);
     expect(await (await browser.get(`${base}/map/history`)).json()).toEqual({ history: [] });
   },

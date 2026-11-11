@@ -5,7 +5,11 @@ import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
-import { liveProvider, voiceAnswerParts } from '../../support/live-provider.js';
+import {
+  isVoiceAnswerRelease,
+  liveProvider,
+  voiceAnswerParts,
+} from '../../support/live-provider.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
@@ -127,9 +131,9 @@ test.each([false, true])(
     await poll(false);
     const replay = await poll(true);
     expect(replay.voice.replyDelivery).toEqual(consumed.voice.replyDelivery);
-    expect(
-      live.sent.filter(({ event }) => event.type === 'session.commentary.append'),
-    ).toHaveLength(microphoneOn ? 1 : 0);
+    expect(live.sent.filter(({ event }) => isVoiceAnswerRelease(event))).toHaveLength(
+      microphoneOn ? 1 : 0,
+    );
     expect(await readMap()).toEqual(before);
     expect(await (await client.get(`${path}/map/history`)).json()).toEqual({ history: [] });
   },
@@ -223,7 +227,7 @@ test('an explicit typed cancellation consumes the outstanding spoken task withou
   const stopped = await poll();
   expect(stopped.voice).toMatchObject({ phase: 'listening', summaryReady: true });
   expect(stopped.assistant.modelReply).toBeUndefined();
-  expect(live.sent.filter(({ event }) => event.type === 'session.commentary.append')).toEqual([]);
+  expect(live.sent.filter(({ event }) => isVoiceAnswerRelease(event, true))).toEqual([]);
   expect(await readMap()).toEqual(before);
 });
 
@@ -326,15 +330,13 @@ test('a checked unsaved outcome is spoken once without creating a new attempt or
   const delivered = await poll();
   expect(delivered.voice.response).toMatchObject({ text: reply, questionPending: false });
   expect(delivered.voice.replyDelivery).toEqual([{ id: `check-${checkId}`, voiced: true }]);
-  expect(live.sent.filter(({ event }) => event.type === 'session.commentary.append')).toMatchObject(
-    [{ event: { delegation_id: null, content: reply } }],
-  );
+  expect(live.sent.filter(({ event }) => isVoiceAnswerRelease(event))).toMatchObject([
+    { event: { delegation_id: null, content: reply } },
+  ]);
   const repeated = await post(`text-assistant/${session.id}/recover`, { checkId });
   expect(await repeated.json()).toEqual(checked);
   await poll();
-  expect(live.sent.filter(({ event }) => event.type === 'session.commentary.append')).toHaveLength(
-    1,
-  );
+  expect(live.sent.filter(({ event }) => isVoiceAnswerRelease(event))).toHaveLength(1);
   expect(await readMap()).toEqual(before);
   expect(model.requests).toEqual([]);
 });
@@ -575,7 +577,7 @@ test('external delegation capacity stops only the affected voice without dispatc
     delegation: { id: 'ignored-provider-task', target: 'provider' },
     offset_ms: 0,
   });
-  expect(live.sent.filter(({ event }) => event.type === 'session.commentary.append')).toEqual([]);
+  expect(live.sent.filter(({ event }) => isVoiceAnswerRelease(event, true))).toEqual([]);
   const emit = (index: number) =>
     live.emit(providerId, {
       type: 'session.delegation.created',
@@ -652,7 +654,7 @@ test('a spoken saved relationship selection waits for actual acknowledgement and
   const selected: TextAssistantView = await (
     await client.get(`${path}/text-assistant/${session.id}`)
   ).json();
-  expect(live.sent.filter(({ event }) => event.type === 'session.commentary.append')).toEqual([]);
+  expect(live.sent.filter(({ event }) => isVoiceAnswerRelease(event, true))).toEqual([]);
   expect(
     (
       await post(`text-assistant/${session.id}/selection`, {
@@ -666,10 +668,10 @@ test('a spoken saved relationship selection waits for actual acknowledgement and
     ).status(),
   ).toBe(200);
   await expect
-    .poll(() => live.sent.filter(({ event }) => event.type === 'session.commentary.append').length)
+    .poll(() => live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
     .toBe(1);
   expect(live.sent.at(-1)?.event).toMatchObject({
-    type: 'session.commentary.append',
+    type: 'session.instructions.append',
   });
   expect(voiceAnswerParts(live.sent).join('')).toBe(
     'Skyttels resultat (verifierat): Sambandet är markerat.\nSamtal (obekräftat): "Här finns sambandet."',

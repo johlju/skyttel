@@ -14,7 +14,7 @@ import { sessionWarningMessage } from '../../../src/shared/session-activity.js';
 import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
-import { liveProvider } from '../../support/live-provider.js';
+import { isVoiceAnswerRelease, liveProvider } from '../../support/live-provider.js';
 import { modelMessage, modelTool, readOnlyScope, textModel } from '../../support/text-model.js';
 
 type Ingested = {
@@ -1795,7 +1795,7 @@ test('voice delegation links one backend owner and captures actual outbound Live
     offset_ms: 1,
   });
   await expect
-    .poll(() => live.sent.some(({ event }) => event.type === 'session.commentary.append'), {
+    .poll(() => live.sent.some(({ event }) => isVoiceAnswerRelease(event)), {
       timeout: 8000,
     })
     .toBe(true);

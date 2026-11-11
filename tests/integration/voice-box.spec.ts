@@ -20,7 +20,7 @@ import {
 } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
-import { liveProvider } from '../support/live-provider.js';
+import { isVoiceAnswerRelease, liveProvider } from '../support/live-provider.js';
 import { expect, test } from '../support/test.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 import { readVoiceProposal } from '../support/voice-work-reading.js';
@@ -79,7 +79,7 @@ function speak(live: ReturnType<typeof liveProvider>, text: string) {
   });
 }
 const answers = (live: ReturnType<typeof liveProvider>) =>
-  live.sent.filter(({ event }) => event.type === 'session.commentary.append').length;
+  live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length;
 
 /** A model whose answer the test holds until it releases it. */
 function heldModel() {
