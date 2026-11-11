@@ -196,10 +196,16 @@ for (const [caseId, width, theme] of [
                   const context = document.createElement('canvas').getContext('2d');
                   if (!context) throw new Error('Text measurement requires the browser canvas.');
                   context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+                  // Native input clientWidth can already exclude padding. Use the
+                  // computed CSS content box without subtracting that padding twice.
                   const available =
-                    element.clientWidth -
-                    Number.parseFloat(style.paddingLeft) -
-                    Number.parseFloat(style.paddingRight);
+                    Number.parseFloat(style.width) -
+                    (style.boxSizing === 'border-box'
+                      ? Number.parseFloat(style.borderLeftWidth) +
+                        Number.parseFloat(style.borderRightWidth) +
+                        Number.parseFloat(style.paddingLeft) +
+                        Number.parseFloat(style.paddingRight)
+                      : 0);
                   return {
                     complete: context.measureText(element.value).width <= available,
                     normalText: Number.parseFloat(style.fontSize) >= 16,
