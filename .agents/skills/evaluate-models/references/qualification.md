@@ -10,8 +10,11 @@ Record conversation length and instruction length as separate dimensions.
 Keep advanced scenarios in the catalog. Report each group independently;
 use everyday results for the main recommendation and timing comparison.
 The extended neutral history is a controlled conversation fixture. Forced
-summary coverage does not establish any real model's context limit; report
-actual context-limit measurements separately when the run requires them.
+summary coverage does not establish any real model's context limit.
+Exclude natural context-saturation and physical provider-limit experiments
+from model evaluation and its remaining-work lists. Retain the catalog's
+bounded summary-correctness scenarios. Report context limits as unverified;
+reopen that scope only on a new explicit request for a separate experiment.
 
 ## Correctness and capability
 

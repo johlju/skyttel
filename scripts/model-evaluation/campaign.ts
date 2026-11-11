@@ -6,6 +6,7 @@ import catalog from './catalog.json' with { type: 'json' };
 import type { EvaluationPlan } from './evaluate.js';
 import { scenarioUtterances } from './follow-ups.js';
 import { judgeInstructions } from './judge.js';
+import type { JudgeCalibrationReference } from './judge-calibration.js';
 import controls from './judge-controls.json' with { type: 'json' };
 import type { LiveEvaluationProfile } from './live.js';
 import optimization from './optimization-campaign-profiles.json' with { type: 'json' };
@@ -55,8 +56,6 @@ export async function prepareOptimizationCampaign(options: {
     'optimization-campaign-profiles.json',
     'optimization-comparison-plan.json',
     'optimization-voice-comparison-plan.json',
-    'context-limit.ts',
-    'context-probe.ts',
   ];
   const sources = Object.fromEntries(
     await Promise.all(
@@ -143,15 +142,12 @@ export async function prepareOptimizationCampaign(options: {
     ),
     clarificationPolicy: 'catalog-unique-matching-reply-once; preserve-direct-and-assisted-v1',
     counting: 'disabled; whole-context reservations',
-    contextLimitSupplement: {
-      status: 'not_run',
-      ordinaryGrowth:
-        'contextLimitFixture(2048); stop at first summary or generation increase; at most one recall',
-      providerBoundary: 'bounded captured-request probe; explicit context_length_exceeded only',
-      physicalVoiceBoundary:
-        'unrun; ordinary summary or text-backend boundary cannot establish Live context limit',
-      repetitions: 1,
-      scope: 'advanced capability evidence; outside everyday percentage thresholds',
+    excludedCoverage: ['natural_context_saturation', 'physical_provider_limit'],
+    contextLimits: {
+      application: 'unverified',
+      provider: 'unverified',
+      voice: 'unverified',
+      policy: 'A separate context-limit experiment requires a new explicit user request.',
     },
     costBasis: {
       backendMaximumUsd: { 'terra-6.1-high-668': 3.265, 'sol-6.1-high-668': 6.53 },
@@ -183,6 +179,7 @@ export function optimizationEvaluationPlan(options: {
   priorSource: string;
   limitUsd?: number;
   localVerification: EvaluationPlan['localVerification'];
+  judgeCalibration?: JudgeCalibrationReference;
 }): EvaluationPlan {
   const backend = optimizationBackend(options.profile);
   if (options.modality === 'voice') optimizationPlaybackAssessor();
@@ -199,6 +196,7 @@ export function optimizationEvaluationPlan(options: {
     backendProfiles: [backend],
     textProfiles: [backend.id],
     judgeProfile: optimization.judgeProfile as EvaluationProfile,
+    ...(options.judgeCalibration ? { judgeCalibration: options.judgeCalibration } : {}),
     baselineProfiles: { text: backend.id },
     applicationComparison: options.campaign.applicationComparison,
     followUps: true,

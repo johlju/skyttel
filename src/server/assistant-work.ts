@@ -149,7 +149,7 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
         invalid_endpoint:
           'Ändpunkten saknas eller är ogiltig. Läs verkliga objekt och fråga vilken ändpunkt som avses före ett nytt förslag. Hitta inte på motpart eller ersättningsobjekt. Ditt övriga utkast finns kvar.',
         unresolved_identity:
-          'Identiteten är olöst. Fråga vilken person eller sak som avses, eller låt användaren uttryckligen välja ospecificerat objekt. Inget sparades.',
+          'Identiteten är olöst. Fråga vilket objekt som avses, eller låt användaren uttryckligen välja ospecificerat objekt. Inget sparades.',
         operation_pending:
           'Kontrollera det väntande sparförsöket innan nya ändringar. Återförsök endast samma ID och innehåll när resultatet är känt.',
         operation_conflict:

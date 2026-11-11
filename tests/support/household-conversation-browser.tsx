@@ -32,6 +32,7 @@ export async function openHouseholdConversation(
     unresolvedIdentities: [],
     pendingOperations: [],
   },
+  modelChoice?: TextAssistantView['modelChoice'],
 ) {
   await page.viewport(width, height);
   let conversation: TextAssistantView = {
@@ -40,6 +41,7 @@ export async function openHouseholdConversation(
     phase: 'ready',
     operations: [],
     review,
+    ...(modelChoice ? { modelChoice, enabledModelChoices: [modelChoice] } : {}),
   };
   let available = true;
   let failNextReply = false;

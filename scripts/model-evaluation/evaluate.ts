@@ -15,7 +15,12 @@ import {
 } from './comparison.js';
 import { type EvaluationContinuation, prepareContinuation } from './continuation.js';
 import { scenarioUtterances } from './follow-ups.js';
-import { contentJudge, judgeInstructions, verifyJudge } from './judge.js';
+import { contentJudge, verifyJudge } from './judge.js';
+import {
+  type JudgeCalibrationReference,
+  judgeCalibrationIdentity,
+  reuseJudgeCalibration,
+} from './judge-calibration.js';
 import controls from './judge-controls.json' with { type: 'json' };
 import {
   budgetedLive,
@@ -67,6 +72,7 @@ export type EvaluationPlan = {
   backendProfiles?: EvaluationProfile[];
   applicationComparison?: ApplicationComparison;
   judgeProfile: EvaluationProfile;
+  judgeCalibration?: JudgeCalibrationReference;
   baselineProfiles: Partial<Record<'text' | 'voice', string>>;
   voice?: boolean;
   voiceProfile?: LiveEvaluationProfile;
@@ -153,19 +159,13 @@ export async function evaluateModels(
       assessor: verifiedPlaybackAssessor(plan.playbackAssessorProfile),
     };
   }
-  const judgeSha256 = createHash('sha256')
-    .update(
-      JSON.stringify({
-        provider: judgeProfile.provider,
-        model: judgeProfile.model,
-        effort: judgeProfile.effort,
-        serviceTier: judgeProfile.serviceTier,
-        outputLimit: judgeProfile.maxOutputTokens,
-        instructions: judgeInstructions,
-        controls,
-      }),
-    )
-    .digest('hex');
+  const judgeSha256 = judgeCalibrationIdentity(judgeProfile);
+  const calibrationReuse = plan.judgeCalibration
+    ? await reuseJudgeCalibration(plan.judgeCalibration, {
+        profile: judgeProfile,
+        origin: runtime.transport ? 'controlled' : 'provider',
+      })
+    : undefined;
   const catalog = { ...rawCatalog, scenarios: plan.scenarioSet ?? rawCatalog.scenarios } as Catalog;
   if (
     !catalog.scenarios.length ||
@@ -375,7 +375,7 @@ export async function evaluateModels(
     ),
   );
   const judgeMaximumCalls =
-    controls.cases.length +
+    (calibrationReuse ? 0 : controls.cases.length) +
     plannedUtterances *
       (2 + maximumFollowUpCandidates + (voiceSelection?.assessor.maximumCandidates ?? 0)) *
       rounds;
@@ -386,6 +386,9 @@ export async function evaluateModels(
     await emit('manifest', 'Utvärderingskörning', {
       ...sharedManifest,
       commit: plan.commit,
+      judgeCalibration: calibrationReuse
+        ? { mode: 'reused', ...calibrationReuse }
+        : { mode: 'fresh' },
       evaluator,
       continuation: continuation?.manifest,
       playback: voiceSelection
@@ -475,20 +478,24 @@ export async function evaluateModels(
     });
     await emit('local_verification', 'Lokal verifiering', plan.localVerification);
     let previousJudgeCost: number | null = cost('judge');
-    const calibrated = await verifyJudge(judge, async (id, result, expected) => {
-      const cumulativeJudgeCostUsd = cost('judge');
-      await emit('judge_control', `Bedömarkontroll ${id}`, {
-        id,
-        result,
-        expected,
-        costUsd:
-          previousJudgeCost === null || cumulativeJudgeCostUsd === null
-            ? null
-            : cumulativeJudgeCostUsd - previousJudgeCost,
-        cumulativeJudgeCostUsd,
-      });
-      previousJudgeCost = cumulativeJudgeCostUsd;
-    });
+    if (calibrationReuse)
+      await emit('judge_calibration_reuse', 'Återanvänd bedömarkalibrering', calibrationReuse);
+    const calibrated =
+      Boolean(calibrationReuse) ||
+      (await verifyJudge(judge, async (id, result, expected) => {
+        const cumulativeJudgeCostUsd = cost('judge');
+        await emit('judge_control', `Bedömarkontroll ${id}`, {
+          id,
+          result,
+          expected,
+          costUsd:
+            previousJudgeCost === null || cumulativeJudgeCostUsd === null
+              ? null
+              : cumulativeJudgeCostUsd - previousJudgeCost,
+          cumulativeJudgeCostUsd,
+        });
+        previousJudgeCost = cumulativeJudgeCostUsd;
+      }));
     if (!calibrated) {
       budget.stop(budget.snapshot().reason ?? 'evaluation_judge_control_failed');
       await emit('diagnostic', 'Bedömaren är inte verifierad', {

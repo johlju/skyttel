@@ -52,6 +52,7 @@ if (command === 'prepare' && preparationPath && arguments_.length === 3) {
     priorSource: execution.priorSource,
     limitUsd: execution.limitUsd,
     localVerification: execution.localVerification,
+    judgeCalibration: execution.judgeCalibration,
   });
   const result = await evaluateModels(plan);
   console.log(

@@ -7,6 +7,7 @@ export type RecordType =
   | 'manifest'
   | 'local_verification'
   | 'judge_control'
+  | 'judge_calibration_reuse'
   | 'attempt'
   | 'diagnostic'
   | 'comparison'

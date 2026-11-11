@@ -939,7 +939,7 @@ for (const mode of ['sequential', 'overlap'] as const) {
             modelMessage(
               JSON.stringify(
                 outcome === 'rejected'
-                  ? { decision: 'clarify' }
+                  ? { decision: 'clarify', operation: 0, question: 'Vilket objekt menar du?' }
                   : { decision: 'allow', complete: true, fulfillsRequest: true },
               ),
             ),
@@ -1133,7 +1133,7 @@ for (const mode of ['sequential', 'overlap'] as const) {
             modelMessage(
               JSON.stringify(
                 ending === 'rejected'
-                  ? { decision: 'clarify' }
+                  ? { decision: 'clarify', operation: 0, question: 'Vilket objekt menar du?' }
                   : { decision: 'allow', complete: true, fulfillsRequest: true },
               ),
             ),

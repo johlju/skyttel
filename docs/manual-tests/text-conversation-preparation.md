@@ -445,6 +445,56 @@ resultat; felet är ett obligatoriskt besked. Leveransen får inte säga
 **Sparat.** eller påstå att Lo lades till av detta uppdrag. Avsluta
 installationen med `quit`.
 
+## Konkret kontrollfråga
+
+TEXT-19 använder en ny röstinstallation enligt inledningen, utan
+`seed-family`. Logga in som Alex, skapa Textprov och lägg Lo Exempel av
+typen Person med beskrivningen Påhittad uppgift i utkastet. Starta samtalet
+med text och lämna mikrofonen av. Ställ kontrollerna:
+
+```text
+scope-work
+response-required off
+hold-check on
+```
+
+Efter första sparbegäran kopieras V och C från `held.draft`. Släpp
+sparverktyget och sedan den hållna kontrollens konkreta fråga:
+
+<!-- markdownlint-disable MD013 -->
+```text
+tool REQUEST save_draft {"version":V,"contentVersion":C}
+reply CHECK {"decision":"clarify","operation":0,"question":"Vilken beskrivning ska Lo ha?"}
+```
+<!-- markdownlint-enable MD013 -->
+
+Efter användarens svar kopieras den väntande delens `id` och `revision`
+från `held.pendingParts` som PART och R. Kopiera `held.messageId` som M.
+Kopiera Lo-förslagets `id` som LO och hela dess `after` som VALUE från
+`held.draft.changes`. Om förslaget saknas i urvalet, släpp först
+`tool REQUEST read_my_draft {}` och hämta det från nästa
+`lastToolResult.changes`. Släpp sedan svaret med den verkliga delens
+identitet och oförändrade förslagsvärde:
+
+<!-- markdownlint-disable MD013 -->
+```text
+tool REQUEST ask_questions {"questions":[],"updates":[{"id":"PART","revision":R,"action":"clarify","messageId":"M","evidence":"Behåll beskrivningen Påhittad uppgift.","expected":[{"kind":"object","id":"LO","value":VALUE}]}]}
+```
+<!-- markdownlint-enable MD013 -->
+
+Släpp en eventuell följande arbetsbegäran med `reply REQUEST Klart.`
+Utkastet ska finnas kvar. Efter nästa uttryckliga sparbegäran kopieras
+nya V och C. Släpp sparandet och godkänn kontrollen:
+
+<!-- markdownlint-disable MD013 -->
+```text
+tool REQUEST save_draft {"version":V,"contentVersion":C}
+reply CHECK {"decision":"allow","complete":true,"fulfillsRequest":true}
+```
+<!-- markdownlint-enable MD013 -->
+
+Läs slutresultatet enligt TEXT-19. Avsluta installationen med `quit`.
+
 ## Avvisad kontroll av hela utkastet
 
 TEXT-15 använder en ny röstinstallation utan `seed-family`. Logga in som
@@ -483,12 +533,13 @@ Kim. Underlaget kommer från hela aktuella utkastet. Avvisa just
 detta sparande med kontrollens eget ID:
 
 ```text
-reply CHECK {"decision":"clarify"}
+reply CHECK {"decision":"unavailable"}
 hold-check off
 ```
 
-Invänta avvisningen och det osparade utkastet. Välj läsande omfattning
-utan ytterligare svarskrav före nästa informationsfråga:
+Invänta avvisningen och det osparade utkastet. Låt användaren avstå från
+det oavslutade arbetet enligt TEXT-15. Välj läsande omfattning utan
+ytterligare svarskrav före nästa informationsfråga:
 
 ```text
 scope-read

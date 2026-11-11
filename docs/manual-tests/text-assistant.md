@@ -685,6 +685,63 @@ som stöd, skilt från hela det ordinarie fallet.
   och det aktuella felet. Den väntande delen framstår inte som färdig.
   Ändringen ligger kvar i utkastet; inget sparande påstås.
 
+### TEXT-19: kontrollens fråga besvaras före en ny sparbegäran
+
+**Syfte:** Visa en konkret fråga från kontrollen och behålla utkastet
+osparat när användaren besvarar den.
+
+**Användare:** Alex i Textprov.
+
+**Förutsättningar:** En ny kontrollerad röstinstallation med Lo Exempel
+av typen Person och beskrivningen Påhittad uppgift i utkastet. Använd
+textvyn och lämna mikrofonen av under hela fallet.
+
+**Separat förberedelse:** Följ
+[konkret kontrollfråga](text-conversation-preparation.md#konkret-kontrollfråga).
+Operatören styr kontrollens fråga och arbetsmodellens svar utan verkliga
+leverantörsanrop.
+
+**Automatiskt motsvarande test (integration eller webbläsare):**
+[text-assistant.spec.ts](../../tests/integration/text-assistant.spec.ts),
+TEXT-19.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/text-assistant.spec.ts",
+    "caseId": "TEXT-19"
+  },
+  "reference": "Kontrollerad fråga vid sparandet i ett textsamtal; svaret bevarar utkastet och ett nytt uttryckligt sparbesked avslutar arbetet.",
+  "outcomes": [
+    "Kontrollens konkreta fråga och behovet av en ny sparbegäran visas.",
+    "Svaret bevarar Lo Exempel osparad med samma beskrivning.",
+    "En ny sparbegäran ger ett tomt utkast och Lo i den sparade tabellen."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna textvyn, börja samtalet och godkänn. Skicka **Spara hela
+   utkastet.**
+2. Välj **Läs mer** i **Samtalsnotis**. Läs frågan **Vilken beskrivning
+   ska Lo ha?** och beskedet om att be om sparande igen. Visa utkastet
+   och kontrollera att Lo Exempel finns kvar.
+3. Skicka **Behåll beskrivningen Påhittad uppgift.** Vänta tills arbetet
+   avslutas. Kontrollera att Lo finns kvar i utkastet och inget
+   **Sparat.** visas.
+4. Skicka **Spara hela utkastet.** Läs **Utkastet är sparat**, kontrollera
+   att utkastet är tomt och öppna Lo Exempel i Tabell. Läs beskrivningen.
+
+**Förväntat resultat:** Den konkreta frågan kan besvaras. Svaret sparar
+ingenting; den nya sparbegäran sparar Lo med Påhittad uppgift kvar.
+
 ### TEXT-15: avvisat sparande bevarar utkastet före ett nytt talat sparbesked
 
 **Syfte:** Behålla både tidigare och nya förslag när sparandet inte kan
@@ -755,7 +812,8 @@ TEXT-15.
 3. Välj **Läs mer** i **Samtalsnotis**. Läs att ändringarna ligger kvar
    osparade och att ett nytt sparbesked behövs. Läs både Lo Exempel och
    Kim i utkastet. Öppna Lo och kontrollera att beskrivningen Påhittad
-   uppgift finns kvar. Stäng detaljen.
+   uppgift finns kvar. Stäng detaljen. Välj **Avstå från det oavslutade
+   arbetet** i Samtalsnotis; de genomförda förslagen ska finnas kvar.
 4. Skicka **Vad finns i utkastet?** Läs redovisningen av båda personerna.
    Utkastet finns kvar och inget **Sparat.** visas.
 5. Slå på **Prata med Skyttel** i samma samtal. Låt operatören förmedla

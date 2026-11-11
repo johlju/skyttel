@@ -281,7 +281,9 @@ test.each([false, true])(
     const allow = document.match(
       /^reply CHECK \{"decision":"allow","complete":true,"fulfillsRequest":true\}$/mu,
     )?.[0];
-    const clarify = document.match(/^reply CHECK \{"decision":"clarify"\}$/mu)?.[0];
+    const clarify = document.match(
+      /^reply CHECK \{"decision":"clarify","operation":0,"question":"Menar du Lo Manuell\?"\}$/mu,
+    )?.[0];
     if (!holdCheck || !allow || !clarify) throw new Error('Missing public queued-check recipe');
     const { child, lines, exit, next, command } = launch();
     const browser = await request.newContext();

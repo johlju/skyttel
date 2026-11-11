@@ -544,8 +544,9 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   Ett ofärdigt uppdrag behåller sin instruktion, sin väntande informationsfråga
   och ett besked om pausat återstående arbete i text och kontrollerad
   röstleverans.
-  TEXT-15 bevarar tidigare och nya förslag efter avvisat sparande och
-  kräver ett nytt uttryckligt talat ändra-och-spara-besked.
+  TEXT-19 visar en konkret kontrollfråga och kräver en ny sparbegäran
+  efter svaret. TEXT-15 bevarar tidigare och nya förslag efter avvisat
+  sparande och kräver ett nytt uttryckligt talat ändra-och-spara-besked.
   TEXT-17 behåller även en väntande informationsfråga efter sparande när
   förklaringen misslyckas och skiljer enkelt verifierat slutbesked från
   beställd förklaring. Hela förklaringen behålls vid lyckat sparande med

@@ -112,8 +112,14 @@ and effort in the run configuration. Its calibration must pass before its
 verdicts can support a comparison. Check recorded references against the current
 `judgeSha256`, which identifies the judge provider, model, effort, instructions
 and controls.
-The runner executes every checked-in judge control first, using one call to
-the selected judge per control and requiring all expected outcomes.
+Before dispatch, check retained original calibration evidence for reuse under
+[the testing guide](../../../../docs/development/testing.md#model-evaluation-history).
+Prepare and bind a valid reference in `EvaluationPlan.judgeCalibration`;
+record its source, freshness window and historical cost separately from new
+spending. If no eligible evidence exists, include fresh calibration in the
+authorized plan. Fresh calibration executes every checked-in judge control,
+using one call per control and requiring all expected outcomes.
+An invalid selected reference stops execution; resolve it before dispatch.
 A control deviation, missing usage or failed local gate stops comparison.
 
 Preserve the application, assistant, MCP, write guards and SQLite. Select one
@@ -139,7 +145,8 @@ Only dialogs whose recorded steps are all `not_run` are eligible. Any attempted
 step, including cancellation or failure, prevents replay of that dialog.
 
 Use a new output directory, carry all source charges conservatively in
-`priorUsd`, preserve the ceiling, and run fresh calibration. The preflight reads
+`priorUsd`, preserve the ceiling, and select calibration evidence as above.
+The preflight reads
 source ledgers without changing them and refuses unsettled charges, omitted
 lineage, changed shared conditions or missing unrun evidence. Keep original
 records and reconciliation evidence available for publication.

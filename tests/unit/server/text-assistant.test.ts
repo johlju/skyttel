@@ -447,7 +447,11 @@ test.each([
 function displayedVersion(session: Pick<TextAssistantView, 'review'>) {
   return { draftVersion: session.review.version, contentVersion: session.review.contentVersion };
 }
-async function message(session: TextAssistantView, text: string) {
+async function message(
+  session: TextAssistantView,
+  text: string,
+  answerTo?: { id: string; revision: number }[],
+) {
   const result = await browser.post(`${path}/${session.id}/messages`, {
     headers: { origin: app.origin },
     data: {
@@ -455,6 +459,7 @@ async function message(session: TextAssistantView, text: string) {
       ...displayedVersion(session),
       requestId: crypto.randomUUID(),
       text,
+      answerTo,
     },
   });
   expect(result.status(), await result.text()).toBe(202);
@@ -1728,6 +1733,213 @@ test.each([
   },
 );
 
+for (const endpoint of ['source', 'target'] as const) {
+  test.each(['update', 'replace', 'incomplete', 'add', 'wrong-verb', 'verb-only'] as const)(
+    `relationship ${endpoint} edits preserve requested wording and unrelated work: %s`,
+    async (mode) => {
+      let connection: {
+        typeId: string;
+        sourceId: string;
+        targetId: string;
+        verb: string;
+        properties: { id: string; label: string; kind: 'text'; value: string }[];
+      };
+      const requested = {
+        sourceId:
+          endpoint === 'target' ? 'service' : mode === 'verb-only' ? 'supplier' : 'platform',
+        targetId:
+          endpoint === 'source' ? 'service' : mode === 'verb-only' ? 'supplier' : 'platform',
+        verb: endpoint === 'source' ? 'levererar till' : 'hämtar från',
+      };
+      const phrase =
+        mode === 'verb-only'
+          ? `Ändra bara verbet på Nordverks samband med Rapportflödet till ”${requested.verb}”. Spara inte.`
+          : `${
+              endpoint === 'source'
+                ? 'Reservplattformen levererar till Rapportflödet.'
+                : 'Rapportflödet hämtar från Reservplattformen.'
+            } ${
+              mode === 'add'
+                ? 'Lägg till den kopplingen och behåll Nordverks koppling.'
+                : 'Det är den aktuella uppgiften för kopplingen som nu går via Nordverk.'
+            } Behåll övriga uppgifter. Spara inte.`;
+      const updatesExisting = ['update', 'verb-only', 'wrong-verb'].includes(mode);
+      const model = textModel(
+        (request) => {
+          const current = JSON.parse(
+            String(request.input.findLast((item) => item.role === 'user')?.content),
+          );
+          return [
+            modelTool('submit_changes', {
+              version: current.draft.version,
+              contentVersion: current.draft.contentVersion,
+              completion: 'draft',
+              operations: [
+                ...(mode === 'replace'
+                  ? [
+                      {
+                        name: 'propose_relationship',
+                        arguments: { id: 'connection', baseRevision: 1, value: null },
+                      },
+                    ]
+                  : []),
+                {
+                  name: 'propose_relationship',
+                  arguments: {
+                    id: updatesExisting ? 'connection' : 'new-connection',
+                    baseRevision: updatesExisting ? 1 : null,
+                    typeRevision: 1,
+                    value: {
+                      ...connection,
+                      ...requested,
+                      ...(mode === 'wrong-verb' ? { verb: connection.verb } : {}),
+                    },
+                  },
+                },
+              ],
+            }),
+          ];
+        },
+        (request) => {
+          if (request.instructions.startsWith('SKYTTEL_TURN_SCOPE'))
+            return [
+              modelMessage(
+                JSON.stringify({ mode: 'work', request: phrase, responseRequired: false }),
+              ),
+            ];
+          const { authority, untrusted } = JSON.parse(String(request.input[0].content));
+          expect(authority.current).toBe(phrase);
+          expect(untrusted.data.map.relationships).toEqual(
+            expect.arrayContaining([expect.objectContaining({ id: 'connection', ...connection })]),
+          );
+          expect(untrusted.data.draft.changes).toEqual(
+            expect.arrayContaining([expect.objectContaining({ id: 'earlier' })]),
+          );
+          expect(untrusted.operations.at(-1).arguments.value).toEqual({
+            ...connection,
+            ...requested,
+            ...(mode === 'wrong-verb' ? { verb: connection.verb } : {}),
+          });
+          // Control the provider verdict, not its semantic reasoning. Verify
+          // that the checker receives the original requested wording and the
+          // actual old/proposed endpoints and verb, then enforce its decision.
+          return [
+            modelMessage(
+              JSON.stringify(
+                mode === 'incomplete'
+                  ? { decision: 'incomplete' }
+                  : mode === 'wrong-verb'
+                    ? { decision: 'deny', operation: 0 }
+                    : { decision: 'allow', complete: true, fulfillsRequest: true },
+              ),
+            ),
+          ];
+        },
+      );
+      await setup(model.provider);
+      const mapPath = path.replace('/text-assistant', '/map');
+      for (const [id, name, kind] of [
+        ['supplier', 'Nordverk', 'Företag'],
+        ['platform', 'Reservplattformen', 'Tjänst'],
+        ['service', 'Rapportflödet', 'Tjänst'],
+      ]) {
+        const state = await (await browser.get(mapPath)).json();
+        const response = await browser.post(`${mapPath}/draft`, {
+          headers: { origin: app.origin },
+          data: {
+            version: state.draft.version,
+            contentVersion: state.contentVersion,
+            id,
+            baseRevision: null,
+            value: {
+              name,
+              typeId: state.types.find((type: { name: string }) => type.name === kind).id,
+            },
+          },
+        });
+        expect(response.status(), await response.text()).toBe(200);
+      }
+      let map = await (await browser.get(mapPath)).json();
+      connection = {
+        typeId: map.relationshipTypes.find((type: { name: string }) => type.name === 'Använder').id,
+        sourceId: endpoint === 'source' ? 'supplier' : 'service',
+        targetId: endpoint === 'source' ? 'service' : 'supplier',
+        verb: endpoint === 'source' ? 'levererar åt' : 'hämtar via',
+        properties: [{ id: 'note', label: 'Anmärkning', kind: 'text', value: 'Varje månad' }],
+      };
+      const unrelated = { ...connection, sourceId: 'platform', targetId: 'supplier' };
+      for (const [id, value] of [
+        ['connection', connection],
+        ['unrelated-connection', unrelated],
+      ] as const) {
+        map = await (await browser.get(mapPath)).json();
+        const proposed = await browser.post(`${mapPath}/relationship`, {
+          headers: { origin: app.origin },
+          data: {
+            version: map.draft.version,
+            contentVersion: map.contentVersion,
+            id,
+            baseRevision: null,
+            value,
+          },
+        });
+        expect(proposed.status(), await proposed.text()).toBe(200);
+      }
+      map = await (await browser.get(mapPath)).json();
+      const saved = await browser.post(`${mapPath}/save`, {
+        headers: { origin: app.origin },
+        data: {
+          version: map.draft.version,
+          contentVersion: map.contentVersion,
+          operationId: 'seed-connection',
+        },
+      });
+      expect(saved.status(), await saved.text()).toBe(200);
+      await webProposal('Tidigare förslag', 'earlier');
+      const before = await start();
+      const result = await message(before, phrase);
+      expect(result.receipt).toBeUndefined();
+      expect(result.review.changes).toEqual(before.review.changes);
+      expect(model.requests).toHaveLength(1);
+      if (mode === 'incomplete' || mode === 'wrong-verb') {
+        expect(result.error).toBe(
+          mode === 'incomplete' ? 'assistant_batch_incomplete' : 'assistant_action_out_of_scope',
+        );
+        expect(result.review).toEqual(before.review);
+      } else {
+        expect(result.error).toBeUndefined();
+        expect(result.review.relationships).toHaveLength(mode === 'replace' ? 2 : 1);
+        expect(result.review.relationships).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              id: updatesExisting ? 'connection' : 'new-connection',
+              after: { ...connection, ...requested },
+            }),
+          ]),
+        );
+        if (mode === 'replace')
+          expect(result.review.relationships).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({
+                id: 'connection',
+                before: expect.objectContaining(connection),
+                after: null,
+              }),
+            ]),
+          );
+      }
+      map = await (await browser.get(mapPath)).json();
+      expect(map.relationships).toHaveLength(2);
+      expect(map.relationships).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: 'connection', ...connection }),
+          expect.objectContaining({ id: 'unrelated-connection', ...unrelated }),
+        ]),
+      );
+    },
+  );
+}
+
 test('a duplicate relationship addition cannot supply projected properties to a later proposal', async () => {
   let typeId = '';
   const properties = [
@@ -2740,6 +2952,142 @@ test.each(['before', 'after'])(
       { id: 'bike', after: { name: 'Blå cykeln' } },
     ]);
     expect(completed.receipt).toBeUndefined();
+  },
+);
+
+test.each(['rephrase', 'unclear', 'new', 'stale', 'unrelated', 'multiple'] as const)(
+  'an action clarification (%s) preserves unrelated waiting and ready parts',
+  async (association) => {
+    let turn = 0;
+    let typeId = '';
+    let beforeCheck: TextAssistantView['pendingParts'];
+    const question = 'Vilken av de gröna cyklarna menar du?';
+    const model = textModel(
+      (request) => {
+        const input = JSON.parse(
+          String(request.input.findLast((row) => row.role === 'user')?.content),
+        );
+        if (turn++ === 0)
+          return [
+            modelTool('ask_questions', {
+              questions: ['Vilken hjälm?', 'Vilken cykel?', 'Vilken bil?'],
+            }),
+          ];
+        if (turn === 2)
+          return [
+            modelTool('ask_questions', {
+              questions: [],
+              updates: input.pendingParts
+                .slice(0, 2)
+                .map((part: { id: string; revision: number }) => ({
+                  id: part.id,
+                  revision: part.revision,
+                  action: 'clarify',
+                  messageId: input.messageId,
+                  evidence: input.message,
+                })),
+              continueResponse: true,
+            }),
+          ];
+        beforeCheck = lastToolResult(request).pendingParts;
+        return [
+          modelTool('submit_changes', {
+            version: input.draft.version,
+            contentVersion: input.draft.contentVersion,
+            completion: 'draft',
+            operations: ['helmet', 'bike'].map((id) => ({
+              name: 'propose_object',
+              arguments: { id, baseRevision: null, value: { typeId, name: id } },
+            })),
+          }),
+        ];
+      },
+      (request) => {
+        if (request.instructions.startsWith('SKYTTEL_TURN_SCOPE'))
+          return [modelMessage(JSON.stringify({ mode: 'work', request: 'Uppdatera föremålen.' }))];
+        if (request.instructions.startsWith('SKYTTEL_TURN_CLARIFICATION')) {
+          const { untrusted } = JSON.parse(String(request.input[0].content));
+          expect(untrusted.checked).toEqual({
+            operation: {
+              name: 'propose_object',
+              arguments: { id: 'bike', baseRevision: null, value: { typeId, name: 'bike' } },
+            },
+            question,
+          });
+          const { id, revision } = untrusted.parts[1];
+          return [
+            modelMessage(
+              JSON.stringify(
+                association === 'unclear'
+                  ? { decision: 'unclear', question: 'Vilken uppgift menar du?' }
+                  : association === 'new'
+                    ? { decision: 'new' }
+                    : {
+                        decision: 'rephrase',
+                        parts:
+                          association === 'multiple'
+                            ? untrusted.parts.map(
+                                ({ id, revision }: { id: string; revision: number }) => ({
+                                  id,
+                                  revision,
+                                }),
+                              )
+                            : [
+                                {
+                                  id: association === 'unrelated' ? 'unrelated-part' : id,
+                                  revision: association === 'stale' ? revision - 1 : revision,
+                                },
+                              ],
+                      },
+              ),
+            ),
+          ];
+        }
+        return [modelMessage(JSON.stringify({ decision: 'clarify', operation: 1, question }))];
+      },
+    );
+    await setup(model.provider);
+    typeId = (await webProposal()).typeId;
+    const waiting = await message(await start(), 'Uppdatera hjälmen, cykeln och bilen.');
+    const result = await message(
+      waiting,
+      'Den blå hjälmen och den gröna cykeln. Bilen vet jag inte.',
+      waiting.pendingParts.map(({ id, revision }: { id: string; revision: number }) => ({
+        id,
+        revision,
+      })),
+    );
+    expect(beforeCheck).toMatchObject([
+      { status: 'ready' },
+      { status: 'ready' },
+      { status: 'waiting' },
+    ]);
+    expect(result.pendingParts[0]).toEqual(beforeCheck?.[0]);
+    expect(result.pendingParts[2]).toEqual(beforeCheck?.[2]);
+    if (association === 'rephrase') {
+      expect(result.pendingParts).toHaveLength(3);
+      expect(result.pendingParts[1]).toMatchObject({
+        id: beforeCheck?.[1].id,
+        revision: 2,
+        question,
+        status: 'waiting',
+      });
+      expect(result.questions).toEqual([question, 'Vilken bil?']);
+    } else {
+      expect(result.pendingParts.slice(0, 3)).toEqual(beforeCheck);
+      if (association === 'new') {
+        expect(result.pendingParts).toHaveLength(4);
+        expect(result.pendingParts[3]).toMatchObject({ question, status: 'waiting' });
+      } else expect(result.pendingParts).toHaveLength(3);
+    }
+    expect(result.error).toBe(
+      ['stale', 'unrelated', 'multiple'].includes(association)
+        ? 'assistant_pending_part_changed'
+        : 'assistant_scope_unclear',
+    );
+    if (association === 'unclear') expect(result.reply).toContain('Vilken uppgift menar du?');
+    expect(result.review).toEqual(waiting.review);
+    expect(result.receipt).toBeUndefined();
   },
 );
 

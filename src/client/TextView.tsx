@@ -53,7 +53,9 @@ export function TextView({
 }) {
   const { session, transcript, text, pending, unknown, working } = conversation;
   const viewport = useConversationViewport();
-  const { computer, mobile, short } = viewport;
+  const { computer, mobile } = viewport;
+  // A short desktop window needs the same room for composing as a touch view.
+  const short = viewport.height < 520;
   const root = useRef<HTMLElement>(null);
   const widths = conversationWidths(
     widthPreferences?.preferences ?? defaultConversationPreferences,

@@ -271,7 +271,7 @@ export function assistantRoutes(database: Database.Database, auth: Auth, origin:
     const server = new McpServer(
       { name: 'Skyttel', version: '1.0.0' },
       {
-        instructions: `Läs bara relevant innehåll för uppdraget. Personer i kartan ger ingen inloggning. Användarhantering, export, återimport och permanent radering görs i ${origin}/households/${connection.householdId}/administration. ${canWrite ? assistantWorkInstructions : 'Denna anslutning är läsande. Kartarbete kräver nytt uttryckligt medgivande med skyttel:read och skyttel:write.'}`,
+        instructions: `Läs bara relevant innehåll för uppdraget. Objekt i kartan ger ingen inloggning eller åtkomst till hushållet, oavsett objekttyp. Användarhantering, export, återimport och permanent radering görs i ${origin}/households/${connection.householdId}/administration. ${canWrite ? assistantWorkInstructions : 'Denna anslutning är läsande. Kartarbete kräver nytt uttryckligt medgivande med skyttel:read och skyttel:write.'}`,
       },
     );
     function map() {

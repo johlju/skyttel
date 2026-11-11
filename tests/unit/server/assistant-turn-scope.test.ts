@@ -706,7 +706,14 @@ test('worker replies and earlier requests cannot expand a subsequent read-only t
   expect(ended.review).toEqual(first.review);
 });
 
-test.each(['clarify', 'malformed'] as const)(
+test.each([
+  '{"decision":"clarify"}',
+  '{"decision":"clarify","operation":0,"question":" "}',
+  '{"decision":"clarify","operation":999,"question":"Vilken typ?"}',
+  '{"decision":"clarify","operation":0,"question":"Vilken typ?","reason":"extra"}',
+  '{"decision":"deny","operation":999}',
+  '{"decision":"unavailable"}',
+])(
   'an action comparison returning %s preserves the draft without a security event',
   async (decision) => {
     const events = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -724,18 +731,14 @@ test.each(['clarify', 'malformed'] as const)(
         modelMessage(
           input.instructions.startsWith('SKYTTEL_TURN_SCOPE')
             ? '{"mode":"work","request":"Create a type."}'
-            : decision === 'clarify'
-              ? '{"decision":"clarify"}'
-              : '{"decision":"deny","operation":999}',
+            : decision,
         ),
       ],
     );
     const started = await setup(model.provider);
     const ended = await send(started, 'Lägg till typen.');
     expect(ended.review).toEqual(started.review);
-    expect(ended.error).toBe(
-      decision === 'clarify' ? 'assistant_scope_unclear' : 'assistant_scope_unavailable',
-    );
+    expect(ended.error).toBe('assistant_scope_unavailable');
     expect(events.mock.calls).toEqual([]);
   },
 );

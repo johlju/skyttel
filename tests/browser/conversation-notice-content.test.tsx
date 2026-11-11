@@ -39,7 +39,10 @@ test.each([
   'expanded error report remains readable and keyboard accessible at $width × $height',
   { tags: ['technical'] },
   async ({ width, height }) => {
-    const home = await openHouseholdConversation(width, height);
+    const home = await openHouseholdConversation(width, height, undefined, undefined, {
+      model: 'gpt-6.1-terra',
+      effort: 'high',
+    });
     await startConversationWithText();
     home.failNextReply();
     await page.getByRole('textbox', { name: 'Meddelande till Skyttel' }).fill('Läs kartan.');
@@ -59,6 +62,19 @@ test.each([
     expect(report).not.toBeNull();
     expect(write).toHaveBeenCalledWith(report?.textContent);
     expect(notice().element().querySelector('textarea')).toBeNull();
+    await expect
+      .poll(() => {
+        const composer = document.querySelector('.text-view-message');
+        if (!composer) return false;
+        const outer = textView().element().getBoundingClientRect();
+        const inner = composer.getBoundingClientRect();
+        return inner.top >= outer.top && inner.bottom <= outer.bottom;
+      })
+      .toBe(true);
+    await focusReachable(page.getByRole('textbox', { name: 'Meddelande till Skyttel' }));
+    await page.getByRole('textbox', { name: 'Meddelande till Skyttel' }).fill('En ny fråga.');
+    await focusReachable(textView().getByRole('button', { name: 'Skicka', exact: true }));
+    await focusReachable(textView().getByRole('button', { name: /^Modell och resonemang:/ }));
     const less = notice().getByRole('button', { name: 'Visa mindre', exact: true });
     await focusReachable(less);
     expect(notice().element().scrollWidth).toBeLessThanOrEqual(notice().element().clientWidth + 1);
