@@ -216,6 +216,7 @@ async function stage(route: string, data: object) {
 test('checker clarification retains its request identity through a rephrased answer and requires fresh saving', async () => {
   const questions = ['Vilken stol menar du?', 'Menar du Tidigare stol?'];
   let checks = 0;
+  let matches = 0;
   const model = textModel(
     (body) => {
       const { message, draft } = JSON.parse(
@@ -253,6 +254,18 @@ test('checker clarification retains its request identity through a rephrased ans
             JSON.stringify({ mode: 'work', request: input.current, responseRequired: false }),
           ),
         ];
+      if (body.instructions.startsWith('SKYTTEL_TURN_CLARIFICATION')) {
+        matches++;
+        expect(input.current).toBe('Rätta stolen.');
+        expect(input.untrusted.parts).toHaveLength(1);
+        expect(input.untrusted.parts[0].request).toBe('Spara hela utkastet.');
+        expect(input.untrusted.checked).toMatchObject({
+          operation: { name: 'propose_object', arguments: { id: 'earlier' } },
+          question: questions[1],
+        });
+        const { id, revision } = input.untrusted.parts[0];
+        return [modelMessage(JSON.stringify({ decision: 'rephrase', parts: [{ id, revision }] }))];
+      }
       const question = questions[checks++];
       return [
         modelMessage(
@@ -276,6 +289,8 @@ test('checker clarification retains its request identity through a rephrased ans
   });
   if (!part) throw new Error('Missing pending checker question');
   const second = await send('Rätta stolen.', [{ id: part.id, revision: part.revision }]);
+  expect(matches).toBe(1);
+  expect(second.error).toBe('assistant_scope_unclear');
   expect(second.pendingParts).toHaveLength(1);
   expect(second.pendingParts?.[0]).toMatchObject({
     id: part.id,
