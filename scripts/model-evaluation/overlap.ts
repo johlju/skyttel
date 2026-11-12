@@ -17,6 +17,7 @@ export type ScenarioVoiceUsage = {
   repetition: number;
   sessions: LiveUsageAttempt[];
   costUsd: number | null;
+  estimatedCostUsd?: number | null;
 };
 
 const catalog = rawCatalog as Catalog;
@@ -262,7 +263,12 @@ export function compareOverlap(
         };
       });
       const costs = (
-        field: 'backendCostUsd' | 'judgeCostUsd' | 'voiceCostUsd' | 'playbackAssessmentCostUsd',
+        field:
+          | 'backendCostUsd'
+          | 'judgeCostUsd'
+          | 'voiceCostUsd'
+          | 'playbackAssessmentCostUsd'
+          | 'estimatedPlaybackAssessmentCostUsd',
       ) =>
         values.length &&
         values.every((attempt) => attempt[field] !== null && attempt[field] !== undefined)
@@ -330,6 +336,12 @@ export function compareOverlap(
           judge: costs('judgeCostUsd'),
           voice: run.plan.modality === 'text' ? 0 : voiceCost,
           recognition: run.plan.modality === 'text' ? 0 : costs('playbackAssessmentCostUsd'),
+          estimatedVoice:
+            sessions.length === run.plan.repetitions.length &&
+            sessions.every((entry) => entry.estimatedCostUsd != null)
+              ? sessions.reduce((sum, entry) => sum + (entry.estimatedCostUsd ?? 0), 0)
+              : null,
+          estimatedRecognition: costs('estimatedPlaybackAssessmentCostUsd'),
         },
         voiceSessions: sessions,
         workAccounting: {
@@ -398,7 +410,13 @@ export function compareOverlap(
             version.repetitions.some((repetition) => !repetition.valid) ||
             version.timing?.relativeRange == null ||
             version.timing.relativeRange > plan.maximumRelativeRange ||
-            Object.values(version.costs).some((cost) => cost === null),
+            // Optional estimates do not invalidate known settled charges.
+            [
+              version.costs.backend,
+              version.costs.judge,
+              version.costs.voice,
+              version.costs.recognition,
+            ].some((cost) => cost === null),
         ),
     );
   return {

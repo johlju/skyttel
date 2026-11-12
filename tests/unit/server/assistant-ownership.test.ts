@@ -8,7 +8,7 @@ import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
-import { liveProvider } from '../../support/live-provider.js';
+import { isVoiceAnswerRelease, liveProvider } from '../../support/live-provider.js';
 import { modelTool, textModel } from '../../support/text-model.js';
 
 type Installation = Awaited<ReturnType<typeof createInstallation>>;
@@ -150,10 +150,7 @@ test.each(['text', 'voice'] as const)(
           delegation: { id: crypto.randomUUID(), type: 'delegation', target: 'client' },
         });
         await expect
-          .poll(
-            () =>
-              live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-          )
+          .poll(() => live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
           .toBe(++spoken);
       }
       let status = session;

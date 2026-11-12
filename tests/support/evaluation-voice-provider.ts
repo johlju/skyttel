@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { chromium } from '@playwright/test';
 import type { LiveSidebandFactory } from '../../src/server/live-provider.js';
-import { liveProvider, voiceAnswerParts } from './live-provider.js';
+import { liveProvider } from './live-provider.js';
 
 /** External speech provider with real local WebRTC media and controlled words.
  * The application, source recording, receiver and output renderer stay real. */
@@ -89,9 +89,24 @@ export async function evaluationVoiceProvider(
     const sideband = live.attach(...args);
     if (options.manual) return sideband;
     const send = sideband.send.bind(sideband);
+    const answers = new Map<string, string[]>();
     sideband.send = (event) => {
       send(event);
-      words += voiceAnswerParts([{ event }]).join('');
+      if (event.type === 'session.thinking.append') {
+        const part = JSON.parse(event.content);
+        const parts = answers.get(part.answerId) ?? [];
+        parts[part.part - 1] = part.text;
+        answers.set(part.answerId, parts);
+        return;
+      }
+      if (event.type === 'session.commentary.append') words += event.content;
+      else if (event.type === 'session.instructions.append') {
+        for (const [answerId, parts] of answers) {
+          if (!event.content.includes(answerId)) continue;
+          words += parts.join('');
+          answers.delete(answerId);
+        }
+      }
       if (words && !outputStarted && !outputTimer) {
         outputTimer = setTimeout(() => {
           outputStarted = true;

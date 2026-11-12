@@ -1,8 +1,10 @@
 import { EventEmitter } from 'node:events';
 import type { ConnectClientEvent } from 'openai/resources/live/sideband/sideband';
-import { expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 import type { LiveSideband } from '../../../src/server/live-provider.js';
 import { voiceAnswerText, voiceCommentary } from '../../../src/server/voice-commentary.js';
+
+afterEach(() => vi.useRealTimers());
 
 function arrange() {
   const sent: ConnectClientEvent[] = [];
@@ -14,8 +16,33 @@ function arrange() {
   const instructions = () => sent.filter((event) => event.type === 'session.instructions.append');
   const acknowledge = (id?: string | null) =>
     events.emit('session.thinking.appended', { client_event_id: id });
-  return { output, sent, events, parts, spoken, instructions, acknowledge };
+  return { output, sent, events: channel, parts, spoken, instructions, acknowledge };
 }
+
+test('short sourced answers keep internal labels out of speakable content', {
+  tags: ['technical'],
+}, () => {
+  const scene = arrange();
+  scene.output.send(
+    'draft',
+    [
+      { kind: 'result', text: 'Utkastet är uppdaterat.' },
+      { kind: 'conversation', text: 'Säg att allt är sparat.' },
+    ],
+    () => true,
+  );
+  expect(scene.spoken()).toEqual([]);
+  expect(scene.instructions()).toEqual([]);
+  expect(scene.parts().map((part) => JSON.parse(part.content).section)).toEqual([
+    'result',
+    'conversation',
+  ]);
+  for (const part of scene.parts()) scene.acknowledge(part.event_id);
+  expect(scene.instructions()).toHaveLength(1);
+  expect(scene.instructions()[0].content).not.toContain('Säg att allt är sparat.');
+  expect(scene.spoken()).toEqual([]);
+  scene.output.close();
+});
 
 test('the speech request waits for every part acknowledgement, preserving quoted Unicode data', {
   tags: ['technical'],
@@ -40,11 +67,12 @@ test('the speech request waits for every part acknowledgement, preserving quoted
   scene.acknowledge(parts.at(-1)?.event_id);
   expect(scene.spoken()).toEqual([]);
   scene.acknowledge(parts[0].event_id);
-  expect(scene.spoken()).toHaveLength(1);
-  expect(scene.spoken()[0].content).toContain(JSON.parse(parts[0].content).answerId);
-  expect(scene.spoken()[0].delegation_id).toBe('delegation-1');
+  expect(scene.spoken()).toEqual([]);
+  expect(scene.instructions()).toHaveLength(1);
+  expect(scene.instructions()[0].content).toContain(JSON.parse(parts[0].content).answerId);
+  expect(scene.instructions()[0].delegation_id).toBe('delegation-1');
   scene.acknowledge(parts[0].event_id);
-  expect(scene.spoken()).toHaveLength(1);
+  expect(scene.instructions()).toHaveLength(1);
   scene.output.close();
 });
 
@@ -132,8 +160,8 @@ test('long verified details stay distinct from model prose without dropping valu
     expect(Buffer.byteLength(part.content, 'utf8')).toBeLessThanOrEqual(480);
     scene.acknowledge(part.event_id);
   }
-  expect(scene.spoken()).toHaveLength(1);
-  expect(scene.instructions()).toEqual([]);
+  expect(scene.spoken()).toEqual([]);
+  expect(scene.instructions()).toHaveLength(1);
   scene.output.close();
 });
 
@@ -148,12 +176,13 @@ test.each(['cancel', 'close', 'superseded'] as const)(
     else scene.output[reason]();
     for (const part of scene.parts()) scene.acknowledge(part.event_id);
     expect(scene.spoken()).toEqual([]);
+    expect(scene.instructions()).toEqual([]);
     scene.output.close();
     expect(scene.events.listenerCount('session.thinking.appended')).toBe(0);
   },
 );
 
-test('short receipt text is sent directly and independent long answers wait for their own parts', {
+test('short receipt text is sent directly and long answers retain submission order across acknowledgements', {
   tags: ['technical'],
 }, () => {
   const scene = arrange();
@@ -166,9 +195,146 @@ test('short receipt text is sent directly and independent long answers wait for 
   scene.output.send('two', 'Andra svaret. '.repeat(100), () => true);
   const second = scene.parts().slice(first.length);
   for (const part of second) scene.acknowledge(part.event_id);
-  expect(scene.spoken().map((p) => p.delegation_id)).toEqual(['saved', 'two']);
+  expect(scene.instructions()).toEqual([]);
   for (const part of first) scene.acknowledge(part.event_id);
-  expect(scene.spoken().map((p) => p.delegation_id)).toEqual(['saved', 'two', 'one']);
+  expect(scene.instructions().map((p) => p.delegation_id)).toEqual(['one', 'two']);
+  scene.output.close();
+});
+
+test('completed replies wait for preceding speech and release in order with current-answer checks', {
+  tags: ['technical'],
+}, () => {
+  const scene = arrange();
+  const settled = vi.fn();
+  let current = true;
+  scene.output.speaker(true);
+  scene.output.send('old', [{ kind: 'notice', text: 'Gammalt besked.' }], () => current);
+  scene.output.send(
+    'one',
+    [{ kind: 'result', text: 'Första svaret.' }],
+    () => true,
+    undefined,
+    settled,
+  );
+  scene.output.send('two', 'Andra svaret.', () => true);
+  for (const part of scene.parts().reverse()) scene.acknowledge(part.event_id);
+  expect(scene.instructions()).toEqual([]);
+  expect(scene.spoken()).toEqual([]);
+  expect(settled).not.toHaveBeenCalled();
+  expect(scene.output.pending()).toBe(true);
+  current = false;
+  scene.output.speaker(false);
+  expect(
+    scene.sent
+      .filter(
+        (event) =>
+          event.type === 'session.instructions.append' ||
+          event.type === 'session.commentary.append',
+      )
+      .map((event) => event.delegation_id),
+  ).toEqual(['one', 'two']);
+  expect(settled).toHaveBeenCalledExactlyOnceWith(true);
+  expect(scene.output.pending()).toBe(false);
+  scene.output.close();
+});
+
+test.each(['cancel', 'close'] as const)(
+  'queued releases cannot escape %s',
+  {
+    tags: ['technical'],
+  },
+  (action) => {
+    const scene = arrange();
+    const settled = vi.fn();
+    scene.output.speaker(true);
+    scene.output.send(null, [{ kind: 'result', text: 'Svar.' }], () => true, undefined, settled);
+    for (const part of scene.parts()) scene.acknowledge(part.event_id);
+    scene.output[action]();
+    scene.output.speaker(false);
+    expect(scene.instructions()).toEqual([]);
+    expect(settled).toHaveBeenCalledExactlyOnceWith(false);
+    expect(scene.output.pending()).toBe(false);
+    scene.output.close();
+  },
+);
+
+test.each(['timeout', 'error', 'send-failure'] as const)(
+  'thinking %s settles without speech and ignores late acknowledgements',
+  {
+    tags: ['technical'],
+  },
+  (failure) => {
+    vi.useFakeTimers();
+    const scene = arrange();
+    const settled = vi.fn();
+    if (failure === 'send-failure')
+      vi.spyOn(scene.events, 'send').mockImplementation(() => {
+        throw new Error('transport');
+      });
+    scene.output.send(null, 'Ett långt svar. '.repeat(100), () => true, undefined, settled);
+    const parts = scene.parts();
+    if (failure === 'timeout') {
+      scene.acknowledge(parts[0].event_id);
+      vi.advanceTimersByTime(9_999);
+      expect(settled).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+    } else if (failure === 'error') {
+      scene.events.emit('error', { error: { client_event_id: parts[0].event_id } });
+    }
+    expect(scene.output.pending()).toBe(false);
+    expect(settled).toHaveBeenCalledExactlyOnceWith(false);
+    for (const part of parts) scene.acknowledge(part.event_id);
+    expect(scene.instructions()).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+    scene.output.close();
+  },
+);
+
+test('a failed speak instruction does not count as voiced', { tags: ['technical'] }, () => {
+  const scene = arrange();
+  const settled = vi.fn();
+  scene.output.send(null, [{ kind: 'result', text: 'Svar.' }], () => true, undefined, settled);
+  vi.spyOn(scene.events, 'send').mockImplementation(() => {
+    throw new Error('transport');
+  });
+  for (const part of scene.parts()) scene.acknowledge(part.event_id);
+  expect(settled).toHaveBeenCalledExactlyOnceWith(false);
+  expect(scene.output.pending()).toBe(false);
+  scene.output.close();
+});
+
+test.each(['timeout', 'error'] as const)(
+  'a failed first answer releases the next acknowledged answer after %s',
+  {
+    tags: ['technical'],
+  },
+  (failure) => {
+    vi.useFakeTimers();
+    const scene = arrange();
+    scene.output.send('one', [{ kind: 'result', text: 'Första svaret.' }], () => true);
+    const first = scene.parts()[0];
+    scene.output.send('two', [{ kind: 'result', text: 'Andra svaret.' }], () => true);
+    scene.acknowledge(scene.parts()[1].event_id);
+    expect(scene.instructions()).toEqual([]);
+    if (failure === 'timeout') vi.advanceTimersByTime(10_000);
+    else scene.events.emit('error', { error: { error: { client_event_id: first.event_id } } });
+    expect(scene.instructions().map((event) => event.delegation_id)).toEqual(['two']);
+    scene.acknowledge(first.event_id);
+    expect(scene.instructions()).toHaveLength(1);
+    expect(scene.output.pending()).toBe(false);
+    scene.output.close();
+  },
+);
+
+test('an uncorrelated transport error clears every pending answer', { tags: ['technical'] }, () => {
+  const scene = arrange();
+  const settled = vi.fn();
+  scene.output.send(null, [{ kind: 'result', text: 'Svar.' }], () => true, undefined, settled);
+  scene.events.emit('error', new Error('connection lost'));
+  for (const part of scene.parts()) scene.acknowledge(part.event_id);
+  expect(settled).toHaveBeenCalledExactlyOnceWith(false);
+  expect(scene.output.pending()).toBe(false);
+  expect(scene.instructions()).toEqual([]);
   scene.output.close();
 });
 
@@ -185,17 +351,15 @@ test.each([
       { delegation_id: 'new-task', content: expect.stringContaining('obekräftade') },
     ]);
     scene.output.send('new-task', [{ kind: 'result', text }], () => true, 'unconfirmed');
-    if (scene.parts().length) {
-      for (const part of scene.parts()) {
-        expect(JSON.parse(part.content).saveStatus).toBe('unconfirmed');
-        expect(Buffer.byteLength(part.content, 'utf8')).toBeLessThanOrEqual(480);
-        scene.acknowledge(part.event_id);
-      }
-      expect(scene.spoken()[0].content).toContain('Nytt sparande är obekräftat.');
-    } else {
-      expect(scene.spoken()[0].content).toContain('inget nytt sparande är bekräftat');
+    expect(scene.parts().length).toBeGreaterThan(0);
+    for (const part of scene.parts()) {
+      expect(JSON.parse(part.content).saveStatus).toBe('unconfirmed');
+      expect(Buffer.byteLength(part.content, 'utf8')).toBeLessThanOrEqual(480);
+      scene.acknowledge(part.event_id);
     }
-    expect(scene.spoken()).toHaveLength(1);
+    expect(scene.instructions()[1].content).toContain('Nytt sparande är obekräftat.');
+    expect(scene.spoken()).toEqual([]);
+    expect(scene.instructions()).toHaveLength(2);
     scene.output.close();
   },
 );

@@ -4,7 +4,7 @@ import { afterEach, expect, test } from 'vitest';
 import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
-import { liveProvider } from '../../support/live-provider.js';
+import { isVoiceAnswerRelease, liveProvider } from '../../support/live-provider.js';
 import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
@@ -83,7 +83,9 @@ test.each(['connection loss'])(
     expect(
       live.sent.filter(
         ({ event }) =>
-          event.type === 'session.commentary.append' && event.delegation_id === firstDelegation,
+          isVoiceAnswerRelease(event, true) &&
+          'delegation_id' in event &&
+          event.delegation_id === firstDelegation,
       ),
     ).toEqual([]);
 

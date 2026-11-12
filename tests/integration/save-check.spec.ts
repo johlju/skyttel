@@ -16,7 +16,7 @@ import {
 import { editTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
-import { liveProvider } from '../support/live-provider.js';
+import { isVoiceAnswerRelease, liveProvider } from '../support/live-provider.js';
 import { expect, test } from '../support/test.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
 
@@ -280,7 +280,7 @@ for (const microphoneOn of [false, true])
       await expect(log.getByRole('listitem').filter({ hasText: unsaved })).toHaveCount(1);
       const commentary = () =>
         live.sent
-          .filter(({ event }) => event.type === 'session.commentary.append')
+          .filter(({ event }) => isVoiceAnswerRelease(event))
           .map(({ event }) => (event.type === 'session.commentary.append' ? event.content : ''))
           .join('');
       if (microphoneOn) {
@@ -386,7 +386,7 @@ test('SPARKONTROLL-04: verifierad sparåterhämtning stoppar fångst under kontr
     await expect
       .poll(() =>
         live.sent
-          .filter(({ event }) => event.type === 'session.commentary.append')
+          .filter(({ event }) => isVoiceAnswerRelease(event))
           .map(({ event }) => (event.type === 'session.commentary.append' ? event.content : ''))
           .join(''),
       )

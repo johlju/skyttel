@@ -16,6 +16,42 @@ import {
 } from '../../../scripts/model-evaluation/report.js';
 import { referenceSpeech } from '../../../scripts/model-evaluation/speech.js';
 import type { Attempt, Catalog } from '../../../scripts/model-evaluation/types.js';
+import voiceSelection from '../../../scripts/model-evaluation/voice-campaign-selection.json' with {
+  type: 'json',
+};
+
+test('transcription estimates remain separate from unresolved actual charges in summaries', {
+  tags: ['technical'],
+}, () => {
+  const summary = summarizeProfile(
+    [
+      {
+        scenario: 'daily',
+        step: 'a',
+        profile: 'voice',
+        repetition: 1,
+        modality: 'voice',
+        outcome: 'pass',
+        fixed: [],
+        elapsedMs: 1000,
+        backendCostUsd: 0.01,
+        playbackAssessmentCostUsd: null,
+        estimatedPlaybackAssessmentCostUsd: 0.001,
+      },
+    ],
+    [{ id: 'daily', group: 'everyday', steps: [{ id: 'a' }] }],
+    'voice',
+    'voice',
+    [1],
+  );
+  expect(summary).toMatchObject({
+    playbackAssessmentCostUsd: null,
+    estimatedPlaybackAssessmentCostUsd: 0.001,
+    groups: {
+      everyday: { playbackAssessmentCostUsd: null, estimatedPlaybackAssessmentCostUsd: 0.001 },
+    },
+  });
+});
 
 test('an everyday comparison keeps advanced costs visible without mixing them into its cost difference', {
   tags: ['technical'],
@@ -732,10 +768,11 @@ test.each(['marin'] as const)(
     tags: ['technical'],
   },
   async (voice) => {
+    const selectedIds = new Set(Object.values(voiceSelection.groups).flat());
     const steps = (catalog as Catalog).scenarios
-      .filter((scenario) => scenario.voice)
+      .filter((scenario) => scenario.voice || selectedIds.has(scenario.id))
       .flatMap((scenario) => scenarioUtterances(scenario, true));
-    expect(steps).toHaveLength(21);
+    expect(steps).toHaveLength(26);
     const files = new Set<string>();
     for (const step of steps) {
       const reference = await referenceSpeech(step.id, step.text, voice);

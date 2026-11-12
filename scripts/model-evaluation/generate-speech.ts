@@ -97,15 +97,24 @@ export async function generateSpeech({
     voices,
     speeds: Object.fromEntries(voices.map((voice) => [voice, speed ?? speechRecipe.speeds[voice]])),
   };
-  const steps = (catalog as Catalog).scenarios
-    .filter((scenario) => scenario.voice)
-    .flatMap((scenario) => scenarioUtterances(scenario, true));
+  const utterances = (catalog as Catalog).scenarios
+    .filter((scenario) => ids !== undefined || scenario.voice)
+    .flatMap((scenario) => scenarioUtterances(scenario, true))
+    .filter((step) => ids === undefined || ids.includes(step.id));
+  const selected = new Map<string, { id: string; text: string }>();
+  for (const step of utterances) {
+    const previous = selected.get(step.id);
+    if (previous && previous.text !== step.text)
+      throw new Error(`speech_reference_conflict:${step.id}`);
+    selected.set(step.id, step);
+  }
+  const steps = [...selected.values()];
   if (ids?.some((id) => !steps.some((step) => step.id === id)))
     throw new Error('unknown_speech_step');
   const records: SpeechRecord[] = [];
   for (const voice of recipe.voices) {
     await mkdir(resolve(directory, voice), { recursive: true });
-    for (const step of steps.filter((step) => ids === undefined || ids.includes(step.id))) {
+    for (const step of steps) {
       const stem = resolve(directory, voice, step.id);
       const request = {
         model: speechRecipe.model,

@@ -12,6 +12,7 @@ export type LiveEvaluationProfile = {
   checkedAt: string;
   sources: string[];
   backend: string;
+  billingMode?: 'usage-estimate';
 };
 
 export function verifiedLiveProfile(profile: LiveEvaluationProfile) {
@@ -23,6 +24,7 @@ export function verifiedLiveProfile(profile: LiveEvaluationProfile) {
     profile.tokens <= 0 ||
     !Number.isFinite(profile.usdPerMinute) ||
     profile.usdPerMinute <= 0 ||
+    (profile.billingMode !== undefined && profile.billingMode !== 'usage-estimate') ||
     !profile.sources.length ||
     !profile.checkedAt
   )
@@ -68,6 +70,8 @@ export function budgetedLive(
   options?: { requiredSession: unknown; recordDispatch?: (body: unknown) => void },
 ) {
   verifiedLiveProfile(profile);
+  const estimated = profile.billingMode === 'usage-estimate';
+  if (estimated && !budget.estimatesAllowed) throw new Error('evaluation_estimate_not_authorized');
   if (!Number.isSafeInteger(maximumSeconds) || maximumSeconds <= 0 || maximumSeconds > 3420)
     throw new Error('evaluation_live_time_limit');
   const pending: string[] = [];
@@ -113,15 +117,25 @@ export function budgetedLive(
       const reservation = reservations.get(usage.attemptId);
       if (reservation && usage.endedAt) {
         reservations.delete(usage.attemptId);
-        budget.settle(
-          reservation,
+        const known =
           usage.model === profile.model &&
-            usage.final &&
-            usage.seconds !== null &&
-            usage.seconds <= maximumSeconds
-            ? (usage.seconds * profile.usdPerMinute) / 60
-            : null,
-        );
+          usage.final &&
+          usage.seconds !== null &&
+          Number.isFinite(usage.seconds) &&
+          usage.seconds >= 0;
+        // A final duration above the reservation is an overrun, not missing
+        // usage. Preserve the amount; the ledger independently stops overspend.
+        if (known && estimated)
+          budget.estimate(
+            reservation,
+            (Math.max(15, usage.seconds as number) * profile.usdPerMinute) / 60,
+            'Reported final duration with a 15-second initialization allowance; short-session final charge unresolved.',
+          );
+        else
+          budget.settle(
+            reservation,
+            known ? ((usage.seconds as number) * profile.usdPerMinute) / 60 : null,
+          );
       }
     },
   };

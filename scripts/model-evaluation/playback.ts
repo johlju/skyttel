@@ -30,6 +30,7 @@ export type PlaybackRecognition = {
   profile: string;
   callId: string;
   costUsd: number | null;
+  estimatedCostUsd?: number | null;
 };
 
 /** Bracket an observed media position with actual clock samples. Missing or

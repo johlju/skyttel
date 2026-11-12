@@ -230,6 +230,7 @@ export type Attempt = {
       profile: string;
       outcome: string;
       costUsd: number | null;
+      estimatedCostUsd?: number | null;
       recordingSha256: string;
       alignmentMarginMs: number;
       lastWordEndSeconds: number | null;
@@ -242,6 +243,7 @@ export type Attempt = {
     limitation: string;
   };
   playbackAssessmentCostUsd?: number | null;
+  estimatedPlaybackAssessmentCostUsd?: number | null;
   playbackAssessmentElapsedMs?: number;
   backendCostUsd: number | null;
   judgeCostUsd?: number | null;

@@ -109,6 +109,13 @@ export async function speechConnection(
   const context = await browser.newContext({
     storageState: await environment.client.storageState(),
   });
+  // tsx preserves nested function names with esbuild's __name helper. Playwright
+  // serializes callbacks without their module closure, so the evaluator-owned
+  // document needs the same helper when launched outside Playwright's compiler.
+  await context.addInitScript({
+    content:
+      'globalThis.__name = (target, value) => Object.defineProperty(target, "name", { value, configurable: true });',
+  });
   const page = await context.newPage();
   // The evaluator owns this renderer. Loading the application would restore
   // and pause the conversation that the evaluator has already opened.

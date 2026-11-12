@@ -20,7 +20,7 @@ import {
 } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
-import { liveProvider } from '../support/live-provider.js';
+import { isVoiceAnswerRelease, liveProvider } from '../support/live-provider.js';
 import { expect, test } from '../support/test.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 import { readVoiceProposal } from '../support/voice-work-reading.js';
@@ -79,7 +79,7 @@ function speak(live: ReturnType<typeof liveProvider>, text: string) {
   });
 }
 const answers = (live: ReturnType<typeof liveProvider>) =>
-  live.sent.filter(({ event }) => event.type === 'session.commentary.append').length;
+  live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length;
 
 /** A model whose answer the test holds until it releases it. */
 function heldModel() {
@@ -235,7 +235,15 @@ test('TAL-11: Skyttel arbetar färdigt och talar klart när mikrofonen stängs a
     await page.getByRole('button', { name: 'Återställ vy', exact: true }).focus();
 
     // Skyttel finishes the work with what was said, and gets its answer to say.
+    const speakingReported = page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/poll') &&
+        response.request().method() === 'POST' &&
+        response.request().postDataJSON()?.speakerActive === true &&
+        response.ok(),
+    );
     await sound(page, 'remote', 0.2);
+    await speakingReported;
     await expect(voiceBox(page)).toHaveText('Skyttel arbetar');
     model.release([
       modelTool('propose_object', {
@@ -248,10 +256,15 @@ test('TAL-11: Skyttel arbetar färdigt och talar klart när mikrofonen stängs a
     ]);
     await expect.poll(() => model.waiting()).toBe(1);
     model.release([modelMessage('Namnet är ändrat i utkastet.')]);
-    await expect.poll(() => answers(live)).toBe(1);
     await expect
       .poll(async () => (await (await page.request.get(path)).json()).draft.changes[0].after.name)
       .toBe('Lo Lind');
+    // The answer waits for the existing speech to finish before its release.
+    await expect(voiceBox(page)).toHaveText('Skyttel talar');
+    expect(answers(live)).toBe(0);
+    await sound(page, 'remote', 0);
+    await expect.poll(() => answers(live)).toBe(1);
+    await sound(page, 'remote', 0.2);
 
     // Skyttel says its answer to the end. The box stays for it, and the connection with it.
     await expect(voiceBox(page)).toHaveText('Skyttel talar');

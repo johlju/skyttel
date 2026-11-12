@@ -29,7 +29,7 @@ import {
 import { familySaveSequence } from '../support/family-save-model.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
-import { liveProvider, voiceAnswerParts } from '../support/live-provider.js';
+import { isVoiceAnswerRelease, liveProvider, voiceAnswerParts } from '../support/live-provider.js';
 import { verifyObjectDepartureAndDiscard } from '../support/object-form-departure.js';
 import { exposedTextLines } from '../support/object-property-reading.js';
 import { expect, test } from '../support/test.js';
@@ -514,9 +514,7 @@ test('TAL-04: samtalstext hålls isär från verifierade röstresultat', async (
       ).toBeVisible();
       await expect(object).toHaveAttribute('aria-pressed', selected ?? 'false');
       await expect
-        .poll(
-          () => live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-        )
+        .poll(() => live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
         .toBe(index + 1);
       const [result, modelText] = voiceAnswerParts(live.sent.slice(replyOffset))
         .join('')
@@ -540,9 +538,7 @@ test('TAL-04: samtalstext hålls isär från verifierade röstresultat', async (
       assistant(page).getByRole('log', { name: 'Samtalstext', exact: true }),
     ).toContainText('Vem betalar?');
     await expect
-      .poll(
-        () => live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-      )
+      .poll(() => live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
       .toBe(5);
     expect(voiceAnswerParts(live.sent.slice(selectionOffset)).join('')).toContain(
       'Skyttels resultat (verifierat): Objektet är markerat',
@@ -697,9 +693,7 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
       ),
     ).toBe(true);
     expect(model.requests).toHaveLength(5);
-    await expect
-      .poll(() => live.sent.some(({ event }) => event.type === 'session.commentary.append'))
-      .toBe(true);
+    await expect.poll(() => live.sent.some(({ event }) => isVoiceAnswerRelease(event))).toBe(true);
     await page.getByRole('button', { name: 'Tillbaka till arbetet', exact: true }).click();
     await readFamily(page);
     await turnMicrophoneOff(page);
@@ -932,9 +926,7 @@ test('TAL-02: negativa besked och förlorad anslutning stoppar sena röständrin
     ]) {
       speak(live, instruction);
       await expect
-        .poll(
-          () => live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-        )
+        .poll(() => live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
         .toBe(++completions);
       await expect(page.getByRole('region', { name: 'Samtalsnotis', exact: true })).toContainText(
         'Skyttel kunde inte slutföra uppdraget. Försök igen.',
@@ -1099,9 +1091,7 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
     await page.setViewportSize({ width: 390, height: 844 });
     await openConversationText(page);
     await expect
-      .poll(
-        () => live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-      )
+      .poll(() => live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
       .toBe(1);
     expect(lastToolResult(model.requests[1])).toMatchObject({ displayed: true });
     // Lose the automatic check before it reaches the server, preserving the

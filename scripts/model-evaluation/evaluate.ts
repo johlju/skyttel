@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
-import type { LiveUsageAttempt } from '../../src/server/live-provider.js';
+import type { LiveSidebandFactory, LiveUsageAttempt } from '../../src/server/live-provider.js';
 import { type ApplicationVersion, applicationAdapter, evaluatorVersion } from './application.js';
 import audioManifest from './audio/manifest.json' with { type: 'json' };
 import { EvaluationBudget } from './budget.js';
@@ -75,6 +75,9 @@ export type EvaluationPlan = {
   judgeCalibration?: JudgeCalibrationReference;
   baselineProfiles: Partial<Record<'text' | 'voice', string>>;
   voice?: boolean;
+  /** Explicit user-approved departure from verified voice billing. Estimates
+   * remain separate from settled charges and retain their ledger holds. */
+  voiceCostAccounting?: 'usage-estimate';
   voiceProfile?: LiveEvaluationProfile;
   playbackAssessorProfile?: PlaybackAssessorProfile;
   referenceVoice?: ReferenceVoice;
@@ -102,6 +105,7 @@ export async function evaluateModels(
   plan: EvaluationPlan,
   runtime: {
     transport?: typeof fetch;
+    liveSideband?: LiveSidebandFactory;
     conversationWorkMode?: 'sequential' | 'overlap';
   } = {},
 ) {
@@ -118,6 +122,14 @@ export async function evaluateModels(
   if (new Set(plan.textProfiles).size !== plan.textProfiles.length)
     throw new Error('evaluation_duplicate_profiles');
   const selected = plan.textProfiles.length + (plan.voice ? 1 : 0);
+  const estimates = plan.voiceCostAccounting === 'usage-estimate';
+  if (
+    (estimates && !plan.voice) ||
+    ((plan.voiceProfile?.billingMode === 'usage-estimate' ||
+      plan.playbackAssessorProfile?.billingMode === 'usage-estimate') &&
+      !estimates)
+  )
+    throw new Error('evaluation_estimate_not_authorized');
   if (!selected) throw new Error('evaluation_models_required');
   if (selected !== 1) throw new Error('evaluation_one_model_per_issue');
   let repetitions = plan.repetitions ?? [1];
@@ -288,6 +300,8 @@ export async function evaluateModels(
     judgeSha256,
     repetitions,
     voice: plan.voice ?? false,
+    voiceCostAccounting: plan.voiceCostAccounting ?? 'verified-only',
+    conversationWorkMode: runtime.conversationWorkMode ?? 'sequential',
     followUps: plan.followUps ?? false,
     referenceVoice: plan.referenceVoice ?? 'marin',
     audio: audioManifest,
@@ -306,7 +320,7 @@ export async function evaluateModels(
     : undefined;
   await mkdir(directory, { recursive: true });
   const db = new Database(join(directory, 'budget.sqlite'));
-  const budget = new EvaluationBudget(db, plan);
+  const budget = new EvaluationBudget(db, { ...plan, allowEstimates: estimates });
   const report = evaluationReporter(directory, plan.issue);
   const published: string[] = [];
   async function emit(...args: Parameters<typeof report>) {
@@ -354,8 +368,12 @@ export async function evaluateModels(
   });
   const judge = contentJudge(plan.apiKey, judgeProvider);
   const assessPlayback = voiceSelection
-    ? playbackAssessor(plan.apiKey, voiceSelection.assessor, budget, (value) =>
-        privateRecords.call(value),
+    ? playbackAssessor(
+        plan.apiKey,
+        voiceSelection.assessor,
+        budget,
+        (value) => privateRecords.call(value),
+        runtime.transport,
       )
     : undefined;
   const attempts: Attempt[] = [];
@@ -464,7 +482,9 @@ export async function evaluateModels(
               : 'Text including counting.',
             playbackTranscriptionMaximumUsd: plan.voice ? null : 0,
             playbackReservation: plan.voice
-              ? 'Before every recognition call, reserve the actual captured WAV duration rounded by the verified billing quantum. A future aggregate voice estimate needs the observed output sample rate and per-scenario session limits; no missing cost is zero.'
+              ? estimates
+                ? 'Voice amounts are usage-based estimates, not settled charges. Transcription holds use a whole-minute allowance; Live estimates use max(15, final reported seconds). Unresolved billing retains holds; absent usage stops new calls.'
+                : 'Before every recognition call, reserve the actual captured WAV duration rounded by the verified billing quantum. A future aggregate voice estimate needs the observed output sample rate and per-scenario session limits; no missing cost is zero.'
               : undefined,
             textTechnicalMaximumUsd: plan.voice
               ? null
@@ -628,15 +648,15 @@ export async function evaluateModels(
             )
           ).reduce((sum, item) => sum + item.clip.frames / item.clip.sampleRate, 0);
           const utterances = scenarioUtterances(scenario, plan.followUps).length;
-          const maximumSeconds = Math.ceil(
+          const reservationSeconds = Math.ceil(
             audioSeconds + utterances * 180 + 32 + (utterances - 1) * 120,
           );
           const liveUsage: LiveUsageAttempt[] = [];
           const live = budgetedLive(
             budget,
-            maximumSeconds,
+            reservationSeconds,
             (usage) => liveUsage.push(usage),
-            fetch,
+            runtime.transport ?? fetch,
             voiceProfile,
             {
               requiredSession: commonLiveSession(voiceProfile),
@@ -664,8 +684,10 @@ export async function evaluateModels(
               modelProfile: profile,
               modelFetch: provider.fetch,
               liveFetch: live.fetch,
+              liveSideband: runtime.liveSideband,
               liveUsage: live.usage,
               liveProfile: voiceProfile,
+              conversationWorkMode: runtime.conversationWorkMode,
             },
             {
               profile: id,
@@ -673,8 +695,14 @@ export async function evaluateModels(
               comparisonContract: comparisonRun?.contractId,
               referenceVoice: plan.referenceVoice,
               followUps: plan.followUps,
-              maximumSeconds,
-              sessionTimeLimit: () => budget.stop('evaluation_live_time_limit'),
+              // A reservation estimate is not an authorized processing deadline.
+              // Retain the existing duration guard only for a finite budget.
+              ...(plan.limitUsd === undefined
+                ? {}
+                : {
+                    maximumSeconds: reservationSeconds,
+                    sessionTimeLimit: () => budget.stop('evaluation_live_time_limit'),
+                  }),
               repetition,
               judge,
               assessPlayback,
@@ -722,21 +750,44 @@ export async function evaluateModels(
               },
             },
           );
-          await emit('diagnostic', `Talkostnad: ${scenario.title}`, {
-            sessions: liveUsage,
-            maximumSeconds,
-            stepCost: 'Estimated allocations are not used to rank models.',
-            observation: voicePlaybackInstrumentation,
-          });
           const finalUsage = [
             ...new Map(liveUsage.map((usage) => [usage.attemptId, usage])).values(),
           ];
+          const estimatedCostUsd =
+            voiceProfile.billingMode === 'usage-estimate'
+              ? finalUsage.length &&
+                finalUsage.every(
+                  (usage) =>
+                    usage.final &&
+                    usage.endedAt &&
+                    usage.model === voiceProfile.model &&
+                    usage.seconds !== null &&
+                    Number.isFinite(usage.seconds) &&
+                    usage.seconds >= 0,
+                )
+                ? finalUsage.reduce(
+                    (sum, usage) =>
+                      sum + (Math.max(15, usage.seconds ?? 0) * voiceProfile.usdPerMinute) / 60,
+                    0,
+                  )
+                : null
+              : undefined;
+          await emit('diagnostic', `Talkostnad: ${scenario.title}`, {
+            sessions: liveUsage,
+            estimatedCostUsd,
+            reservationSeconds,
+            sessionTimeLimitSeconds: plan.limitUsd === undefined ? null : reservationSeconds,
+            stepCost: 'Estimated allocations are not used to rank models.',
+            observation: voicePlaybackInstrumentation,
+          });
           scenarioVoiceUsage.push({
             scenario: scenario.id,
             applicationVersion: application?.id,
             repetition,
             sessions: finalUsage,
+            estimatedCostUsd,
             costUsd:
+              voiceProfile.billingMode !== 'usage-estimate' &&
               finalUsage.length &&
               finalUsage.every(
                 (usage) =>

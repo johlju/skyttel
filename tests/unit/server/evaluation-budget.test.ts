@@ -7,6 +7,127 @@ import {
 } from '../../../scripts/model-evaluation/live.js';
 import profiles from '../../../scripts/model-evaluation/profiles.json' with { type: 'json' };
 
+test.each([undefined, 1])(
+  'known costs above a reservation stop only an explicit budget scope: %s',
+  { tags: ['technical'] },
+  (limitUsd) => {
+    const db = new Database(':memory:');
+    try {
+      const budget = new EvaluationBudget(db, {
+        authorized: true,
+        limitUsd,
+        priorUsd: 0,
+        priorSource: 'Controlled reservation overrun.',
+      });
+      const charge = budget.reserve('voice', 0.1);
+      budget.settle(charge, 0.2);
+      expect(budget.snapshot()).toMatchObject({
+        spentUsd: 0.2,
+        reservedUsd: 0,
+        stopped: limitUsd !== undefined,
+        reason: limitUsd === undefined ? null : 'evaluation_cost_above_reservation',
+      });
+      if (limitUsd === undefined) expect(() => budget.reserve('judge', 0.1)).not.toThrow();
+      else expect(() => budget.reserve('judge', 0.1)).toThrow('evaluation_cost_above_reservation');
+    } finally {
+      db.close();
+    }
+  },
+);
+
+test.each([5, 90, 125])(
+  'Live estimates retain initialization uncertainty without adding it twice: %s seconds',
+  {
+    tags: ['technical'],
+  },
+  async (seconds) => {
+    const db = new Database(':memory:');
+    try {
+      const budget = new EvaluationBudget(db, {
+        authorized: true,
+        priorUsd: 0,
+        priorSource: 'Controlled estimate scope.',
+        allowEstimates: true,
+      });
+      const profile = {
+        ...profiles.profiles.find((item) => item.role === 'voice'),
+        usdPerMinute: 0.05,
+        billingMode: 'usage-estimate',
+      } as LiveEvaluationProfile;
+      const live = budgetedLive(
+        budget,
+        120,
+        () => {},
+        async () => Response.json({}),
+        profile,
+      );
+      await live.fetch('https://api.openai.com/v1/live/sessions', {
+        body: JSON.stringify({ session: { model: profile.model } }),
+      });
+      live.usage({
+        attemptId: 'controlled',
+        sessionId: 'controlled',
+        startedAt: '2026-11-11T00:00:00Z',
+        endedAt: '2026-11-11T00:01:30Z',
+        model: profile.model,
+        seconds,
+        final: true,
+        outcome: 'closed',
+      });
+      expect(budget.snapshot()).toMatchObject({
+        spentUsd: 0,
+        estimatedUsd: seconds === 5 ? 0.0125 : seconds === 90 ? 0.075 : 0.104167,
+        reservedUsd: 0.1,
+        estimatedCharges: 1,
+        stopped: false,
+      });
+      expect(() => budget.reserve('judge', 0.01)).not.toThrow();
+    } finally {
+      db.close();
+    }
+  },
+);
+
+test('authorized estimates remain separate from settled charges and survive reopening', {
+  tags: ['technical'],
+}, () => {
+  const db = new Database(':memory:');
+  const config = {
+    authorized: true,
+    priorUsd: 0,
+    priorSource: 'Controlled estimate scope.',
+    allowEstimates: true,
+  };
+  try {
+    const budget = new EvaluationBudget(db, config);
+    const charge = budget.reserve('voice', 0.05);
+    budget.estimate(
+      charge,
+      0.0125,
+      '15-second initialization allowance; final billing unresolved.',
+    );
+    expect(new EvaluationBudget(db, config).snapshot()).toMatchObject({
+      spentUsd: 0,
+      estimatedUsd: 0.0125,
+      estimatedCharges: 1,
+      reservedUsd: 0.05,
+      stopped: false,
+    });
+    expect(() => budget.reserve('judge', 1)).not.toThrow();
+    expect(() => new EvaluationBudget(db, { ...config, allowEstimates: false })).toThrow(
+      'evaluation_budget_configuration_changed',
+    );
+    budget.settle(charge, 0.01);
+    expect(budget.snapshot()).toMatchObject({
+      spentUsd: 0.01,
+      estimatedUsd: 0,
+      estimatedCharges: 0,
+    });
+  } finally {
+    db.close();
+  }
+});
+
 test('an omitted ceiling tracks costs and uncertainty while preserving explicit budget scopes', {
   tags: ['technical'],
 }, () => {
@@ -91,58 +212,64 @@ test('an empty legacy capped schema reports incompatibility for an uncapped conf
   }
 });
 
-test('a failed paid voice startup retains its hold and counts as dispatched execution', {
-  tags: ['technical'],
-}, async () => {
-  const db = new Database(':memory:');
-  try {
-    const budget = new EvaluationBudget(db, {
-      authorized: true,
-      limitUsd: 10,
-      priorUsd: 0,
-      priorSource: 'Isolated non-billable test.',
-    });
-    const profile = profiles.profiles.find(
-      (item) => item.role === 'voice',
-    ) as LiveEvaluationProfile;
-    const live = budgetedLive(
-      budget,
-      60,
-      () => {},
-      async () => {
-        throw new Error('connection_failed_after_dispatch');
-      },
-      profile,
-    );
-    expect(budget.callsStarted).toBe(0);
-    await expect(
-      live.fetch('https://api.openai.com/v1/live/sessions', {
-        body: JSON.stringify({ session: { model: profile.model } }),
-      }),
-    ).rejects.toThrow('connection_failed_after_dispatch');
-    live.usage({
-      attemptId: 'failed-start',
-      sessionId: null,
-      startedAt: '2026-10-10T00:00:00Z',
-      endedAt: '2026-10-10T00:00:01Z',
-      model: profile.model,
-      seconds: null,
-      final: false,
-      outcome: 'failed',
-    });
-    expect(budget.callsStarted).toBe(1);
-    expect(budget.snapshot()).toMatchObject({
-      stopped: true,
-      reason: 'evaluation_usage_unknown',
-      reservedUsd: profile.usdPerMinute,
-    });
-    await expect(
-      live.fetch('https://api.openai.com/v1/live/sessions', {
-        body: JSON.stringify({ session: { model: profile.model } }),
-      }),
-    ).rejects.toThrow('evaluation_usage_unknown');
-    expect(budget.callsStarted).toBe(1);
-  } finally {
-    db.close();
-  }
-});
+test.each([false, true])(
+  'a failed paid voice startup retains its hold and counts as dispatched execution (estimates: %s)',
+  {
+    tags: ['technical'],
+  },
+  async (allowEstimates) => {
+    const db = new Database(':memory:');
+    try {
+      const budget = new EvaluationBudget(db, {
+        authorized: true,
+        limitUsd: 10,
+        priorUsd: 0,
+        priorSource: 'Isolated non-billable test.',
+        allowEstimates,
+      });
+      const profile = {
+        ...profiles.profiles.find((item) => item.role === 'voice'),
+        ...(allowEstimates ? { billingMode: 'usage-estimate' } : {}),
+      } as LiveEvaluationProfile;
+      const live = budgetedLive(
+        budget,
+        60,
+        () => {},
+        async () => {
+          throw new Error('connection_failed_after_dispatch');
+        },
+        profile,
+      );
+      expect(budget.callsStarted).toBe(0);
+      await expect(
+        live.fetch('https://api.openai.com/v1/live/sessions', {
+          body: JSON.stringify({ session: { model: profile.model } }),
+        }),
+      ).rejects.toThrow('connection_failed_after_dispatch');
+      live.usage({
+        attemptId: 'failed-start',
+        sessionId: null,
+        startedAt: '2026-10-10T00:00:00Z',
+        endedAt: '2026-10-10T00:00:01Z',
+        model: profile.model,
+        seconds: null,
+        final: false,
+        outcome: 'failed',
+      });
+      expect(budget.callsStarted).toBe(1);
+      expect(budget.snapshot()).toMatchObject({
+        stopped: true,
+        reason: 'evaluation_usage_unknown',
+        reservedUsd: profile.usdPerMinute,
+      });
+      await expect(
+        live.fetch('https://api.openai.com/v1/live/sessions', {
+          body: JSON.stringify({ session: { model: profile.model } }),
+        }),
+      ).rejects.toThrow('evaluation_usage_unknown');
+      expect(budget.callsStarted).toBe(1);
+    } finally {
+      db.close();
+    }
+  },
+);

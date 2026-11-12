@@ -10,6 +10,15 @@ const units = (usd: number) => {
 /** One persistent, atomic ledger shared by voice, backend, summary, judge and
  * any billed counting calls. Unknown charges keep their conservative hold. */
 export class EvaluationBudget {
+  get estimatesAllowed() {
+    return Boolean(
+      (
+        this.db.prepare('SELECT allow_estimates FROM evaluation_accounting').get() as {
+          allow_estimates: number;
+        }
+      ).allow_estimates,
+    );
+  }
   private dispatchedCalls = 0;
   get callsStarted() {
     return this.dispatchedCalls;
@@ -25,6 +34,7 @@ export class EvaluationBudget {
       priorUsd: number;
       priorSource: string;
       authorized: boolean;
+      allowEstimates?: boolean;
     },
   ) {
     if (!config.authorized || !config.priorSource.trim())
@@ -36,6 +46,18 @@ export class EvaluationBudget {
       CREATE TABLE IF NOT EXISTS evaluation_charge (
       id TEXT PRIMARY KEY, kind TEXT NOT NULL, reserved INTEGER NOT NULL,
       actual INTEGER, uncertain INTEGER NOT NULL DEFAULT 0);`);
+    db.exec(`CREATE TABLE IF NOT EXISTS evaluation_accounting (
+      id INTEGER PRIMARY KEY CHECK (id = 1), allow_estimates INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS evaluation_estimate (
+      id TEXT PRIMARY KEY, amount INTEGER NOT NULL, basis TEXT NOT NULL);`);
+    db.prepare('INSERT OR IGNORE INTO evaluation_accounting VALUES (1, ?)').run(
+      Number(config.allowEstimates === true),
+    );
+    const accounting = db.prepare('SELECT allow_estimates FROM evaluation_accounting').get() as {
+      allow_estimates: number;
+    };
+    if (accounting.allow_estimates !== Number(config.allowEstimates === true))
+      throw new Error('evaluation_budget_configuration_changed');
     db.prepare(
       'INSERT OR IGNORE INTO evaluation_budget (id, ceiling, prior, source) VALUES (1, ?, ?, ?)',
     ).run(ceiling, units(config.priorUsd), config.priorSource);
@@ -61,10 +83,17 @@ export class EvaluationBudget {
         'SELECT COALESCE(SUM(actual), 0) AS spent, COALESCE(SUM(CASE WHEN actual IS NULL THEN reserved ELSE 0 END), 0) AS held FROM evaluation_charge',
       )
       .get() as { spent: number; held: number };
+    const estimates = this.db
+      .prepare(`SELECT COALESCE(SUM(e.amount), 0) AS amount,
+      COUNT(*) AS count FROM evaluation_estimate e JOIN evaluation_charge c ON c.id = e.id
+      WHERE c.actual IS NULL`)
+      .get() as { amount: number; count: number };
     return {
       limitUsd: config.ceiling === null ? null : config.ceiling / 1e6,
       spentUsd: (config.prior + totals.spent) / 1e6,
       reservedUsd: totals.held / 1e6,
+      estimatedUsd: estimates.amount / 1e6,
+      estimatedCharges: estimates.count,
       availableUsd:
         config.ceiling === null
           ? null
@@ -98,6 +127,23 @@ export class EvaluationBudget {
       .prepare('UPDATE evaluation_budget SET stopped = COALESCE(stopped, ?) WHERE id = 1')
       .run(reason);
   }
+  /** An explicitly authorized estimate never settles a charge or releases its hold.
+   * Missing provider usage must still use settle(id, null) and stop execution. */
+  estimate(id: string, estimatedUsd: number, basis: string) {
+    this.db.transaction(() => {
+      if (!this.estimatesAllowed || !basis.trim())
+        throw new Error('evaluation_estimate_not_authorized');
+      const charge = this.db
+        .prepare('SELECT reserved, actual FROM evaluation_charge WHERE id = ?')
+        .get(id) as { reserved: number; actual: number | null } | undefined;
+      if (!charge || charge.actual !== null) throw new Error('evaluation_charge_already_settled');
+      const amount = units(estimatedUsd);
+      this.db.prepare('INSERT INTO evaluation_estimate VALUES (?, ?, ?)').run(id, amount, basis);
+      this.db.prepare('UPDATE evaluation_charge SET uncertain = 1 WHERE id = ?').run(id);
+      if (this.snapshot().limitUsd !== null && amount > charge.reserved)
+        this.stop('evaluation_cost_above_reservation');
+    })();
+  }
   settle(id: string, actualUsd: number | null) {
     this.db.transaction(() => {
       const charge = this.db
@@ -111,7 +157,7 @@ export class EvaluationBudget {
         const actual = units(actualUsd);
         this.db.prepare('UPDATE evaluation_charge SET actual = ? WHERE id = ?').run(actual, id);
         const available = this.snapshot().availableUsd;
-        if (actual > charge.reserved || (available !== null && available < 0))
+        if (available !== null && (actual > charge.reserved || available < 0))
           this.stop('evaluation_cost_above_reservation');
       }
     })();

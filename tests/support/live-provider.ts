@@ -91,3 +91,20 @@ export function voiceAnswerParts(sent: readonly { event: ConnectClientEvent }[])
     return [];
   });
 }
+
+/** A regular answer is released either as speakable text or as an instruction
+ * to render acknowledged source data. Mandatory notices are checked separately. */
+export function isVoiceAnswerRelease(
+  event: ConnectClientEvent,
+  includeNotices = false,
+): event is Extract<
+  ConnectClientEvent,
+  { type: 'session.commentary.append' | 'session.instructions.append' }
+> {
+  return (
+    event.type === 'session.commentary.append' ||
+    (event.type === 'session.instructions.append' &&
+      (event.content.startsWith('Svar ') ||
+        (includeNotices && event.content.startsWith('Återge svar '))))
+  );
+}

@@ -11,7 +11,8 @@ export type PlaybackAssessorProfile = {
   model: 'whisper-1';
   language: 'sv';
   usdPerMinute: number;
-  billingQuantumSeconds: number;
+  billingQuantumSeconds: number | null;
+  billingMode?: 'usage-estimate';
   alignmentMarginMs: number;
   minimumAverageLogProbability: number;
   maximumNoSpeechProbability: number;
@@ -27,8 +28,11 @@ export function verifiedPlaybackAssessor(profile: PlaybackAssessorProfile) {
     profile.language !== 'sv' ||
     !Number.isFinite(profile.usdPerMinute) ||
     profile.usdPerMinute <= 0 ||
-    !Number.isFinite(profile.billingQuantumSeconds) ||
-    profile.billingQuantumSeconds <= 0 ||
+    (profile.billingMode !== undefined && profile.billingMode !== 'usage-estimate') ||
+    (profile.billingMode !== 'usage-estimate' &&
+      (!Number.isFinite(profile.billingQuantumSeconds) ||
+        profile.billingQuantumSeconds === null ||
+        profile.billingQuantumSeconds <= 0)) ||
     !Number.isFinite(profile.alignmentMarginMs) ||
     profile.alignmentMarginMs < 100 ||
     !Number.isFinite(profile.minimumAverageLogProbability) ||
@@ -55,6 +59,8 @@ export function playbackAssessor(
   transport: typeof fetch = fetch,
 ) {
   const profile = verifiedPlaybackAssessor(supplied);
+  const estimated = profile.billingMode === 'usage-estimate';
+  if (estimated && !budget.estimatesAllowed) throw new Error('evaluation_estimate_not_authorized');
   const client = new ModelClient({
     apiKey,
     baseURL: 'https://api.openai.com/v1',
@@ -64,8 +70,11 @@ export function playbackAssessor(
   });
   return async (recording: PlaybackRecording): Promise<PlaybackRecognition> => {
     const seconds = recording.frames / recording.sampleRate;
-    const billedSeconds =
-      Math.ceil(seconds / profile.billingQuantumSeconds) * profile.billingQuantumSeconds;
+    // In estimate mode this is an allowance, not a claimed provider billing quantum.
+    const quantum = profile.billingQuantumSeconds as number;
+    const billedSeconds = estimated
+      ? Math.ceil(seconds / 60) * 60
+      : Math.ceil(seconds / quantum) * quantum;
     const maximum = (billedSeconds * profile.usdPerMinute) / 60;
     const reservation = budget.reserve('playback_transcription', maximum);
     const callId = randomUUID();
@@ -94,14 +103,24 @@ export function playbackAssessor(
       const usage = result.usage;
       const charged =
         usage?.type === 'duration' && Number.isFinite(usage.seconds) && usage.seconds > 0
-          ? (Math.ceil(usage.seconds / profile.billingQuantumSeconds) *
-              profile.billingQuantumSeconds *
+          ? ((estimated ? usage.seconds : Math.ceil(usage.seconds / quantum) * quantum) *
               profile.usdPerMinute) /
             60
           : null;
-      budget.settle(reservation, charged);
+      if (estimated && charged !== null)
+        budget.estimate(
+          reservation,
+          charged,
+          'Provider-reported duration at published rate; Whisper billing rounding unresolved.',
+        );
+      else budget.settle(reservation, charged);
       settled = true;
-      recognition = { ...recognition, text: result.text, costUsd: charged };
+      recognition = {
+        ...recognition,
+        text: result.text,
+        costUsd: estimated ? null : charged,
+        ...(estimated ? { estimatedCostUsd: charged } : {}),
+      };
       const words = result.words;
       const segments = result.segments;
       const normalized = (text: string) =>

@@ -74,6 +74,32 @@ test('partial generation preserves prior manifests and writes independently revi
   expect(create).toHaveBeenCalledTimes(first.records.length);
 });
 
+test('explicit generation can prepare catalog utterances before they are enabled for voice evaluation', {
+  tags: ['technical'],
+}, async () => {
+  const create = vi.fn(async () => response());
+  const result = await generateSpeech({
+    directory: await directory(),
+    create,
+    ids: [
+      'everyday-01-request',
+      'everyday-09-request',
+      'everyday-25-request',
+      'everyday-29-request',
+      'everyday-30-request',
+    ],
+    voices: ['marin'],
+  });
+  expect(result.records.map((record) => record.text)).toEqual([
+    'Vi har skaffat Disney+. Lägg till det.',
+    'Alex använder Spotify.',
+    'Vad kostar Spotify?',
+    'Ångra den senaste ändringen.',
+    'Spara mina ändringar.',
+  ]);
+  expect(create).toHaveBeenCalledTimes(5);
+});
+
 test('speech generation reuses complete matching audio without a second provider charge', {
   tags: ['technical'],
 }, async () => {

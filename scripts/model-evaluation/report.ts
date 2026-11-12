@@ -252,6 +252,10 @@ export function summarizeProfile(
         values.filter((attempt) => groupIds.has(attempt.scenario)),
         'playbackAssessmentCostUsd',
       ),
+      estimatedPlaybackAssessmentCostUsd: totalCost(
+        values.filter((attempt) => groupIds.has(attempt.scenario)),
+        'estimatedPlaybackAssessmentCostUsd',
+      ),
     };
   }
   const groups = Object.fromEntries(
@@ -313,6 +317,9 @@ export function summarizeProfile(
           playbackAssessmentCostUsd: reply
             ? totalCost([attempt, reply], 'playbackAssessmentCostUsd')
             : null,
+          estimatedPlaybackAssessmentCostUsd: reply
+            ? totalCost([attempt, reply], 'estimatedPlaybackAssessmentCostUsd')
+            : null,
         };
       }),
       outcomes: outcomeCounts(followUps),
@@ -327,6 +334,7 @@ export function summarizeProfile(
     judgeCostUsd: totalCost(values, 'judgeCostUsd'),
     voiceCostUsd: totalCost(values, 'voiceCostUsd'),
     playbackAssessmentCostUsd: totalCost(values, 'playbackAssessmentCostUsd'),
+    estimatedPlaybackAssessmentCostUsd: totalCost(values, 'estimatedPlaybackAssessmentCostUsd'),
   };
 }
 function outcomeCounts(values: Attempt[]) {
@@ -339,7 +347,12 @@ function outcomeCounts(values: Attempt[]) {
 }
 function totalCost(
   values: Attempt[],
-  key: 'backendCostUsd' | 'judgeCostUsd' | 'voiceCostUsd' | 'playbackAssessmentCostUsd',
+  key:
+    | 'backendCostUsd'
+    | 'judgeCostUsd'
+    | 'voiceCostUsd'
+    | 'playbackAssessmentCostUsd'
+    | 'estimatedPlaybackAssessmentCostUsd',
 ) {
   return values.length && values.every((attempt) => attempt[key] != null)
     ? values.reduce((sum, attempt) => sum + (attempt[key] ?? 0), 0)
@@ -424,6 +437,7 @@ type ScopeField =
   | 'unresolvedAssessments'
   | 'judgeCostUsd'
   | 'voiceCostUsd'
+  | 'estimatedPlaybackAssessmentCostUsd'
   | 'playbackAssessmentCostUsd';
 type ProfileSummary = Omit<ReturnType<typeof summarizeProfile>, ScopeField> &
   Partial<Pick<ReturnType<typeof summarizeProfile>, ScopeField>>;

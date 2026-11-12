@@ -5,7 +5,11 @@ import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
-import { liveProvider, voiceAnswerParts } from '../../support/live-provider.js';
+import {
+  isVoiceAnswerRelease,
+  liveProvider,
+  voiceAnswerParts,
+} from '../../support/live-provider.js';
 import {
   failExplanation,
   lastToolResult,
@@ -298,15 +302,12 @@ test('only one actual delegation executes raw voice fragments through Terra and 
   const delegationId = voice.delegate();
   voice.delegate(delegationId);
   await expect
-    .poll(
-      () =>
-        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-    )
+    .poll(() => voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
     .toBe(1);
   const proposed = await voice.poll();
   expect(proposed.assistant.review.changes).toMatchObject([{ id: 'family-music' }]);
   expect(model.requests).toHaveLength(3);
-  const sent = voice.live.sent.find(({ event }) => event.type === 'session.commentary.append');
+  const sent = voice.live.sent.find(({ event }) => isVoiceAnswerRelease(event));
   expect(sent?.event).toMatchObject({ delegation_id: delegationId });
   expect(JSON.stringify(model.requests[0])).toContain('Lägg till Familjens musik.');
   expect(model.requests[0].tools.some(({ name }) => name === 'read_merge_review')).toBe(false);
@@ -314,10 +315,7 @@ test('only one actual delegation executes raw voice fragments through Terra and 
   voice.transcript('Spara.');
   const saveId = voice.delegate();
   await expect
-    .poll(
-      () =>
-        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-    )
+    .poll(() => voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
     .toBe(2);
   const saved = await voice.poll();
   expect(saved.assistant.receipt.changes).toMatchObject([{ after: { id: 'family-music' } }]);
@@ -333,10 +331,7 @@ test('only one actual delegation executes raw voice fragments through Terra and 
   voice.transcript('Vad sparades?');
   voice.delegate();
   await expect
-    .poll(
-      () =>
-        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-    )
+    .poll(() => voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
     .toBe(3);
   const detail = voiceAnswerParts(voice.live.sent.slice(beforeDetails)).join('');
   expect(detail).toContain('Skyttels resultat (verifierat):');
@@ -449,10 +444,7 @@ test.each([
     voice.transcript(instruction);
     voice.delegate();
     await expect
-      .poll(
-        () =>
-          voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-      )
+      .poll(() => voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
       .toBe(1);
     const { assistant } = await voice.poll();
     const map = await (await browser.get(mapPath)).json();
@@ -809,10 +801,7 @@ test('voice commentary separates unverified paraphrased claims and useful questi
   voice.transcript('Beskriv mitt utkast.');
   voice.delegate();
   await expect
-    .poll(
-      () =>
-        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-    )
+    .poll(() => voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
     .toBe(1);
   const { assistant } = await voice.poll();
   expect(assistant.modelReply).toBe(modelReply);
@@ -835,10 +824,7 @@ test('long quoted model conversation cannot break the source boundary or Live co
   voice.transcript('Ställ en fråga.');
   voice.delegate();
   await expect
-    .poll(
-      () =>
-        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-    )
+    .poll(() => voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
     .toBe(1);
   const chunks = voiceAnswerParts(voice.live.sent);
   const lines = chunks.join('').split('\n');
@@ -879,10 +865,7 @@ test('combined type proposals speak the directed question and retain the verifie
   voice.transcript('Lägg till sambandstypen Delar.');
   voice.delegate();
   await expect
-    .poll(
-      () =>
-        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-    )
+    .poll(() => voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
     .toBe(1);
   const status = await voice.poll();
   expect(status.assistant.result).toEqual({
@@ -979,10 +962,7 @@ test('large verified draft details are assembled completely within the Live limi
   voice.transcript('Beskriv hela utkastet.');
   voice.delegate();
   await expect
-    .poll(
-      () =>
-        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-    )
+    .poll(() => voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
     .toBe(1);
   const status = await voice.poll();
   expect(status.assistant.result.message).toContain('3 Cykel');
@@ -1027,10 +1007,7 @@ test.each([
   voice.transcript(text);
   voice.delegate();
   await expect
-    .poll(
-      () =>
-        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-    )
+    .poll(() => voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
     .toBe(1);
   const result = await voice.poll();
   expect(result.assistant.error).toBe('assistant_save_not_requested');
@@ -1083,9 +1060,7 @@ test('new speech retains held voice work until an explicit stop invalidates its 
   ]);
   await expect.poll(async () => (await voice.poll()).assistant.phase).not.toBe('working');
   expect((await voice.poll()).assistant.review.changes).toEqual([]);
-  expect(voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append')).toEqual(
-    [],
-  );
+  expect(voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event, true))).toEqual([]);
   voice.delegate();
   expect(model.requests).toHaveLength(1);
 });
@@ -1108,9 +1083,7 @@ test('the voice reports work only for a task that was said, and not after that t
   await expect.poll(async () => (await voice.poll()).voice.phase).toBe('listening');
   expect((await voice.poll()).assistant.phase).not.toBe('working');
   // Skyttel is given nothing to say about the stopped task.
-  expect(voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append')).toEqual(
-    [],
-  );
+  expect(voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event, true))).toEqual([]);
   // A written message is the conversation's work, not the voice's.
   const ready = await (await browser.get(session)).json();
   const written = await browser.post(`${session}/messages`, {
@@ -1140,10 +1113,7 @@ test('the first fragment retains its displayed draft anchor when a web edit arri
   voice.transcript('.');
   voice.delegate();
   await expect
-    .poll(
-      () =>
-        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-    )
+    .poll(() => voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
     .toBe(1);
   expect(model.requests).toHaveLength(0);
   expect((await voice.poll()).assistant.review.changes).toHaveLength(1);
@@ -1169,10 +1139,7 @@ test('a spoken correction waits for held work, retains context and suppresses it
   release?.([modelMessage('Gammalt svar.')]);
   await expect.poll(() => model.requests.length).toBe(2);
   await expect
-    .poll(
-      () =>
-        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-    )
+    .poll(() => voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
     .toBe(1);
   expect((await voice.poll()).assistant.modelReply).toBe('Det nya uppdraget är förstått.');
   const turn = JSON.parse(
@@ -1236,10 +1203,7 @@ test('delegation timing preserves the entire overlapping transcript fragment', a
     delegation: { id: 'before-fragment-end', target: 'client', type: 'delegation' },
   });
   await expect
-    .poll(
-      () =>
-        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-    )
+    .poll(() => voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
     .toBe(1);
   expect(model.requests).toHaveLength(1);
   const turn = JSON.parse(
@@ -1265,18 +1229,12 @@ test('voice checks and completes only the original registered save before new wo
   expect(pending.status).toBe('pending');
   expect(pending.operationId).not.toBe('provider-id');
   await expect
-    .poll(
-      () =>
-        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-    )
+    .poll(() => voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
     .toBe(1);
   voice.transcript('Ja.');
   voice.delegate();
   await expect
-    .poll(
-      () =>
-        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-    )
+    .poll(() => voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
     .toBe(2);
   const saved = (await voice.poll()).assistant;
   expect(saved.receipt.operationId).toBe(pending.operationId);
@@ -1336,10 +1294,7 @@ test('a duplicate fragment and a delegation without new speech never duplicate a
   voice.live.emit(voice.providerId, fragment);
   voice.delegate();
   await expect
-    .poll(
-      () =>
-        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-    )
+    .poll(() => voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
     .toBe(1);
   voice.delegate();
   expect(model.requests).toHaveLength(1);
@@ -1347,9 +1302,7 @@ test('a duplicate fragment and a delegation without new speech never duplicate a
     JSON.parse(String(model.requests[0].input.findLast((item) => item.role === 'user')?.content))
       .message,
   ).toBe('Läs utkastet.');
-  expect(
-    voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append'),
-  ).toHaveLength(2);
+  expect(voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event))).toHaveLength(2);
 });
 
 test('provider startup failure records unknown usage and leaves the same text session and draft usable', async () => {
@@ -1533,9 +1486,7 @@ test('voice selection commentary waits for the actual browser acknowledgement', 
   await expect
     .poll(async () => (await voice.poll()).assistant.selection?.objectId)
     .toBe('web-object');
-  expect(voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append')).toEqual(
-    [],
-  );
+  expect(voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event, true))).toEqual([]);
   const current = (await voice.poll()).assistant;
   const response = await browser.post(`${voice.path}/${voice.assistant.id}/selection`, {
     headers: { origin: app.origin },
@@ -1543,13 +1494,10 @@ test('voice selection commentary waits for the actual browser acknowledgement', 
   });
   expect(response.status()).toBe(200);
   await expect
-    .poll(
-      () =>
-        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-    )
+    .poll(() => voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
     .toBe(1);
   expect(voice.live.sent.at(-1)?.event).toMatchObject({
-    type: 'session.commentary.append',
+    type: 'session.instructions.append',
   });
   expect(voiceAnswerParts(voice.live.sent).join('')).toBe(
     'Skyttels resultat (verifierat): Objektet är markerat.\nSamtal (obekräftat): "Berätta vilken person som använder det."',
@@ -1594,10 +1542,7 @@ test.each([false, true])(
     });
     expect(response.status()).toBe(200);
     await expect
-      .poll(
-        () =>
-          voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-      )
+      .poll(() => voice.live.sent.filter(({ event }) => isVoiceAnswerRelease(event)).length)
       .toBe(1);
     expect(voiceAnswerParts(voice.live.sent).join('')).toBe(
       pendingQuestion

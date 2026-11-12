@@ -429,6 +429,131 @@
             "sha256": "41d16ee4a45c68636cf554b2502246088f2cb16a5214906651fe353fb2712ae9"
           },
           "provenance": "Reuses unchanged approved audio and exact text from oklarheter-pris-foljdsvar; no new synthesis."
+        },
+        "everyday-01-request": {
+          "text": "Vi har skaffat Disney+. Lägg till det.",
+          "file": "marin/everyday-01-request.wav",
+          "frames": 80485,
+          "sha256": "5a049fe9d836dae5fccc0938cc470bd3a20dfdf291e9580e92659a20e7718c01",
+          "sampleRate": 24000,
+          "channels": 1,
+          "sampleWidth": 2,
+          "durationSeconds": 3.3535416666666666,
+          "recipe": {
+            "model": "gpt-4o-mini-tts",
+            "instructions": "Läs den givna texten ordagrant på tydlig, naturlig svenska med normalt samtalstempo. Uttala svenska sammansatta ord sammanhängande och egennamn omsorgsfullt. Bevara alla namn, belopp och relationer. Låt det låta som en person som ger ett uppdrag i ett samtal.",
+            "speed": 1.15,
+            "generatorSha256": "4c590f99492bc31b221a6485f15dbc003c9e17717aa69df02efaf387375053b3",
+            "method": "Exact catalog utterance, one authorized synthesis call; unchanged generated WAV."
+          },
+          "review": {
+            "status": "approved",
+            "reviewer": "user",
+            "date": "2026-11-11",
+            "sha256": "5a049fe9d836dae5fccc0938cc470bd3a20dfdf291e9580e92659a20e7718c01",
+            "statement": "Approve all five clips"
+          },
+          "generationCostUsd": 0.0012372000000000001
+        },
+        "everyday-09-request": {
+          "text": "Alex använder Spotify.",
+          "file": "marin/everyday-09-request.wav",
+          "frames": 46900,
+          "sha256": "6bce2c9068a12f7a5a4745a321ece5cb4a838e5c328a352a3f68497bc0cbf13d",
+          "sampleRate": 24000,
+          "channels": 1,
+          "sampleWidth": 2,
+          "durationSeconds": 1.9541666666666666,
+          "recipe": {
+            "model": "gpt-4o-mini-tts",
+            "instructions": "Läs den givna texten ordagrant på tydlig, naturlig svenska med normalt samtalstempo. Uttala svenska sammansatta ord sammanhängande och egennamn omsorgsfullt. Bevara alla namn, belopp och relationer. Låt det låta som en person som ger ett uppdrag i ett samtal.",
+            "speed": 1.15,
+            "generatorSha256": "4c590f99492bc31b221a6485f15dbc003c9e17717aa69df02efaf387375053b3",
+            "method": "Exact catalog utterance, one authorized synthesis call; unchanged generated WAV."
+          },
+          "review": {
+            "status": "approved",
+            "reviewer": "user",
+            "date": "2026-11-11",
+            "sha256": "6bce2c9068a12f7a5a4745a321ece5cb4a838e5c328a352a3f68497bc0cbf13d",
+            "statement": "Approve all five clips"
+          },
+          "generationCostUsd": 0.0007283999999999999
+        },
+        "everyday-25-request": {
+          "text": "Vad kostar Spotify?",
+          "file": "marin/everyday-25-request.wav",
+          "frames": 48074,
+          "sha256": "23467ded313403274886a78534e3ccb877d5d0982988575b3b543f35535122c8",
+          "sampleRate": 24000,
+          "channels": 1,
+          "sampleWidth": 2,
+          "durationSeconds": 2.0030833333333335,
+          "recipe": {
+            "model": "gpt-4o-mini-tts",
+            "instructions": "Läs den givna texten ordagrant på tydlig, naturlig svenska med normalt samtalstempo. Uttala svenska sammansatta ord sammanhängande och egennamn omsorgsfullt. Bevara alla namn, belopp och relationer. Låt det låta som en person som ger ett uppdrag i ett samtal.",
+            "speed": 1.15,
+            "generatorSha256": "4c590f99492bc31b221a6485f15dbc003c9e17717aa69df02efaf387375053b3",
+            "method": "Exact catalog utterance, one authorized synthesis call; unchanged generated WAV."
+          },
+          "review": {
+            "status": "approved",
+            "reviewer": "user",
+            "date": "2026-11-11",
+            "sha256": "23467ded313403274886a78534e3ccb877d5d0982988575b3b543f35535122c8",
+            "statement": "Approve all five clips"
+          },
+          "generationCostUsd": 0.000753
+        },
+        "everyday-29-request": {
+          "text": "Ångra den senaste ändringen.",
+          "file": "marin/everyday-29-request.wav",
+          "frames": 57455,
+          "sha256": "8439eedbda15ab751de5e22e9fa076f547a1afc7bb2229cbac67bc588bd18899",
+          "sampleRate": 24000,
+          "channels": 1,
+          "sampleWidth": 2,
+          "durationSeconds": 2.3939583333333334,
+          "recipe": {
+            "model": "gpt-4o-mini-tts",
+            "instructions": "Läs den givna texten ordagrant på tydlig, naturlig svenska med normalt samtalstempo. Uttala svenska sammansatta ord sammanhängande och egennamn omsorgsfullt. Bevara alla namn, belopp och relationer. Låt det låta som en person som ger ett uppdrag i ett samtal.",
+            "speed": 1.15,
+            "generatorSha256": "4c590f99492bc31b221a6485f15dbc003c9e17717aa69df02efaf387375053b3",
+            "method": "Exact catalog utterance, one authorized synthesis call; unchanged generated WAV."
+          },
+          "review": {
+            "status": "approved",
+            "reviewer": "user",
+            "date": "2026-11-11",
+            "sha256": "8439eedbda15ab751de5e22e9fa076f547a1afc7bb2229cbac67bc588bd18899",
+            "statement": "Approve all five clips"
+          },
+          "generationCostUsd": 0.0008988
+        },
+        "everyday-30-request": {
+          "text": "Spara mina ändringar.",
+          "file": "marin/everyday-30-request.wav",
+          "frames": 43844,
+          "sha256": "521abc2254c0ec75e299403c36fbe99847da8b1bf24dee104352b2a865f10324",
+          "sampleRate": 24000,
+          "channels": 1,
+          "sampleWidth": 2,
+          "durationSeconds": 1.8268333333333333,
+          "recipe": {
+            "model": "gpt-4o-mini-tts",
+            "instructions": "Läs den givna texten ordagrant på tydlig, naturlig svenska med normalt samtalstempo. Uttala svenska sammansatta ord sammanhängande och egennamn omsorgsfullt. Bevara alla namn, belopp och relationer. Låt det låta som en person som ger ett uppdrag i ett samtal.",
+            "speed": 1.15,
+            "generatorSha256": "4c590f99492bc31b221a6485f15dbc003c9e17717aa69df02efaf387375053b3",
+            "method": "Exact catalog utterance, one authorized synthesis call; unchanged generated WAV."
+          },
+          "review": {
+            "status": "approved",
+            "reviewer": "user",
+            "date": "2026-11-11",
+            "sha256": "521abc2254c0ec75e299403c36fbe99847da8b1bf24dee104352b2a865f10324",
+            "statement": "Approve all five clips"
+          },
+          "generationCostUsd": 0.0007296000000000001
         }
       }
     }

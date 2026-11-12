@@ -12,7 +12,7 @@ import {
 import { editTableObject, readTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
-import { liveProvider } from '../support/live-provider.js';
+import { isVoiceAnswerRelease, liveProvider } from '../support/live-provider.js';
 import { openProperties, propertyRow } from '../support/property-controls.js';
 import { expect, test } from '../support/test.js';
 import {
@@ -520,9 +520,7 @@ for (const microphoneOn of [true, false]) {
       expect(JSON.parse(authoritative.content[0].text).currentDraft.changes).toEqual(
         before.draft.changes,
       );
-      expect(live.sent.filter(({ event }) => event.type === 'session.commentary.append')).toEqual(
-        [],
-      );
+      expect(live.sent.filter(({ event }) => isVoiceAnswerRelease(event, true))).toEqual([]);
       old?.emit('session.usage.updated', {
         type: 'session.usage.updated',
         usage: { seconds: 1 },
@@ -649,9 +647,7 @@ test('KONTEXT-11: sammanfattning väntar på talat sparande och dess hörda kvit
     await expect.poll(async () => (await read()).objects[0]?.name).toBe('Lo Exempel');
     await expect
       .poll(() =>
-        live.sent.some(
-          ({ event }) => event.type === 'session.commentary.append' && event.content === 'Sparat.',
-        ),
+        live.sent.some(({ event }) => isVoiceAnswerRelease(event) && event.content === 'Sparat.'),
       )
       .toBe(true);
     const beforeAudioLo = await readTableObject(page, 'Lo Exempel');
@@ -728,9 +724,7 @@ test('KONTEXT-11: sammanfattning väntar på talat sparande och dess hörda kvit
     await page.getByRole('button', { name: 'Tillbaka till arbetet', exact: true }).click();
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true');
     expect(
-      live.sent.filter(
-        ({ event }) => event.type === 'session.commentary.append' && event.content === 'Sparat.',
-      ),
+      live.sent.filter(({ event }) => isVoiceAnswerRelease(event) && event.content === 'Sparat.'),
     ).toHaveLength(1);
   } finally {
     release?.();

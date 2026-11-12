@@ -388,7 +388,7 @@ förberedelse. Läs det verkliga held-anropets värden varje gång. Alla uppgift
    **Visa utkastet**, samt avsaknad av nytt kvitto och ny markering.
 3. Kör `sessions`. Läs senaste svarets `session.thinking.append`-paket.
    Gruppera deras JSON-innehåll efter `answerId` och sammanfoga `text` i
-   `part`-ordning. Efter delarna ska `session.commentary.append` ange att
+   `part`-ordning. Efter delarna ska `session.instructions.append` ange att
    samma svar är komplett. Beskedet **Utkast: 1 osparat förslag** ska
    beskriva det faktiska utkastet utan att bekräfta något sparande eller någon
    markering. Modellens svar ska stå separat, citerat under
@@ -586,9 +586,14 @@ och mikrofonavslag ska samma spår vara `live`, `enabled:false` och
    hållet.
 2. Välj **Prata med Skyttel**. Kör `stats()`. Flytta fokus till
    **Återställ vy** med Tab.
-3. Kör `setSound('remote', true)`. Släpp anropet med ett `propose_object` som
+3. Kör `setSound('remote', true)`. Kontrollera i webbläsarens nätverkspanel
+   att ett `POST` till `/poll` med `speakerActive: true` har fått ett lyckat
+   svar innan modellens anrop släpps. Släpp anropet med ett `propose_object` som
    ändrar Lo-förslagets namn till **Lo Lind**, enligt TAL-02:s verktygssteg,
    och nästa anrop med `reply REQUEST Namnet är ändrat i utkastet.`.
+   Kör `sessions`: svarets instruktion väntar medan ljudaktiviteten pågår.
+   Kör `setSound('remote', false)`, invänta svarets instruktion i `sessions`
+   och kör sedan `setSound('remote', true)` för det nya svaret.
 4. Kör `sessions`. Kör sedan `setSound('remote', false)` och vänta några
    sekunder. Kör `stats()`.
 5. Vid UI-steg 4, sätt `window.skyttelVoiceFixture.setSound('remote', true)`

@@ -21,6 +21,30 @@ const profile: PlaybackAssessorProfile = {
   sources: ['https://example.test/controlled-transcription'],
 };
 
+test('a transcription profile cannot authorize estimates on its own', {
+  tags: ['technical'],
+}, () => {
+  const db = new Database(':memory:');
+  try {
+    const budget = new EvaluationBudget(db, {
+      authorized: true,
+      priorUsd: 0,
+      priorSource: 'Controlled strict ledger.',
+    });
+    expect(() =>
+      playbackAssessor(
+        'controlled',
+        { ...profile, billingQuantumSeconds: null, billingMode: 'usage-estimate' },
+        budget,
+        () => {},
+      ),
+    ).toThrow('evaluation_estimate_not_authorized');
+    expect(budget.callsStarted).toBe(0);
+  } finally {
+    db.close();
+  }
+});
+
 test.each([
   'complete',
   'missing-usage',
@@ -28,15 +52,20 @@ test.each([
   'mismatched-words',
   'invalid-segments',
   'duration-mismatch',
+  'estimated',
+  'estimated-missing-usage',
 ] as const)(
   'recording assessor sends actual WAV without answer hints and retains %s billing/evidence',
   { tags: ['technical'] },
   async (mode) => {
+    const estimated = mode.startsWith('estimated');
+    const missingUsage = mode.endsWith('missing-usage');
     const db = new Database(':memory:');
     const budget = new EvaluationBudget(db, {
       authorized: true,
       priorUsd: 0,
       priorSource: 'Controlled provider; no paid calls.',
+      allowEstimates: estimated,
     });
     const records: unknown[] = [];
     const pcm = Buffer.alloc(96000);
@@ -76,25 +105,38 @@ test.each([
             no_speech_prob: 0.01,
           },
         ],
-        ...(mode === 'missing-usage' ? {} : { usage: { type: 'duration', seconds: 1 } }),
+        ...(missingUsage ? {} : { usage: { type: 'duration', seconds: estimated ? 1.25 : 1 } }),
       });
     };
     try {
       const assess = playbackAssessor(
         'controlled-key',
-        profile,
+        estimated
+          ? { ...profile, billingQuantumSeconds: null, billingMode: 'usage-estimate' }
+          : profile,
         budget,
         (value) => records.push(value),
         transport,
       );
       const result = await assess(recording);
-      expect(result.outcome).toBe(mode === 'complete' ? 'recognized' : 'inconclusive');
+      expect(result.outcome).toBe(
+        mode === 'complete' || mode === 'estimated' ? 'recognized' : 'inconclusive',
+      );
       expect(requests).toBe(1);
       expect(records).toHaveLength(1);
       expect(budget.callsStarted).toBe(1);
-      expect(budget.snapshot().stopped).toBe(mode === 'missing-usage');
-      if (mode === 'missing-usage') {
+      expect(budget.snapshot().stopped).toBe(missingUsage);
+      if (missingUsage) {
         expect(result.costUsd).toBeNull();
+        expect(budget.snapshot().reservedUsd).toBeGreaterThan(0);
+      } else if (estimated) {
+        expect(result.costUsd).toBeNull();
+        expect(result.estimatedCostUsd).toBeCloseTo(0.00020833333);
+        expect(budget.snapshot()).toMatchObject({
+          spentUsd: 0,
+          estimatedUsd: 0.000209,
+          estimatedCharges: 1,
+        });
         expect(budget.snapshot().reservedUsd).toBeGreaterThan(0);
       } else expect(result.costUsd).toBeGreaterThan(0);
     } finally {

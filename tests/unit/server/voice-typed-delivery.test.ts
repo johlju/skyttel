@@ -74,7 +74,7 @@ async function arrange(
         .not.toBe('working');
       return current;
     },
-    async poll(microphoneOn: boolean, microphoneActive = false) {
+    async poll(microphoneOn: boolean, microphoneActive = false, speakerActive = false) {
       current = await (await browser.get(path)).json();
       const response = await post(`${path}/voice/${voiceId}/poll`, {
         revision: current.revision,
@@ -82,6 +82,7 @@ async function arrange(
         contentVersion: current.review.contentVersion,
         microphoneOn,
         microphoneActive,
+        speakerActive,
       });
       expect(response.status(), await response.text()).toBe(200);
       return response.json();
@@ -98,15 +99,18 @@ test.each([true, false])(
     ]);
     const { live, send, poll } = await arrange(model.provider);
     await send('Vad vet vi?', 'first');
-    const consumed = await poll(on);
-    expect(consumed.voice.replyDelivery).toContainEqual({ id: 'first', voiced: on });
+    await expect
+      .poll(async () => (await poll(on)).voice.replyDelivery)
+      .toContainEqual({ id: 'first', voiced: on });
     const spoken = () => voiceAnswerParts(live.sent).join('');
     expect(spoken()).toBe(on ? 'Samtal (obekräftat): "Första svaret."' : '');
     await poll(true);
     expect(spoken()).toBe(on ? 'Samtal (obekräftat): "Första svaret."' : '');
     await send('Fortsätt.', 'next');
     const next = await poll(true);
-    expect(next.voice.replyDelivery).toContainEqual({ id: 'next', voiced: true });
+    await expect
+      .poll(async () => (await poll(true)).voice.replyDelivery)
+      .toContainEqual({ id: 'next', voiced: true });
     expect(next.voice.response).toMatchObject({ text: 'Nästa svaret.', questionPending: false });
     expect(spoken()).toContain('Samtal (obekräftat): "Nästa svaret."');
     expect(spoken().split('Nästa svaret.')).toHaveLength(2);
@@ -129,6 +133,32 @@ test('a long typed answer reaches the voice intact in bounded silent parts witho
   expect(result.assistant.completedReplies).toContainEqual(
     expect.objectContaining({ id: 'long-reply', text: answer, source: 'text' }),
   );
+});
+
+test('speaker activity holds an acknowledged typed reply until the preceding answer finishes', {
+  tags: ['technical'],
+}, async () => {
+  const { live, send, poll } = await arrange(
+    textModel(() => [modelMessage('Nästa svar.')]).provider,
+  );
+  await send('Fortsätt.', 'queued');
+  const pending = await poll(true, false, true);
+  expect(pending.assistant.completedReplies).toContainEqual(
+    expect.objectContaining({ id: 'queued', text: 'Nästa svar.' }),
+  );
+  expect(pending.voice.replyDelivery).toBeUndefined();
+  // A second poll observes the asynchronous thinking acknowledgements.
+  expect((await poll(true, false, true)).voice.replyDelivery).toBeUndefined();
+  expect(live.sent.some(({ event }) => event.type === 'session.instructions.append')).toBe(false);
+  const released = await poll(true, false, false);
+  expect(released.voice.replyDelivery).toEqual([{ id: 'queued', voiced: true }]);
+  expect(
+    live.sent.filter(({ event }) => event.type === 'session.instructions.append'),
+  ).toHaveLength(1);
+  await poll(true);
+  expect(
+    live.sent.filter(({ event }) => event.type === 'session.instructions.append'),
+  ).toHaveLength(1);
 });
 
 test('necessary typed questions are explicit, unchanged conversation data and do not mutate or save the map', async () => {
@@ -589,8 +619,9 @@ test('a failed typed completion delivers its own question before a later task qu
   expect(queued.completedReplies).toContainEqual(
     expect.objectContaining({ id: 'failed-partial', failed: true, newQuestions: [question] }),
   );
-  const delivered = await poll(true);
-  expect(delivered.voice.replyDelivery).toContainEqual({ id: 'failed-partial', voiced: true });
+  await expect
+    .poll(async () => (await poll(true)).voice.replyDelivery)
+    .toContainEqual({ id: 'failed-partial', voiced: true });
   const firstSpoken = voiceAnswerParts(live.sent).join('');
   expect(firstSpoken).toContain('Sambandstypen Delar lades till.');
   expect(firstSpoken).toContain(`Obligatoriskt besked från Skyttel: ${failed.reply}`);
@@ -619,8 +650,9 @@ test('a failed typed completion delivers its own question before a later task qu
   expect(later.review).toEqual(failed.review);
   expect(later.receipt).toBeUndefined();
   expect(model.requests).toHaveLength(2);
-  const next = await poll(true);
-  expect(next.voice.replyDelivery).toContainEqual({ id: 'later-question', voiced: true });
+  await expect
+    .poll(async () => (await poll(true)).voice.replyDelivery)
+    .toContainEqual({ id: 'later-question', voiced: true });
   const spoken = voiceAnswerParts(live.sent).join('');
   expect(spoken.startsWith(firstSpoken)).toBe(true);
   expect(spoken).toContain(`Nödvändig fråga (samtalsdata): ${JSON.stringify(laterQuestion)}`);
