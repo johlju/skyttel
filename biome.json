@@ -12,10 +12,10 @@
       "src/**",
       "tests/**",
       "scripts/**",
-      ".agents/skills/implement-stack/scripts/**",
       "*.json",
       "*.config.ts",
-      "!package-lock.json"
+      "!package-lock.json",
+      "!!.agents/skills"
     ]
   },
   "formatter": {
