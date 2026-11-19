@@ -48,12 +48,11 @@ for (const [caseId, outcome] of [
       await expect(choice).toBeChecked();
       await choice.uncheck();
       if (outcome === 'confirmed') {
-        await expect(field.getByRole('status')).toHaveText(
+        const toast = field.locator('.cookie-storage-toast');
+        await expect(toast).toBeVisible();
+        await expect(toast.getByRole('status')).toHaveText(
           'Ihågkommen inloggning är avstängd. Du är fortfarande inloggad.',
         );
-        const box = await field.getByRole('status').boundingBox();
-        expect(box?.width).toBeLessThanOrEqual(1);
-        expect(box?.height).toBeLessThanOrEqual(1);
         await expect(choice).toBeEnabled();
         expect(
           (await context.cookies())
@@ -76,6 +75,10 @@ for (const [caseId, outcome] of [
       if (outcome === 'rejected') await expect(choice).toBeChecked();
       else await expect(choice).not.toBeChecked();
       await expect(choice).toBeFocused();
+      if (outcome === 'confirmed') {
+        await field.getByRole('button', { name: 'Stäng meddelandet', exact: true }).click();
+        await expect(field.getByRole('status')).toBeEmpty();
+      }
     } finally {
       await context.close();
       await installation.close();

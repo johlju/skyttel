@@ -148,22 +148,24 @@ export function StorageConsentProvider({
   const manager = useConsentManager(userId);
   const [bypassed, setBypassed] = useState(false);
   const show = !suppressBanner && !bypassed && (!manager.consent || manager.bannerPending);
+  const hasNotice =
+    ['saving', 'checking', 'saved', 'unknown', 'rejected', 'restored'].includes(
+      manager.preference.state,
+    ) ||
+    manager.preference.recoveryMessage ||
+    manager.error ||
+    manager.message;
+  const prepareNotice =
+    userId && (manager.consent?.preferences || manager.preference.saved?.remembered);
   return (
     <ConsentContext value={manager}>
       {children}
       {show && <ConsentBanner onLeave={() => setBypassed(true)} />}
-      {!suppressBanner &&
-        !show &&
-        (['saving', 'checking', 'saved', 'unknown', 'rejected', 'restored'].includes(
-          manager.preference.state,
-        ) ||
-          manager.preference.recoveryMessage ||
-          manager.error ||
-          manager.message) && (
-          <div className="cookie-storage storage-notice">
-            <ConsentFeedback />
-          </div>
-        )}
+      {!suppressBanner && !show && (prepareNotice || hasNotice) && (
+        <div className={hasNotice ? 'cookie-storage storage-notice' : 'cookie-storage'}>
+          <ConsentFeedback />
+        </div>
+      )}
       {userId && loginId && !show && <RememberedLoginOffer userId={userId} loginId={loginId} />}
     </ConsentContext>
   );
@@ -227,7 +229,7 @@ function RememberedLoginOffer({ userId, loginId }: { userId: string; loginId: st
         från den ursprungliga inloggningen. Detta ändrar inte ditt Google- eller Microsoft-konto.
         Välj bara detta på en egen enhet.
       </p>
-      <ConsentFeedback onLogin={() => setOpen(false)} />
+      <ConsentFeedback inlineOnly onLogin={() => setOpen(false)} />
       {error && <p role="alert">{error}</p>}
       <footer>
         <button
@@ -462,80 +464,135 @@ export function ConsentCategories({
 
 export function ConsentFeedback({
   alwaysRender = false,
+  inlineOnly = false,
+  paused = false,
+  retainConfirmation = false,
   onLogin,
   quietSuccess = false,
   source = 'all',
 }: {
   alwaysRender?: boolean;
+  inlineOnly?: boolean;
+  paused?: boolean;
+  retainConfirmation?: boolean;
   onLogin?: () => void;
   quietSuccess?: boolean;
   source?: 'all' | 'consent' | 'preference';
 }) {
   const manager = useContext(ConsentContext);
-  if (!manager) return null;
-  const preference = source === 'consent' ? null : manager.preference;
-  const error = source === 'preference' ? '' : manager.error;
-  const message = source === 'preference' ? '' : manager.message;
-  const saving = source !== 'preference' && manager.saving;
-  if (
-    !alwaysRender &&
+  const preference = paused || source === 'consent' ? null : manager?.preference;
+  const error = paused || source === 'preference' ? '' : (manager?.error ?? '');
+  const message = paused || source === 'preference' ? '' : (manager?.message ?? '');
+  const saving = !paused && source !== 'preference' && manager?.saving;
+  const pending = saving || preference?.state === 'saving' || preference?.state === 'checking';
+  const status = pending
+    ? preference?.state === 'checking' && !saving
+      ? 'Kontrollerar samma åtgärd…'
+      : 'Sparar…'
+    : preference?.state === 'saved'
+      ? `Ihågkommen inloggning är ${preference.confirmedRemembered ? 'aktiverad' : 'avstängd'}. ${preference.reauthenticated ? 'Resultatet gäller din tidigare begäran. Du har loggat in på nytt.' : preference.continued ? 'Du är fortfarande inloggad.' : 'Logga in igen för att fortsätta.'} ${message}`.trim()
+      : message;
+  const confirmation =
+    !inlineOnly &&
+    status &&
+    !pending &&
     !error &&
-    !message &&
+    !preference?.requiresLogin &&
+    !preference?.resultChecked &&
     !preference?.recoveryMessage &&
-    !['saving', 'checking', 'saved', 'unknown', 'rejected', 'unavailable', 'restored'].includes(
-      preference?.state ?? 'idle',
-    ) &&
-    !saving
-  )
-    return null;
+    (!preference || ['idle', 'saved'].includes(preference.state));
+  const confirmationText = confirmation ? status : '';
+  const [display, setDisplay] = useState({
+    text: confirmationText,
+    phase: 'toast' as 'toast' | 'inline' | 'dismissed',
+  });
+  if (display.text !== confirmationText) {
+    setDisplay({ text: confirmationText, phase: 'toast' });
+  }
+  useEffect(() => {
+    if (!display.text || display.phase !== 'toast') return;
+    const timer = window.setTimeout(() => {
+      setDisplay({ text: display.text, phase: retainConfirmation ? 'inline' : 'dismissed' });
+    }, 10_000);
+    return () => window.clearTimeout(timer);
+  }, [display, retainConfirmation]);
+
+  const toast = confirmation && display.phase === 'toast';
+  const dismissible = confirmation && display.phase !== 'dismissed';
+  const statusText =
+    confirmation && !dismissible
+      ? ''
+      : status +
+        (!quietSuccess && preference?.state === 'saved' && preference.recoveryMessage
+          ? ` ${preference.recoveryMessage}`
+          : '');
   return (
     <div
       className={`cookie-storage-feedback${quietSuccess ? ' cookie-storage-feedback-quiet' : ''}`}
     >
-      <p
-        role="status"
+      <div
         className={
-          quietSuccess &&
-          !saving &&
-          !preference?.resultChecked &&
-          !['saving', 'checking'].includes(preference?.state ?? 'idle')
-            ? 'sr-only'
-            : undefined
+          toast ? 'cookie-storage-toast' : dismissible ? 'cookie-storage-result' : undefined
         }
       >
-        {saving || preference?.state === 'saving'
-          ? 'Sparar…'
-          : preference?.state === 'checking'
-            ? 'Kontrollerar samma åtgärd…'
-            : preference?.state === 'saved'
-              ? `Ihågkommen inloggning är ${preference.confirmedRemembered ? 'aktiverad' : 'avstängd'}. ${preference.reauthenticated ? 'Resultatet gäller din tidigare begäran. Du har loggat in på nytt.' : preference.continued ? 'Du är fortfarande inloggad.' : 'Logga in igen för att fortsätta.'} ${message}`.trim()
-              : message}
-        {!quietSuccess && preference?.state === 'saved' && preference.recoveryMessage
-          ? ` ${preference.recoveryMessage}`
-          : ''}
-      </p>
-      <p role="alert">
-        {error}
-        {error ? ' ' : ''}
-        {preference?.state === 'unknown'
-          ? 'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes. Åtgärdens referens bevaras. Att lämna vyn skickar inget nytt sparande.'
-          : preference?.state === 'rejected'
-            ? 'Ändringen kunde inte sparas. Försök igen.'
-            : preference?.state === 'unavailable'
-              ? preference.recoveryMessage ||
-                'Aktuellt val kunde inte hämtas. Logga in igen för att fortsätta.'
-              : preference?.state === 'restored'
-                ? preference.recoveryMessage
-                : ''}
-        {preference?.state === 'unknown' && preference.recoveryMessage
-          ? ` ${preference.recoveryMessage}`
-          : ''}
-        {quietSuccess &&
-        ['saved', 'rejected'].includes(preference?.state ?? 'idle') &&
-        preference?.recoveryMessage
-          ? ` ${preference.recoveryMessage}`
-          : ''}
-      </p>
+        <p
+          role="status"
+          aria-atomic="true"
+          className={
+            !statusText ||
+            (quietSuccess &&
+              !dismissible &&
+              !pending &&
+              !preference?.resultChecked &&
+              !preference?.requiresLogin &&
+              !confirmation)
+              ? 'sr-only'
+              : undefined
+          }
+        >
+          {statusText}
+        </p>
+        {dismissible && (
+          <button
+            type="button"
+            aria-label="Stäng meddelandet"
+            onClick={() => setDisplay({ text: confirmationText, phase: 'dismissed' })}
+          >
+            ×
+          </button>
+        )}
+      </div>
+      {(alwaysRender ||
+        error ||
+        pending ||
+        message ||
+        preference?.recoveryMessage ||
+        ['saved', 'unknown', 'rejected', 'unavailable', 'restored'].includes(
+          preference?.state ?? 'idle',
+        )) && (
+        <p role="alert">
+          {error}
+          {error ? ' ' : ''}
+          {preference?.state === 'unknown'
+            ? 'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes. Åtgärdens referens bevaras. Att lämna vyn skickar inget nytt sparande.'
+            : preference?.state === 'rejected'
+              ? 'Ändringen kunde inte sparas. Försök igen.'
+              : preference?.state === 'unavailable'
+                ? preference.recoveryMessage ||
+                  'Aktuellt val kunde inte hämtas. Logga in igen för att fortsätta.'
+                : preference?.state === 'restored'
+                  ? preference.recoveryMessage
+                  : ''}
+          {preference?.state === 'unknown' && preference.recoveryMessage
+            ? ` ${preference.recoveryMessage}`
+            : ''}
+          {quietSuccess &&
+          ['saved', 'rejected'].includes(preference?.state ?? 'idle') &&
+          preference?.recoveryMessage
+            ? ` ${preference.recoveryMessage}`
+            : ''}
+        </p>
+      )}
       {preference?.requiresLogin && (
         <p>
           {quietSuccess &&
@@ -660,7 +717,7 @@ function ConsentBanner({ onLeave }: { onLeave: () => void }) {
             </div>
           </div>
         )}
-        <ConsentFeedback onLogin={onLeave} />
+        <ConsentFeedback inlineOnly onLogin={onLeave} />
         <div className="consent-banner-buttons">
           <button ref={reject} type="button" disabled={manager.blocked} onClick={() => save(false)}>
             Endast nödvändiga

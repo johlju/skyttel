@@ -198,7 +198,7 @@
   margin-top: 12px;
   font-size: 12px;
 }
-.consent-banner .cookie-storage-feedback p:empty {
+.consent-banner .cookie-storage-feedback [role="alert"]:empty {
   display: none;
 }
 @media (min-width: 1100px) {

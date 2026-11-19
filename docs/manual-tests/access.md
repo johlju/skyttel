@@ -136,7 +136,7 @@ ACCESS-29. Verklig HTTPS, SQLite och kakor; syntetisk leverantör.
   "reference": "Dator, HTTPS och aktiv ihågkommen inloggning.",
   "outcomes": [
     "Uttryckligt sparande bekräftar avstängningen.",
-    "Fokus stannar på reglaget utan grön resultatbox.",
+    "Fokus stannar på reglaget och den tillfälliga bekräftelsen går att stänga.",
     "Ny aktivering är ett separat uttryckligt val på lagringssidan."
   ]
 }
@@ -147,11 +147,12 @@ ACCESS-29. Verklig HTTPS, SQLite och kakor; syntetisk leverantör.
 
 1. Öppna `/cookies` direkt i samma webbläsare.
 2. Stäng av reglaget **Ihågkommen inloggning**. Ändringen skickas direkt.
-3. Kontrollera beskedet och tangentbordsfokus.
+3. Kontrollera beskedet och tangentbordsfokus. Stäng beskedet med ×.
 
 **Förväntat resultat:**
 
-- Reglaget är av och behåller fokus. Ingen grön resultatbox visas.
+- Reglaget är av och behåller fokus när beskedet visas. Bekräftelsen visas
+  längst ned och försvinner när du stänger den.
 - Reglaget kan användas för en ny uttrycklig aktivering.
 - Uppgifterna anger högst tidigare slut eller åtta timmar från
   avstängningen och 30 minuters inaktivitet.

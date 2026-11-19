@@ -639,6 +639,31 @@ test('failed deletion of the local reference cannot undo a confirmed server chan
   ).toMatchObject({ remembered: false });
 });
 
+test('reset updates the existing live region and keeps the result after the toast expires', async () => {
+  const setTimeout = globalThis.setTimeout;
+  const timers = vi
+    .spyOn(window, 'setTimeout')
+    .mockImplementation((handler, delay, ...args) =>
+      setTimeout(handler, delay === 10_000 ? 250 : delay, ...args),
+    );
+  const { container } = render(page());
+  await screen.findByRole('switch', { name: 'Ihågkommen inloggning' });
+  await userEvent.click(screen.getByRole('button', { name: 'Återställ samtycke' }));
+  const status = container.querySelector('.cookie-storage-quick [role="status"]');
+  expect(status?.getAttribute('aria-atomic')).toBe('true');
+  expect(status?.textContent).toBe('');
+  const dialog = screen.getByRole('dialog', { name: 'Återställ samtycke?' });
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Återställ' }));
+  await waitFor(() => expect(status?.closest('.cookie-storage-toast')).toBeTruthy());
+  expect(status?.textContent).toContain('Lagringssamtycket är återställt.');
+  await waitFor(() => expect(timers).toHaveBeenCalledWith(expect.any(Function), 10_000));
+  await waitFor(() => expect(status?.closest('.cookie-storage-result')).toBeTruthy());
+  expect(screen.getByRole('status')).toBe(status);
+  expect(status?.textContent).toContain('Lagringssamtycket är återställt.');
+  await userEvent.click(screen.getByRole('button', { name: 'Stäng meddelandet' }));
+  expect(status?.textContent).toBe('');
+});
+
 test('failed consent cleanup keeps confirmed OFF separate from an incomplete browser reset', async () => {
   render(page());
   await screen.findByRole('switch', { name: 'Ihågkommen inloggning' });

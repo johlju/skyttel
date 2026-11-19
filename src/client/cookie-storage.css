@@ -94,10 +94,10 @@ article.cookie-storage a {
 }
 .cookie-storage-decision {
   padding: 16px;
-  border: 1px solid #bbf7d0;
+  border: 1px solid var(--space-line);
   border-radius: 8px;
-  background: var(--storage-success-bg);
-  color: var(--storage-success);
+  background: var(--storage-subtle);
+  color: var(--space-text);
 }
 .cookie-storage-card h3 {
   margin: 0;
@@ -275,8 +275,8 @@ article.cookie-storage a {
   background: var(--storage-danger-bg);
 }
 .cookie-storage-feedback [role="status"]:not(:empty) {
-  color: var(--storage-success);
-  background: var(--storage-success-bg);
+  color: var(--space-text);
+  background: var(--space-surface);
 }
 .cookie-storage-feedback-quiet [role="status"]:not(:empty) {
   padding: 0;
@@ -377,17 +377,54 @@ article.cookie-storage a {
   }
 }
 
-.storage-notice {
+.storage-notice,
+.cookie-storage-toast {
   position: fixed;
   bottom: 16px;
   left: 16px;
   right: 16px;
   z-index: 20;
-  padding: 16px;
-  border: 1px solid currentColor;
-  border-radius: 8px;
-  background: var(--storage-success-bg);
-  color: var(--storage-success);
+}
+.storage-notice:has(.cookie-storage-toast) {
+  position: static;
+}
+.cookie-storage-toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: min(560px, calc(100% - 32px));
+  margin-inline: auto;
+  padding: 8px 12px 8px 16px;
+  border: 1px solid var(--space-line);
+  border-radius: 12px;
+  background: var(--space-surface);
+  color: var(--space-text);
+  box-shadow: var(--space-shadow);
+}
+.cookie-storage-feedback .cookie-storage-toast [role="status"]:not(:empty) {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.cookie-storage-feedback :is(.cookie-storage-toast, .cookie-storage-result) button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  min-height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+.cookie-storage-feedback :is(.cookie-storage-toast, .cookie-storage-result) button:hover {
+  background: var(--storage-subtle);
 }
 [data-theme="dark"] .cookie-storage-title svg {
   color: #93b8ff;
@@ -404,4 +441,13 @@ article.cookie-storage a {
 .cookie-storage :is(button, input):focus-visible {
   outline: 2px solid var(--storage-blue);
   outline-offset: 3px;
+}
+
+.cookie-storage-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cookie-storage-result p {
+  margin: 0;
 }

@@ -357,7 +357,10 @@ function CookieStorageContents({ userId }: { userId?: string }) {
             <p role="alert">{exportError}</p>
           </div>
         )}
-        {(resultPlace === 'quick' || resultPlace === 'reset') && feedback}
+        {resultPlace === 'quick' && feedback}
+        {(resetOrigin || resultPlace === 'reset') && (
+          <ConsentFeedback paused={Boolean(resetOrigin)} retainConfirmation quietSuccess />
+        )}
       </section>
       <h2>Kakinställningar</h2>
       {manager.consent && (
@@ -667,7 +670,7 @@ function StorageResetDialog({
           rensas inte. Google och Microsoft styr sin egen lagring.
         </p>
       </div>
-      <ConsentFeedback quietSuccess />
+      <ConsentFeedback inlineOnly quietSuccess />
       <footer>
         <button ref={cancel} type="button" disabled={pending} onClick={onCancel}>
           {unknown ? 'Lämna med okänt utfall' : 'Avbryt'}

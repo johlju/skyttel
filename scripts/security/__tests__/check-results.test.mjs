@@ -171,7 +171,9 @@ it('blocks unfixed high container findings and absent or mismatched evidence', (
   assert.equal(run(args).status, 0);
   report.matches.push(finding);
   json(join(path, 'grype.json'), report);
-  assert.equal(run(args).status, 1);
+  const blocked = run(args);
+  assert.equal(blocked.status, 1);
+  assert.match(blocked.stderr, /Container scan finding: .*CVE-2026-12345.*synthetic-package/);
   report.matches = [];
   report.source.target.imageID = `sha256:${'2'.repeat(64)}`;
   json(join(path, 'grype.json'), report);

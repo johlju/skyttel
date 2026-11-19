@@ -87,12 +87,29 @@ function trivy(path) {
 }
 
 function grype(directory, exceptionsPath) {
+  const report = json(join(directory, 'grype.json'));
   const result = containerPolicy({
     imageId: readFileSync(join(directory, 'image-id.txt'), 'utf8').trim(),
-    report: json(join(directory, 'grype.json')),
+    report,
     sbom: json(join(directory, 'sbom.spdx.json')),
     document: json(exceptionsPath),
   });
+  if (result.reason === 'high_critical') {
+    for (const { vulnerability, artifact } of report.matches) {
+      if (!['High', 'Critical'].includes(vulnerability.severity)) continue;
+      console.error(
+        'Container scan finding:',
+        JSON.stringify({
+          id: vulnerability.id,
+          severity: vulnerability.severity,
+          package: artifact?.name,
+          version: artifact?.version,
+          type: artifact?.type,
+          fixedVersions: vulnerability.fix?.versions,
+        }),
+      );
+    }
+  }
   requireValue(result.outcome === 'passed', `Container policy blocked: ${result.reason}`);
 }
 
