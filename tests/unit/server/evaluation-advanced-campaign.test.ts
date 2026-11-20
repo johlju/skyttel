@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, vi } from 'vitest';
@@ -261,9 +261,15 @@ test('unknown calibration usage retains its whole hold and blocks every later ph
       budget: { stopped: true, reason: 'evaluation_usage_unknown', reservedUsd: 4.67144 },
     });
     expect(result.runs.slice(1).every((run) => run.status === 'not_run')).toBe(true);
-    expect(
-      JSON.parse(await readFile(join(directory, 'run', 'campaign.json'), 'utf8')),
-    ).toMatchObject({ origin: 'controlled', stopReason: 'evaluation_usage_unknown' });
+    const runDirectory = join(directory, 'run');
+    const campaignPath = join(runDirectory, 'campaign.json');
+    expect(JSON.parse(await readFile(campaignPath, 'utf8'))).toMatchObject({
+      origin: 'controlled',
+      stopReason: 'evaluation_usage_unknown',
+    });
+    expect((await stat(runDirectory)).mode & 0o777).toBe(0o700);
+    expect((await stat(campaignPath)).mode & 0o777).toBe(0o600);
+    expect((await stat(join(runDirectory, 'freeze.json'))).mode & 0o777).toBe(0o600);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

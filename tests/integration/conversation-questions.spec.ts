@@ -812,21 +812,37 @@ test('FRAGA-04: ett verifierat Sparat väntar på hela ordet och ljudet innan fy
       });
     })
     .catch(() => {});
-  const advanceUntilStatus = async (status: string) => {
-    // AudioContext uses real time; step the paused activity sampler until the
-    // actual playback transition is observed, then measure its timeout exactly.
-    await expect
-      .poll(async () => {
-        await page.clock.runFor(50);
-        return (await voiceBox(page).innerText()).includes(status);
-      })
-      .toBe(true);
+  const expectVoiceStatusFor = async (status: string, duration: number) => {
+    const box = voiceBox(page);
+    await expect(box).toHaveText(status);
+    // Let Web Audio and the browser activity sampler advance together.
+    const changedTo = await box.evaluate(
+      (element, { status, duration }) =>
+        new Promise<string | null>((resolve) => {
+          const current = () => (element.isConnected ? element.textContent?.trim() : '') ?? '';
+          const observer = new MutationObserver(check);
+          const timer = setTimeout(() => finish(current() === status ? null : current()), duration);
+          function finish(value: string | null) {
+            observer.disconnect();
+            clearTimeout(timer);
+            resolve(value);
+          }
+          function check() {
+            const value = current();
+            if (value !== status) finish(value);
+          }
+          observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+          check();
+        }),
+      { status, duration },
+    );
+    expect(changedTo, `Voice status should remain ${status} for ${duration} ms`).toBeNull();
   };
   try {
     await startConversationWithVoice(page);
     await expect(voiceBox(page)).toHaveText('Lyssnar');
     speak(live, 'Spara hela utkastet.');
-    await waitForResponse(live);
+    await expect.poll(() => commentary(live).length, { timeout: 10_000 }).toBeGreaterThan(0);
     await expect.poll(() => responses.at(-1)?.response?.receiptOperationId).toBeTruthy();
     await expect(page.locator('.draft-save-toast')).toHaveText('Utkastet är sparat');
     await expect(page.locator('.draft-save-toast')).toBeVisible();
@@ -857,22 +873,17 @@ test('FRAGA-04: ett verifierat Sparat väntar på hela ordet och ljudet innan fy
     await expect(voiceBox(page)).toHaveText('Lyssnar');
     // The final transcript arrives before its audio starts. No four-second timeout yet.
     await output(page, 'at.');
-    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 60_000));
-    await page.clock.runFor(4500);
-    await expect(voiceBox(page)).not.toContainText('Sparat');
+    await expectVoiceStatusFor('Lyssnar', 4500);
     await sound(page, true);
-    await advanceUntilStatus('Skyttel talar');
-    await expect(voiceBox(page)).toContainText('Skyttel talar');
-    await page.clock.runFor(4500);
-    await expect(voiceBox(page)).toContainText('Skyttel talar');
+    await expectVoiceStatusFor('Skyttel talar', 4500);
     await sound(page, false);
-    await advanceUntilStatus('Sparat');
+    await expect(voiceBox(page)).toHaveText('Sparat');
+    const shownAt = await page.evaluate(() => Date.now());
+    await page.clock.pauseAt(shownAt + 3000);
     await expect(voiceBox(page)).toHaveText('Sparat');
     await expect(voiceAnnouncement(page)).not.toHaveText('Sparat');
     await expect(voiceBox(page).locator('.voice-saved')).toHaveAttribute('aria-hidden', 'true');
     await expect(textView(page)).toHaveCount(0);
-    await page.clock.runFor(3000);
-    await expect(voiceBox(page)).toHaveText('Sparat');
     await page.clock.runFor(1000);
     await expect(voiceBox(page)).toHaveText('Lyssnar');
     await page.clock.resume();

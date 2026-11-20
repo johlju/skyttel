@@ -192,7 +192,7 @@ export async function executeAdvancedCampaign(
     await reuseJudgeCalibration(calibration, { profile: freeze.judge.profile, origin });
   // Exclusive creation makes this a single-use execution scope: no retries or
   // implicit continuation can silently reset any ledger.
-  await mkdir(execution.directory);
+  await mkdir(execution.directory, { mode: 0o700 });
   const evidence = {
     origin,
     freezeSha256: freeze.freezeSha256,
@@ -222,8 +222,16 @@ export async function executeAdvancedCampaign(
     })),
   };
   const save = () =>
-    writeFile(join(execution.directory, 'campaign.json'), `${JSON.stringify(evidence, null, 2)}\n`);
-  await writeFile(join(execution.directory, 'freeze.json'), `${JSON.stringify(freeze, null, 2)}\n`);
+    writeFile(
+      join(execution.directory, 'campaign.json'),
+      `${JSON.stringify(evidence, null, 2)}\n`,
+      { mode: 0o600 },
+    );
+  await writeFile(
+    join(execution.directory, 'freeze.json'),
+    `${JSON.stringify(freeze, null, 2)}\n`,
+    { mode: 0o600 },
+  );
   for (const run of evidence.runs)
     if (execution.runs.some(({ id }) => id === run.id)) {
       run.reason = 'pending_execution';

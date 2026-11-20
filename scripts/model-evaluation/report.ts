@@ -20,13 +20,13 @@ export function evaluationReporter(directory: string, issue: number) {
     const record = { format: 'skyttel-model-evaluation', version: 1, issue, type, data };
     const json = publicEvaluationText(JSON.stringify(record, null, 2));
     const stem = `${String(++sequence).padStart(4, '0')}-${type}`;
-    await writeFile(join(directory, `${stem}.json`), `${json}\n`, { flag: 'wx' });
+    await writeFile(join(directory, `${stem}.json`), `${json}\n`, { flag: 'wx', mode: 0o600 });
     await writeFile(
       join(directory, `${stem}.md`),
       publicEvaluationText(
         `## ${title}\n\n${prose ? `${prose}\n\n` : ''}\`\`\`json\n${json}\n\`\`\`\n`,
       ),
-      { flag: 'wx' },
+      { flag: 'wx', mode: 0o600 },
     );
     return join(directory, `${stem}.md`);
   };

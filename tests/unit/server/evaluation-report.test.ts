@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from 'vitest';
@@ -662,8 +662,11 @@ test('public report artifacts hash session IDs throughout JSON, titles and prose
       data,
       `Compared with ${otherId}.`,
     );
-    const json = await readFile(join(directory, '0001-diagnostic.json'), 'utf8');
+    const jsonPath = join(directory, '0001-diagnostic.json');
+    const json = await readFile(jsonPath, 'utf8');
     const markdown = await readFile(path, 'utf8');
+    expect((await stat(jsonPath)).mode & 0o777).toBe(0o600);
+    expect((await stat(path)).mode & 0o777).toBe(0o600);
     expect(JSON.parse(json)).toEqual({
       format: 'skyttel-model-evaluation',
       version: 1,
