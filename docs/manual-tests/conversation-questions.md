@@ -747,7 +747,7 @@ ljudet innan fyra sekunder börjar”.
     "spec": "tests/integration/conversation-questions.spec.ts",
     "caseId": "FRAGA-04"
   },
-  "reference": "Chromium, kontrollerad leverantör, riktig server och SQLite. Hela det aktuella talbeskedet levereras i fragment, även när samma kvitto kontrolleras före röstsvaret.",
+  "reference": "Chromium, kontrollerad leverantör och styrda ljudmätvärden, riktig server och SQLite. Hela det aktuella talbeskedet levereras i fragment, även när samma kvitto kontrolleras före röstsvaret.",
   "outcomes": [
     "Ingen tid räknas från kvittot, ett ofullständigt ord eller enbart transporttext före det kontrollerade ljudet. **Skyttel talar** består medan ljudet är aktivt.",
     "Efter ljudet visas **Sparat** i fyra sekunder, med en grön bock mellan vågformen och ordet. Bocken är dold för hjälpmedel. Sparbeskedet under hushållsnamnet annonseras artigt en gång vid kvittot; röstrutan upprepar ingen sparannons. Textvyn öppnas inte av sig själv.",

@@ -4,7 +4,11 @@ import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
-import { liveProvider, voiceAnswerParts } from '../../support/live-provider.js';
+import {
+  isVoiceAnswerRelease,
+  liveProvider,
+  voiceAnswerParts,
+} from '../../support/live-provider.js';
 import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
@@ -492,6 +496,16 @@ test.each(['ordinary', 'held-status', 'held-stop'] as const)(
       const completed = heldStop
         ? ((await (await browser.get(`${path}/${session.id}`)).json()) as TextAssistantView)
         : await settled(session);
+      if (boundary === 'ordinary') {
+        // The settled HTTP view can arrive before the Live answer is released.
+        await expect
+          .poll(() =>
+            live.sent.some(
+              ({ sessionId, event }) => sessionId === providerId && isVoiceAnswerRelease(event),
+            ),
+          )
+          .toBe(true);
+      }
       if (heldStatus) await expect.poll(() => statusHeld).toBe(true);
       if (heldStop) {
         stoppingRequest = post(`${path}/${session.id}/voice/${voiceId}/stop`);

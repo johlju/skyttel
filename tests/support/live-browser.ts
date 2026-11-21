@@ -217,6 +217,26 @@ export const liveBrowserFixtureSource = `
       signal.gain.gain.value = 0.2;
       void signal.context.resume();
     },
+    useControlledRemoteSamples: () => {
+      // A timing test can control the incoming audio meter without depending
+      // on Chromium's media graph scheduling. Leave microphone samples real.
+      const createSource = AudioContext.prototype.createMediaStreamSource;
+      AudioContext.prototype.createMediaStreamSource = function (stream) {
+        const source = createSource.call(this, stream);
+        if (!stream.getAudioTracks().some(track => remoteTracks.includes(track))) return source;
+        const signal = signals.get(remoteTracks);
+        const connect = source.connect.bind(source);
+        source.connect = (destination, ...args) => {
+          if (destination instanceof AnalyserNode) {
+            destination.getByteTimeDomainData = (samples) => {
+              samples.fill(128 + Math.round(127 * signal.gain.gain.value));
+            };
+          }
+          return connect(destination, ...args);
+        };
+        return source;
+      };
+    },
     setSound: (source, active, level = 0.2) => {
       const signal = signals.get(source === 'microphone' ? microphoneTracks : remoteTracks);
       if (!signal) throw new Error('Missing media signal');
@@ -264,6 +284,7 @@ declare global {
       captureChanges(): { enabled: boolean; at: number }[];
       microphoneLevel(): number;
       setMicrophoneTone(frequency: number): void;
+      useControlledRemoteSamples(): void;
       /** The level is the sound's strength, from 0 to 1. A quiet voice when it is left out. */
       setSound(source: 'microphone' | 'remote', active: boolean, level?: number): void;
       diagnostics(): {

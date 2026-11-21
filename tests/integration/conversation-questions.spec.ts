@@ -757,8 +757,8 @@ test('FRAGA-04: ett verifierat Sparat väntar på hela ordet och ljudet innan fy
 }) => {
   await page.clock.install();
   const { app, live, path, responses } = await fixture(page, saveModel());
-  // Keep the original intermittent failure diagnosable across the independent
-  // browser clock and real audio clock without recording conversation content.
+  await page.evaluate(() => window.skyttelVoiceFixture.useControlledRemoteSamples());
+  // Record the transitions without retaining conversation content.
   await page
     .evaluate(() => {
       const timeline: unknown[] = [];
@@ -815,7 +815,7 @@ test('FRAGA-04: ett verifierat Sparat väntar på hela ordet och ljudet innan fy
   const expectVoiceStatusFor = async (status: string, duration: number) => {
     const box = voiceBox(page);
     await expect(box).toHaveText(status);
-    // Let Web Audio and the browser activity sampler advance together.
+    // Observe the status throughout the interval while the app samples the signal.
     const changedTo = await box.evaluate(
       (element, { status, duration }) =>
         new Promise<string | null>((resolve) => {
