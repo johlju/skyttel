@@ -29,11 +29,14 @@ export function stableDeploymentSource(env) {
   assert.equal(run.status, 'completed');
   assert.equal(run.conclusion, 'success');
   assert.ok(Number.isSafeInteger(run.id) && run.id > 0, 'Invalid release run ID');
-  assert.match(run.head_sha ?? '', /^[a-f0-9]{40}$/u, 'Invalid release run source commit');
+  // Use the Actions context for outbound requests and check it against the event file.
+  const commit = env.STABLE_RELEASE_SHA;
+  assert.match(commit ?? '', /^[a-f0-9]{40}$/u, 'Invalid release run source commit');
+  assert.equal(commit === run.head_sha, true, 'Release source commit does not match the event');
   assert.equal(typeof run.head_branch, 'string');
   const ref = `refs/tags/${run.head_branch}`;
   assert.match(ref, stableTagPattern, 'Expected a stable release tag');
-  return { repository, ref, commit: run.head_sha, eventName: run.event, runId: String(run.id) };
+  return { repository, ref, commit, eventName: run.event, runId: String(run.id) };
 }
 
 export function validateStableIdentity(identity, source) {

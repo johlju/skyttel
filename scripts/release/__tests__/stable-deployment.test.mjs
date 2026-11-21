@@ -30,6 +30,7 @@ test('stable deployment binds the published image to the successful upstream tag
     GITHUB_REPOSITORY: repository,
     GITHUB_REF: 'refs/heads/main',
     GITHUB_SHA: 'b'.repeat(40),
+    STABLE_RELEASE_SHA: commit,
     GITHUB_EVENT_PATH: join(directory, 'event.json'),
   };
   const writeEvent = (workflowRun) =>
@@ -41,6 +42,9 @@ test('stable deployment binds the published image to the successful upstream tag
   const source = stableDeploymentSource(env);
   assert.deepEqual(source, { repository, ref, commit, eventName: 'push', runId: '42' });
   assert.throws(() => stableDeploymentSource({ ...env, GITHUB_REF: 'refs/heads/feature' }));
+  for (const sha of [undefined, 'short', env.GITHUB_SHA]) {
+    assert.throws(() => stableDeploymentSource({ ...env, STABLE_RELEASE_SHA: sha }));
+  }
   const identity = {
     ...createReleasePlan({
       ...source,
@@ -66,6 +70,7 @@ test('stable deployment binds the published image to the successful upstream tag
     { head_branch: 'v0.2.0-preview.1' },
     { head_branch: 'v0.2.0\n' },
     { head_sha: 'short' },
+    { head_sha: env.GITHUB_SHA },
     { id: 0 },
     { conclusion: 'failure' },
     { event: 'workflow_dispatch' },
