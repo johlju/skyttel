@@ -9,7 +9,7 @@ import {
 } from './operator-upgrade-notes.mjs';
 
 const stableVersion = '(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)';
-const stableTagPattern = new RegExp(`^refs/tags/v${stableVersion}$`, 'u');
+export const stableTagPattern = new RegExp(`^refs/tags/v${stableVersion}$`, 'u');
 const fullVersionPattern = new RegExp(
   `^${stableVersion}(?:-preview\\.(?:0|[1-9]\\d*))?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$`,
   'u',
@@ -75,6 +75,20 @@ function git(...args) {
   return execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 }
 
+export function requireStableSource(ref, commit) {
+  if (!stableTagPattern.test(ref ?? '') || !/^[a-f0-9]{40}$/u.test(commit ?? '')) {
+    throw new Error('A stable Git tag and full source commit are required.');
+  }
+  if (git('rev-parse', `${ref}^{commit}`) !== commit) {
+    throw new Error('Stable Git tag does not match the release commit.');
+  }
+  try {
+    git('merge-base', '--is-ancestor', commit, 'refs/remotes/origin/main');
+  } catch {
+    throw new Error('Stable releases must reference a commit already approved on origin/main.');
+  }
+}
+
 function writeCompatible(file, content) {
   try {
     fs.writeFileSync(file, content, { flag: 'wx' });
@@ -117,14 +131,7 @@ export function main(args = process.argv.slice(2), env = process.env) {
     throw new Error('Checked-out source does not match the release commit.');
   }
   if (plan.channel === 'stable') {
-    if (git('rev-parse', `${context.ref}^{commit}`) !== plan.commit) {
-      throw new Error('Stable Git tag does not match the release commit.');
-    }
-    try {
-      git('merge-base', '--is-ancestor', plan.commit, 'refs/remotes/origin/main');
-    } catch {
-      throw new Error('Stable releases must reference a commit already approved on origin/main.');
-    }
+    requireStableSource(context.ref, plan.commit);
   }
 
   const sourceNotes = execFileSync(

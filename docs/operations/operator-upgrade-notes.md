@@ -6,6 +6,15 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Prepare production before publishing a stable release
+
+Complete the applicable upgrade preparation before you push a stable version
+tag for a revision on the main branch. Successful publication starts a
+deployment check. If the main branch has newer production changes, the
+deployment is skipped even when publication succeeds. Check the deployment
+result and confirm that production runs the stable version before you mark
+the rollout complete.
+
 ### Protect copied conversation error reports
 
 Before rollout, prepare the support process to handle copied conversation

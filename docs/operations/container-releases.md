@@ -2,22 +2,23 @@
 
 This guide is for maintainers who publish, review, or recover a Skyttel
 container release. The release workflow publishes to GHCR and GitHub Releases.
-After successful publication from a `main` push that changes production
-inputs, it deploys the exact digest to Render. Follow the
+After successful publication, stable tags and `main` pushes that change
+production inputs deploy their exact digests to Render. Follow the
 [Render runbook](render.md) for setup, deployment evidence and failure recovery.
-Stable tags publish without
-changing production.
 
 ## Triggers and version identity
 
 A push to `main` in `viscalyx/skyttel` starts the release chain, including
 application tests and security checks. A pushed stable tag `vX.Y.Z` starts a
-separate stable chain. Its commit must be part of `origin/main`; the tag and
-release plan must identify the same commit. Preview tags created by the
-workflow do not trigger another run. An older stable tag is not a request to
-replace a newer running main version.
+separate stable chain. Create the tag from a commit already on
+`origin/main`. The release plan checks that the tag points to that exact
+commit. Preview tags created by the workflow do not trigger another run.
+Successful stable publication starts **Stable production deployment** on
+`main`, including when the tag's commit only changed tests or documentation.
+The deployment verifies the published digest and skips a release if newer
+production changes on `main` have superseded it.
 
-Only the Render deployment job is filtered by changed files. Source and
+Only Render deployment on `main` pushes is filtered by changed files. Source and
 migration changes, package manifests, the lockfile, and production build or
 container configuration require deployment. The inputs are `src/`,
 `migrations/`, `package.json`, `package-lock.json`, `Dockerfile`,
@@ -225,6 +226,8 @@ helper does not publish or commit the change.
 ## Retry and retention
 
 Use the existing run's retry controls after resolving a transient failure.
+For a stable deployment failure after publication, retry the
+**Stable production deployment** run for that tag.
 Do not delete its artifacts or create replacement tags to force a retry.
 The original version plan, verified candidate archive, and signed evidence
 are restored when present. Existing files must match before missing files
@@ -284,6 +287,8 @@ for these outcomes:
    digest, source, signatures, inventory, and guidance verify publicly.
 2. A stable tag for an approved main commit publishes a stable release with
    its own valid digest and a comparison only to the stable channel.
+   The stable deployment verifies that digest on Render and retains its
+   deployment report.
 3. A required check failure produces no approved release. Preview tag
    creation produces no duplicate release run.
 4. A retry after partial publication preserves the original version, image,

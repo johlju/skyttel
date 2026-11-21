@@ -42,6 +42,7 @@ function platform() {
     statuses: [],
     waits: 0,
     requests: [],
+    releases: [],
     nextStatus: 'live',
     healthy: true,
     nextHealthy: true,
@@ -55,7 +56,7 @@ function platform() {
   };
   const reply = (body, status = 200) => new Response(JSON.stringify(body), { status });
   const fetch = async (url, options = {}) => {
-    const { pathname: path } = new URL(url);
+    const { pathname: path, searchParams } = new URL(url);
     const method = options.method ?? 'GET';
     const body = options.body && JSON.parse(options.body);
     state.requests.push({ url, method, body });
@@ -63,6 +64,10 @@ function platform() {
     if (override) return override;
     if (path.endsWith('/git/ref/heads/main')) return reply({ object: { sha: state.main } });
     if (path.startsWith('/repos/viscalyx/skyttel/compare/')) return reply(state.comparison);
+    if (path === '/repos/viscalyx/skyttel/releases') {
+      const start = (Number(searchParams.get('page')) - 1) * 100;
+      return reply(state.releases.slice(start, start + 100));
+    }
     if (path === '/repos/viscalyx/skyttel/deployments') return reply({ id: 42 });
     if (path.endsWith('/deployments/42/statuses')) {
       state.statuses.push(body.state);
@@ -144,6 +149,86 @@ test('a verified release updates the saved image and running digest; retry verif
   assert.equal(state.statuses.at(-1), 'success');
   assert.equal((await run()).outcome, 'success');
   assert.equal(state.deploys, 1, 'A retry must verify the already running image, not restart it');
+});
+
+test('a stable release supersedes preview retries of the same commit and allows newer production changes', async () => {
+  const { state, run } = platform();
+  const sourceRef = 'refs/tags/v0.1.0';
+  const stableDigest = `sha256:${'f'.repeat(64)}`;
+  const stableIdentity = {
+    ...createReleasePlan({
+      gitVersion: { Sha: commit, SemVer: '0.1.0', FullSemVer: '0.1.0' },
+      repository: identity.repository,
+      commit,
+      ref: sourceRef,
+      eventName: 'push',
+    }),
+    digest: stableDigest,
+  };
+  const stableEntry = {
+    tag_name: stableIdentity.tag,
+    name: stableIdentity.fullVersion,
+    draft: true,
+    prerelease: false,
+    body: `<!-- skyttel-release-identity ${JSON.stringify(stableIdentity)} -->`,
+  };
+  state.releases = [
+    stableEntry,
+    { ...stableEntry, draft: false, prerelease: true },
+    { ...stableEntry, draft: false, name: '0.2.0' },
+    { ...stableEntry, draft: false, tag_name: 'v0.2.0', name: '0.1.0' },
+  ];
+  assert.equal(
+    (await run()).outcome,
+    'success',
+    'Drafts and inconsistent releases permit previews',
+  );
+  assert.equal(state.savedImage, `${image}@${digest}`);
+
+  stableEntry.draft = false;
+  state.releases = [
+    ...Array.from({ length: 100 }, () => ({ draft: false, prerelease: true })),
+    ...state.releases,
+  ];
+  state.nextDigest = stableDigest;
+  state.nextIdentity = { ...version, version: stableIdentity.fullVersion };
+  const stableRelease = { identity: stableIdentity, sourceRef };
+  assert.equal((await run(stableRelease)).outcome, 'success');
+  assert.equal(state.savedImage, `${image}@${stableDigest}`);
+  assert.equal(state.running.version, '0.1.0');
+  assert.equal((await run(stableRelease)).outcome, 'success');
+  assert.equal(state.deploys, 2, 'Retrying the stable release must preserve the live deployment');
+
+  const retry = await run();
+  assert.equal(retry.outcome, 'superseded');
+  assert.equal(retry.skipReason, 'stable_release_published');
+  assert.ok(retry.requests.some(({ path }) => path === '/releases?per_page=100&page=2'));
+  assert.ok(retry.requests.every(({ method }) => method === 'GET'));
+  assert.equal(state.savedImage, `${image}@${stableDigest}`);
+  assert.equal(state.deploys, 2);
+  assert.equal(state.patches, 2);
+
+  state.main = 'e'.repeat(40);
+  assert.equal((await run(stableRelease)).outcome, 'superseded');
+  const newerVersion = '0.2.0-preview.1';
+  const newerPreview = {
+    ...createReleasePlan({
+      gitVersion: { Sha: state.main, SemVer: newerVersion, FullSemVer: newerVersion },
+      repository: identity.repository,
+      commit: state.main,
+      ref: 'refs/heads/main',
+      eventName: 'push',
+    }),
+    digest,
+  };
+  state.nextDigest = newerPreview.digest;
+  state.nextIdentity = { ...version, commit: state.main, version: newerVersion };
+  assert.equal(
+    (await run({ sourceCommit: state.main, identity: newerPreview })).outcome,
+    'success',
+  );
+  assert.equal(state.running.commit, state.main);
+  assert.equal(state.deploys, 3);
 });
 
 test('image services deploy and retry regardless of the inapplicable autoDeploy field', async () => {

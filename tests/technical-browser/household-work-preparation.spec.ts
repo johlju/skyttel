@@ -106,10 +106,12 @@ test('literal household preparation completes the family tools on seeded public 
     command(render(template, request));
     return held(after);
   }
+  let directory: string;
   try {
     await expect.poll(() => events.some((item) => item.event === 'ready')).toBe(true);
     const ready = events.find((item) => item.event === 'ready');
     if (!ready?.origin || !ready.directory) throw new Error('No real public installation');
+    directory = ready.directory;
     await signIn(page.request, ready.origin);
     const { household } = await (await createHousehold(page.request, ready.origin)).json();
     const path = `${ready.origin}/api/households/${household.id}/map`;
@@ -337,22 +339,24 @@ test('literal household preparation completes the family tools on seeded public 
     expect(await read()).toEqual(saved);
     expect(await history()).toEqual(receipts);
     expect((await (await member.request.get(path)).json()).draft).toEqual(privateDraft);
-    command('quit');
-    await expect.poll(() => child.exitCode).toBe(0);
-    await expect(stat(ready.directory)).rejects.toMatchObject({ code: 'ENOENT' });
-    expect(events.filter((item) => item.event === 'error')).toEqual([]);
-    expect(unexpectedPreparationDiagnostics(diagnostics)).toBe('');
   } finally {
-    if (child.exitCode === null) command('quit');
-    await expect.poll(() => child.exitCode).toBe(0);
-    await test.info().attach('literal-household-preparation-events', {
-      body: JSON.stringify(events, null, 2),
-      contentType: 'application/json',
-    });
-    await test.info().attach('household-preparation-diagnostic-timeline', {
-      body: JSON.stringify(diagnosticTimeline, null, 2),
-      contentType: 'application/json',
-    });
-    await memberContext.close();
+    try {
+      // Close the clients before quit so delivery cannot reconnect during fixture shutdown.
+      await Promise.all([page.close(), memberContext.close()]);
+    } finally {
+      if (child.exitCode === null) command('quit');
+      await expect.poll(() => child.exitCode).toBe(0);
+      await test.info().attach('literal-household-preparation-events', {
+        body: JSON.stringify(events, null, 2),
+        contentType: 'application/json',
+      });
+      await test.info().attach('household-preparation-diagnostic-timeline', {
+        body: JSON.stringify(diagnosticTimeline, null, 2),
+        contentType: 'application/json',
+      });
+    }
   }
+  await expect(stat(directory)).rejects.toMatchObject({ code: 'ENOENT' });
+  expect(events.filter((item) => item.event === 'error')).toEqual([]);
+  expect(unexpectedPreparationDiagnostics(diagnostics)).toBe('');
 });

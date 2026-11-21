@@ -46,8 +46,9 @@ jobs:
         run: node scripts/release/restore.mjs release-plan release
         env:
           GH_TOKEN: ${{ github.token }}
-      - name: Check whether the push changes production inputs
+      - name: Check whether the main push changes production inputs
         id: deployment
+        if: github.ref == 'refs/heads/main'
         run: node scripts/release/deployment-changes.mjs
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         if: steps.restore.outputs.found != 'true'
@@ -288,7 +289,7 @@ jobs:
           node scripts/release/github-release.mjs publish release
 
   deploy:
-    # Stable tags and pushes without production changes still publish, but do not deploy.
+    # Stable publication hands off to deploy-stable.yml on the protected branch.
     if: github.repository == 'viscalyx/skyttel' && github.ref == 'refs/heads/main' && needs.plan.outputs.deploy == 'true'
     needs: [plan, checks, candidate, publish]
     runs-on: ubuntu-latest

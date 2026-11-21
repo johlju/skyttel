@@ -8,9 +8,12 @@ explains those accounts and registrations from the beginning. Keep the
 deployment and authentication guides open while you work.
 
 Complete the first deployment while someone is available to check it. After
-setup, an approved merge to `main` publishes a verified image and deploys it
-automatically. No second approval is required. A stable tag publishes a
-release but does not replace production.
+setup, an approved merge to `main` that changes production inputs publishes
+and can deploy a verified image. A stable tag on a commit already on `main`
+starts a deployment check after publication, even after a test-only or
+documentation-only merge. Newer production changes on `main` can skip the
+stable deployment after publication succeeds. Confirm the live version
+before you mark the rollout complete. No second approval is required.
 
 If this installation already contains household data, start with
 [updating an existing installation](#updating-an-existing-installation).
@@ -745,7 +748,8 @@ household content, and private draft checks pass and you record the outcome.
 Render documents the control under
 [restarting a service](https://render.com/docs/deploys#restarting-a-service).
 
-Future merges to `main` deploy automatically. Only the release workflow may
+Future merges to `main` that change production inputs deploy automatically
+when the candidate remains eligible. Only the release workflows may
 make unattended changes: do not run deploy hooks, another workflow,
 Blueprint auto-sync, or dashboard deployments concurrently. The workflow
 serializes changes and does not cancel an active migration.
@@ -777,10 +781,26 @@ installation authority and does not need that login transition.
    production inputs. Documentation, tests, release tooling, and devcontainer
    changes alone publish without deploying. The plan summary records this
    decision; see the [production input list](container-releases.md#triggers-and-version-identity).
-1. Wait for `deploy` to succeed, then inspect the deployment report using
-   step 9. If it fails, follow the diagnosis procedure below before retrying.
-1. Confirm application health, version, and existing household access using
-   step 6. Perform any additional checks required by the upgrade notes.
+1. If the merge triggers deployment, wait for `deploy` to finish. Use step 9
+   to verify that the report shows `success` and the expected digest. If
+   deployment fails, follow the diagnosis procedure below before retrying.
+   If the merge skips deployment and you are publishing a stable tag, go
+   directly to [the stable tag procedure](#deploy-a-stable-tag).
+1. After a successful deployment, confirm application health, version, and
+   existing household access using step 6. Perform any additional checks
+   required by the upgrade notes.
+
+### Deploy a stable tag
+
+1. Complete the applicable upgrade preparation before pushing a stable tag
+   for a commit on `main`.
+1. After stable publication succeeds, open
+   **Actions → Stable production deployment** for the tag. Verify that the
+   report shows `success` and the stable release's digest. If it shows
+   `superseded`, newer production changes prevented the rollout. If it fails,
+   follow the diagnosis procedure below and retry the stable deployment run.
+1. After a successful deployment, confirm application health, version, and
+   existing household access using step 6.
 
 ## Diagnose failure before retry
 
@@ -866,7 +886,7 @@ older job uses its original script.
 | `previous_deployment_status_unknown` | Inspect the latest deployment in Render. The job must recognize that it has finished before starting a replacement. |
 | `previous_deployment_requires_diagnosis` in an older release job | Use a release from main with the current deployment controller. Rerunning the older job uses its original controller and can block on the same failed deployment. |
 | An image mismatch after deployment | Compare the saved image, running image and release evidence. Resolve the mismatch before reopening access. |
-| `superseded` | Use the latest main release run whose push changes production inputs. The older candidate is intentionally skipped. |
+| `superseded` | For `stable_release_published`, check the stable deployment for the same commit. Otherwise, check the latest eligible release with the newer production changes. |
 | `main_comparison_incomplete` | A maintainer must inspect the source comparison. Missing or potentially truncated evidence cannot authorize an older release. Use the latest eligible release when production inputs differ. |
 <!-- markdownlint-enable MD013 -->
 

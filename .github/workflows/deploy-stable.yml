@@ -1,0 +1,61 @@
+name: Stable production deployment
+
+on:
+  workflow_run:
+    workflows: [Container release]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  deploy:
+    # workflow_run uses the default branch. Keep the production environment restricted to main.
+    if: >-
+      github.repository == 'viscalyx/skyttel' &&
+      github.ref == 'refs/heads/main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.path == '.github/workflows/release.yml' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    environment: production
+    concurrency:
+      group: render-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: read
+      attestations: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Verify the published stable release from the completed run
+        run: node scripts/release/stable-deployment.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Deploy and verify Render production
+        run: node scripts/release/deploy.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
+          SKYTTEL_ORIGIN: ${{ vars.SKYTTEL_ORIGIN }}
+          DEPLOYMENT_DIRECTORY: ${{ runner.temp }}/deployment
+      - name: Retain sanitized deployment evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: render-deployment-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/deployment
+          if-no-files-found: warn
+          retention-days: 90

@@ -137,9 +137,13 @@ trusted release runs. The
 publication job holds its own credentials and publishes the exact candidate
 archive after container tests, scanning, and signature verification. It does
 not rebuild that image after scanning. Release evidence has separate
-retention from ordinary check reports. After successful main publication,
-the [Render deployment job](render.md) uses separate credentials
-to deploy and verify that digest. Stable tags do not change production.
+retention from ordinary check reports. Successful stable publication and
+`main` pushes that change production inputs start the
+[Render deployment check](render.md) on `main`. It uses separate
+credentials to deploy and verify the published digest when the release is
+eligible. A stable release can publish successfully and skip deployment
+when newer production changes on `main` supersede it. Verify the deployment
+result and the live digest before recording a stable rollout as complete.
 The [daily image monitor](security-monitoring.md) scans the
 actual running and retained rollback digests. It shares the release
 container policy and reports unknown status when required evidence or

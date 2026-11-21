@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
+import { stableTagPattern, validateReleasePlan } from './plan.mjs';
 
 export const requiredAssets = [
   'plan.json',
@@ -34,17 +35,49 @@ function earlierVersion(left, right) {
   return false;
 }
 
-function requireBodyIdentity(body, release) {
+function readBodyIdentity(body) {
+  if (typeof body !== 'string') return undefined;
   const matches = [...body.matchAll(/^<!-- skyttel-release-identity (.+) -->$/gmu)];
-  let identity;
+  if (matches.length !== 1) return undefined;
   try {
-    if (matches.length === 1) identity = JSON.parse(matches[0][1]);
+    return JSON.parse(matches[0][1]);
   } catch {
-    identity = undefined;
+    return undefined;
   }
-  if (!isDeepStrictEqual(identity, release)) {
+}
+
+function requireBodyIdentity(body, release) {
+  if (!isDeepStrictEqual(readBodyIdentity(body), release)) {
     throw new Error('Conflict in release body identity; the exact verified release is required.');
   }
+}
+
+async function* githubListPages(request, path) {
+  for (let page = 1; ; page += 1) {
+    const entries = await request(`${path}?per_page=100&page=${page}`);
+    if (!Array.isArray(entries)) throw new Error('GitHub returned an invalid list.');
+    yield entries;
+    if (entries.length < 100) return;
+  }
+}
+
+export async function hasPublishedStableRelease(request, repository, commit) {
+  for await (const entries of githubListPages(request, '/releases')) {
+    for (const entry of entries) {
+      if (entry?.draft !== false || entry.prerelease !== false) continue;
+      const ref = `refs/tags/${entry.tag_name}`;
+      if (!stableTagPattern.test(ref)) continue;
+      const release = readBodyIdentity(entry.body);
+      if (release?.commit !== commit || entry.name !== release.fullVersion) continue;
+      try {
+        validateReleasePlan(release, { repository, commit, ref, eventName: 'push' });
+        return true;
+      } catch {
+        // Only a consistent stable release identity establishes a promotion.
+      }
+    }
+  }
+  return false;
 }
 
 function github({ release, token, fetchImpl = fetch, apiUrl = 'https://api.github.com' }) {
@@ -105,12 +138,8 @@ function github({ release, token, fetchImpl = fetch, apiUrl = 'https://api.githu
   };
   const list = async (path) => {
     const result = [];
-    for (let page = 1; ; page += 1) {
-      const entries = await request(`${path}?per_page=100&page=${page}`);
-      if (!Array.isArray(entries)) throw new Error('GitHub returned an invalid list.');
-      result.push(...entries);
-      if (entries.length < 100) return result;
-    }
+    for await (const entries of githubListPages(request, path)) result.push(...entries);
+    return result;
   };
   const tagCommit = async (tag) => {
     const reference = await request(`/git/ref/tags/${encodeURIComponent(tag)}`, { optional: true });
