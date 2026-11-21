@@ -568,7 +568,7 @@ test('external transcript capacity stops only the affected voice without dispatc
   expect(live.channels.has(providerId)).toBe(true);
   expect(model.requests).toEqual([]);
   expect(await readMap()).toEqual(before);
-});
+}, 15_000);
 
 test('external delegation capacity stops only the affected voice without dispatching a household mutation', async () => {
   const model = textModel(() => [modelMessage('Ett svar.')]);

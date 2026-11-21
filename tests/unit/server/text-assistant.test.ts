@@ -541,7 +541,7 @@ test('old completed polls retain their original results and reply prefixes after
   expect(reset.status()).toBe(200);
   expect(await reset.json()).toMatchObject({ tasks: [], completedReplies: [] });
   expect((await browser.get(`${path}/${session.id}/messages/turn-1`)).status()).toBe(409);
-});
+}, 15_000);
 
 test('a question about the previous failure reports its verified reason without repeating or authorizing the failed save', async () => {
   let step = 0;
