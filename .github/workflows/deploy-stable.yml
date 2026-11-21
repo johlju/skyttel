@@ -43,10 +43,12 @@ jobs:
         run: node scripts/release/stable-deployment.mjs
         env:
           GH_TOKEN: ${{ github.token }}
+          STABLE_RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
       - name: Deploy and verify Render production
         run: node scripts/release/deploy.mjs
         env:
           GH_TOKEN: ${{ github.token }}
+          STABLE_RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
           SKYTTEL_ORIGIN: ${{ vars.SKYTTEL_ORIGIN }}
