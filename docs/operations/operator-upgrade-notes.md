@@ -6,6 +6,12 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Restore archives that include the Milky Way background
+
+Use a destination that supports the Milky Way background when you restore a
+household archive that contains this preference. An older release can reject
+the full archive even when it uses the same archive format version.
+
 ### Prepare production before publishing a stable release
 
 Complete the applicable upgrade preparation before you push a stable version
