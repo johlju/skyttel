@@ -167,7 +167,10 @@ export function spatialScene(
   const locations = new Map<string, Vector3>();
   const defaults = new Map<string, Vector3>();
   let personalPositions = new Map<string, PersonalPosition>();
-  const background = spaceBackground(renderer.getPixelRatio());
+  const background = spaceBackground(renderer.getPixelRatio(), () => {
+    painted = false;
+    draw();
+  });
   sky.add(background.group);
   let lost = false;
   let needsFrame = true;

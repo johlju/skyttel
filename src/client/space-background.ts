@@ -9,7 +9,11 @@ import {
   PlaneGeometry,
   Points,
   Quaternion,
+  RepeatWrapping,
   ShaderMaterial,
+  SRGBColorSpace,
+  type Texture,
+  TextureLoader,
   Vector3,
 } from 'three';
 import { defaultViewSettings, type ViewSettings } from '../shared/personal-view.js';
@@ -20,7 +24,7 @@ import { lightOceanBackground } from './light-ocean-background.js';
 
 /** Decorative graphics only. Extend theme choices here; camera navigation and
  * personal object placement remain owned by spatialScene. No animation loop. */
-export function spaceBackground(pixelRatio: number) {
+export function spaceBackground(pixelRatio: number, redraw: () => void) {
   const group = new Group();
   const cosmic = cosmicSky(pixelRatio);
   group.visible = false;
@@ -199,6 +203,46 @@ export function spaceBackground(pixelRatio: number) {
     aspect: material.uniforms.aspect.value,
     tangent: material.uniforms.tangent.value,
   };
+  const panoramaMaterial = new ShaderMaterial({
+    depthTest: false,
+    depthWrite: false,
+    uniforms: {
+      rotation: material.uniforms.rotation,
+      offset: material.uniforms.offset,
+      tangent: material.uniforms.tangent,
+      aspect: material.uniforms.aspect,
+      panorama: { value: null as Texture | null },
+    },
+    vertexShader: material.vertexShader,
+    fragmentShader: `
+      #include <common>
+      varying vec2 screen;
+      uniform mat3 rotation;
+      uniform vec3 offset;
+      uniform float tangent, aspect;
+      uniform sampler2D panorama;
+      void main() {
+        // A panoramic field of view keeps the band in frame without stretching
+        // the stars at the sides of a wide screen.
+        float halfHeight = atan(tangent * 5.0);
+        float latitude = screen.y * halfHeight;
+        float longitude = screen.x * min(PI, aspect * halfHeight);
+        vec3 ray = vec3(sin(longitude) * cos(latitude), sin(latitude),
+                        -cos(longitude) * cos(latitude));
+        vec3 d = normalize(rotation * ray + offset);
+        vec2 uv = vec2(atan(d.x, -d.z) / (2.0 * PI), asin(clamp(d.y, -1.0, 1.0)) / PI) + 0.5;
+        // Keep mip selection continuous as longitude wraps from one to zero.
+        vec2 dx = dFdx(uv), dy = dFdy(uv);
+        dx.x -= round(dx.x);
+        dy.x -= round(dy.x);
+        vec3 sky = textureGrad(panorama, uv, dx, dy).rgb;
+        // Keep the contrast in the dust lanes while softening the brightest stars.
+        float luminance = dot(sky, vec3(0.2126, 0.7152, 0.0722));
+        gl_FragColor = vec4(sky * 0.78 / (1.0 + luminance * 0.65), 1.0);
+        #include <colorspace_fragment>
+      }
+    `,
+  });
   const mesh = new Mesh(geometry, material);
   mesh.frustumCulled = false;
   mesh.renderOrder = -100;
@@ -206,6 +250,9 @@ export function spaceBackground(pixelRatio: number) {
   const ocean = lightOceanBackground();
   const deepOcean = darkOceanBackground();
   group.add(mesh, cosmic.group, ocean.mesh, deepOcean.mesh);
+  let panorama: Texture | undefined;
+  let showingMilkyWay = false;
+  let disposed = false;
 
   return {
     group,
@@ -217,6 +264,29 @@ export function spaceBackground(pixelRatio: number) {
       const universe = theme === 'dark' && value.darkBackground === 'universe';
       deepOcean.mesh.visible = theme === 'dark' && value.darkBackground === 'ocean';
       mesh.visible = !ocean.mesh.visible && !deepOcean.mesh.visible && !universe;
+      showingMilkyWay = group.visible && theme === 'dark' && value.darkBackground === 'milky-way';
+      mesh.material =
+        showingMilkyWay && panoramaMaterial.uniforms.panorama.value ? panoramaMaterial : material;
+      if (showingMilkyWay && !panorama) {
+        panorama = new TextureLoader().load(
+          new URL('./assets/milky-way.webp', import.meta.url).href,
+          (texture) => {
+            if (disposed) return;
+            texture.colorSpace = SRGBColorSpace;
+            texture.wrapS = RepeatWrapping;
+            panoramaMaterial.uniforms.panorama.value = texture;
+            if (showingMilkyWay) {
+              mesh.material = panoramaMaterial;
+              redraw();
+            }
+          },
+          undefined,
+          () => {
+            panorama?.dispose();
+            panorama = undefined;
+          },
+        );
+      }
       cosmic.configure(universe);
       stars.visible = theme === 'dark' && value.darkBackground === 'mist';
       material.uniforms.variant.value =
@@ -285,6 +355,9 @@ export function spaceBackground(pixelRatio: number) {
       return !reducedMotion && rebased;
     },
     dispose() {
+      disposed = true;
+      panorama?.dispose();
+      panoramaMaterial.dispose();
       geometry.dispose();
       material.dispose();
       starGeometry.dispose();

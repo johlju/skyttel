@@ -1285,6 +1285,7 @@ export function SpatialMap({
                 <option value="atmosphere">Atmosfär</option>
                 <option value="mist">Dis och ljuspunkter</option>
                 <option value="universe">Universum</option>
+                <option value="milky-way">Vintergatan</option>
                 <option value="ocean">Under världshavet</option>
               </select>
             </fieldset>
