@@ -15,6 +15,7 @@ import type { MapObject, MapRelationship, MapState } from '../shared/map.js';
 import { defaultViewSettings, type Position, type ViewSettings } from '../shared/personal-view.js';
 import { relationshipLabel } from '../shared/relationship-label.js';
 import { relationshipVerb } from '../shared/relationship-verb.js';
+import milkyWay2Credit from './assets/milky-way-2.LICENSE.txt?url&no-inline';
 import { BackgroundMotionSlider } from './BackgroundMotionSlider.js';
 import { LifecycleStatus } from './Lifecycle.js';
 import { formatCoordinate, MapNavigation } from './MapNavigation.js';
@@ -38,6 +39,21 @@ import { ZeroReferenceTint } from './ZeroReferenceTint.js';
 import { depthTintRegions, verticalCurveTints } from './zero-reference-depth.js';
 
 type LabelBox = { x: number; y: number; width: number; height: number };
+
+const skyCredits: Partial<
+  Record<ViewSettings['darkBackground'], { name: string; description: string; url: string }>
+> = {
+  'milky-way': {
+    name: 'ESO/S. Brunier',
+    description: 'Himmelsfoto av ESO/S. Brunier',
+    url: 'https://www.eso.org/public/images/eso0932a/',
+  },
+  'milky-way-2': {
+    name: 'Källor till stjärnhimlen',
+    description: 'Källor och licens för Vintergatan 2',
+    url: milkyWay2Credit,
+  },
+};
 
 export function ProposalSymbol({ change }: { change?: { before: unknown; after: unknown } }) {
   if (!change) return null;
@@ -239,7 +255,7 @@ export function SpatialMap({
     // The filter dialog overlays the map without reserving label space.
     const boxes = [
       ...root.querySelectorAll(
-        `.workspace-tools, .workspace-context, .map-object-search, .map-search-filter, .workspace-feedback, .voice-box, .workspace-voice-controls, .conversation-notice, .map-navigation, .label-note, .spatial-view-actions${revealRequest ? ', .map-selection-details' : ''}`,
+        `.workspace-tools, .workspace-context, .map-object-search, .map-search-filter, .workspace-feedback, .voice-box, .workspace-voice-controls, .conversation-notice, .map-navigation, .label-note, .spatial-view-actions, .spatial-photo-credit${revealRequest ? ', .map-selection-details' : ''}`,
       ),
     ].flatMap((element) => {
       if (element.closest('details:not([open])') && !element.matches('summary')) return [];
@@ -303,6 +319,12 @@ export function SpatialMap({
   const settings = personal?.view?.settings ?? defaultViewSettings;
   const [localSettings, setLocalSettings] = useState(defaultViewSettings);
   const preferences = personal ? settings : localSettings;
+  const panoramaSelected =
+    theme === 'dark' &&
+    (preferences.darkBackground === 'milky-way' || preferences.darkBackground === 'milky-way-2');
+  const showPanoramaMotionHelp = preferences.background && panoramaSelected;
+  const skyCredit =
+    theme === 'dark' && preferences.background && skyCredits[preferences.darkBackground];
   const [hasUnsavedMotion, setHasUnsavedMotion] = useState(false);
   const [hasUnsavedTint, setHasUnsavedTint] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(
@@ -1285,15 +1307,26 @@ export function SpatialMap({
                 <option value="atmosphere">Atmosfär</option>
                 <option value="mist">Dis och ljuspunkter</option>
                 <option value="universe">Universum</option>
+                <option value="milky-way">Vintergatan</option>
+                <option value="milky-way-2">Vintergatan 2</option>
                 <option value="ocean">Under världshavet</option>
               </select>
             </fieldset>
             <fieldset
               disabled={backgroundMotionDisabled}
               aria-busy={personal?.pending || undefined}
+              aria-describedby={
+                showPanoramaMotionHelp ? `${labelPrefix}-panorama-motion-help` : undefined
+              }
               className="background-motion"
             >
               <legend>Bakgrundens rörelse</legend>
+              {showPanoramaMotionHelp && (
+                <p id={`${labelPrefix}-panorama-motion-help`}>
+                  Stjärnorna har fasta riktningar på himlen. Därför påverkar Panoreringsstyrka och
+                  Lageravstånd inte panoramat.
+                </p>
+              )}
               {(
                 [
                   ['panStrength', 'Panoreringsstyrka'],
@@ -1308,7 +1341,9 @@ export function SpatialMap({
                   value={preferences[key]}
                   percent={key !== 'layerDistance'}
                   busy={personal?.pending ?? false}
-                  disabled={backgroundMotionDisabled}
+                  disabled={
+                    backgroundMotionDisabled || (panoramaSelected && key !== 'zoomStrength')
+                  }
                   onCommit={(value) => configure({ [key]: value })}
                   onUnsavedChange={setHasUnsavedMotion}
                 />
@@ -1317,15 +1352,19 @@ export function SpatialMap({
                 type="button"
                 aria-disabled={personal?.pending || undefined}
                 onClick={() => {
-                  if (!personal?.pending)
-                    configure({
-                      panStrength: defaultViewSettings.panStrength,
-                      zoomStrength: defaultViewSettings.zoomStrength,
-                      layerDistance: defaultViewSettings.layerDistance,
-                    });
+                  if (personal?.pending) return;
+                  configure(
+                    panoramaSelected
+                      ? { zoomStrength: defaultViewSettings.zoomStrength }
+                      : {
+                          panStrength: defaultViewSettings.panStrength,
+                          zoomStrength: defaultViewSettings.zoomStrength,
+                          layerDistance: defaultViewSettings.layerDistance,
+                        },
+                  );
                 }}
               >
-                Återställ rörelse
+                {panoramaSelected ? 'Återställ zoomstyrka' : 'Återställ rörelse'}
               </button>
             </fieldset>
             {reducedMotion && <p>Bakgrunden är stilla eftersom minskad rörelse är aktiverad.</p>}
@@ -2059,6 +2098,17 @@ export function SpatialMap({
         </svg>
         {(moving || preferences.axisPinned) && (
           <SpatialOrientation orientation={orientation} corner={preferences.axisCorner} />
+        )}
+        {active && !unavailable && !contextLost && skyCredit && (
+          <a
+            className="spatial-photo-credit"
+            href={skyCredit.url}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`${skyCredit.name}. ${skyCredit.description} (öppnas i ny flik)`}
+          >
+            {skyCredit.name}
+          </a>
         )}
       </div>
       <p

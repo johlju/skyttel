@@ -1,0 +1,6 @@
+interface:
+  display_name: "Skyttel Panorama Background"
+  short_description: "Build a spherical panorama for Skyttel’s spatial map"
+  default_prompt: "Use $implement-background to turn my scenario into a 360° × 180° panorama background for Skyttel’s spatial map."
+policy:
+  allow_implicit_invocation: false

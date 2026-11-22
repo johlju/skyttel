@@ -66,6 +66,7 @@ export function BackgroundMotionSlider({
           max={percent ? 100 : 2}
           step={percent ? 5 : 0.1}
           value={display}
+          disabled={disabled}
           aria-valuetext={text}
           aria-disabled={busy || undefined}
           onPointerDown={(event) => {

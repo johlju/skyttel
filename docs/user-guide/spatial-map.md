@@ -386,9 +386,23 @@ ovanför. Använd kartans vanliga lutning för att se planen och vattnet
 däremellan.
 Atmosfär har mjuka mörka ljusfält; Dis och ljuspunkter har mörkt dis och
 avlägsna ljuspunkter. Universum visar stjärnor, galaxer, nebulosor och
-stoft i mörkt tema. Det aktiva temat, även systemtema, väljer vilken
-bakgrund som visas. Tema- och bakgrundsbyten behåller kamerans utsnitt och
-dina objektplaceringar.
+stoft i mörkt tema. Med Vintergatan ser du stjärnhimlen från jorden.
+Rotera kartan för att följa stjärnbandet från den ljusa galaxkärnan
+till de glesare delarna på motsatt sida. Om du vrider blicken bort från
+bandet ser du stjärnfälten ovanför eller under galaxens plan.
+Stjärnorna ligger så långt bort att de står still när du panorerar.
+Vintergatan 2 visar en egen rendering av stjärnhimlen. Mätningar av
+galaxens ljus och stoftmoln ger stjärnbandet dess form. Stoftet dämpar
+ljuset bakom sig. De ljusstarkaste stjärnorna följer en stjärnkatalog.
+Länken **Källor till stjärnhimlen** i kartan visar källor och licens.
+Det aktiva temat, även systemtema, väljer vilken bakgrund som visas.
+Tema- och bakgrundsbyten behåller kamerans utsnitt och dina objektplaceringar.
+
+Himmelsfotot av [ESO/S. Brunier](https://www.eso.org/public/images/eso0932a/)
+används under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+Skyttel visar en nedskalad WebP-version med dämpade högdagrar.
+Renderingen i Vintergatan 2 används under
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
 
 Under världshavet i mörkt tema visar blågröna ljusformer i mörkt vatten:
 kronmanet, sifonofor, lanternfish, vampyrbläckfisk, musselkräftors ljusspår
@@ -399,9 +413,13 @@ kameran står still.
 **Panoreringsstyrka** och **Zoomstyrka** styr responsen oberoende, från
 0 till 100 procent i steg om 5 procent. Noll stoppar respektive respons;
 bakgrunden följer fortfarande rotation. **Lageravstånd** styr intrycket av
-djup, från 0,5 till 2,0 i steg om 0,1. Samma värden gäller alla bakgrunder
-och båda temana. **Återställ rörelse** sparar 70 procent, 70 procent och
-1,0. Bakgrundsval, synlighet, kamera och objektplaceringar behålls.
+djup, från 0,5 till 2,0 i steg om 0,1. Värdena delas mellan bakgrunder och
+teman. I **Vintergatan** och **Vintergatan 2** har stjärnorna fasta
+himmelsriktningar. Där är **Panoreringsstyrka** och **Lageravstånd**
+inaktiva och visar dina sparade värden. **Återställ zoomstyrka** återställer
+zoomstyrkan till 70 procent. För övriga bakgrunder sparar
+**Återställ rörelse** 70 procent, 70 procent och 1,0. Bakgrundsval,
+synlighet, kamera och objektplaceringar behålls.
 När bakgrunden är av eller systemets minskade rörelse gäller visar de
 inaktiva rörelsereglagen dina sparade värden.
 Reglagen kan ändras med piltangenterna, Home och End eller genom att peka
@@ -417,7 +435,7 @@ påverkar den. Pausade rörelser spelas inte upp i efterhand.
 
 **Visa bakgrund** visar ditt sparade önskemål även med minskad rörelse.
 När bakgrunden är på kan du ändra båda bakgrundsvalen. De tre
-rörelsereglagen och **Återställ rörelse** är inaktiva och förklaringen
+rörelsereglagen och återställningsknappen är inaktiva och förklaringen
 **Bakgrunden är stilla eftersom minskad rörelse är aktiverad.** visas.
 Systemvalet ändrar inga sparade inställningar. När bakgrunden är av är
 även bakgrundsväljarna inaktiva med sina sparade värden kvar.

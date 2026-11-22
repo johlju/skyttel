@@ -94,6 +94,7 @@ dist/
 
 # Temporary folders
 .worktrees/
+/.codex/worktrees/
 tmp/
 temp/
 

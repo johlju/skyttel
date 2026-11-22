@@ -1,0 +1,83 @@
+﻿Vintergatan 2
+
+Svenska – bildens licens och källor
+
+Skyttels panoramabild milky-way-2.webp delas under CC BY-SA 4.0.
+Du får använda, ändra och dela bilden, även kommersiellt. När du delar
+den ska du ange upphovspersonerna och källorna, länka till licensen och
+berätta vad som har ändrats. En bearbetad bild delas på samma villkor.
+https://creativecommons.org/licenses/by-sa/4.0/deed.sv
+
+Så används de fyra källorna i bilden
+
+- COBE/DIRBE mäter himlens infraröda ljus. Mätningarna ger stjärnbandet
+  dess ljusfördelning, från den ljusa galaxkärnan till de svagare delarna.
+- Edenhofers tredimensionella stoftkarta visar hur långt bort närliggande
+  stoftmoln finns. Det gör att vi kan dämpa ljuset från stjärnorna bakom dem.
+- SFD98 anger den sammanlagda mängden stoft i varje riktning. Kartan ger
+  de mörka stråken i Vintergatan finare detaljer.
+- Stjärnkatalogen HYG ger de ljusstarkaste stjärnorna deras positioner,
+  ljusstyrkor och färger.
+
+Se avsnittet ”English – license and credits” nedan för fullständiga
+källhänvisningar, upphovspersoner och licensvillkor för varje datakälla.
+
+English – license and credits
+
+Skyttel contributors rendered milky-way-2.webp using the four data sources
+listed below. The panorama is licensed under Creative Commons
+Attribution-ShareAlike 4.0 International (CC BY-SA 4.0). You may use,
+adapt and share it, including commercially. When sharing it, credit the
+creators and sources, link to the license and indicate any changes.
+Share adaptations under the same license.
+https://creativecommons.org/licenses/by-sa/4.0/
+
+COBE/DIRBE near-infrared sky brightness
+
+Credit: NASA Goddard Space Flight Center and the COBE Science Working Group.
+The 2.2-micron Zodi-Subtracted Mission Average data provide the large-scale
+stellar light distribution. These US government data are publicly available.
+https://lambda.gsfc.nasa.gov/product/cobe/dirbe_products.html
+https://lambda.gsfc.nasa.gov/product/cobe/dirbe_zsma_data_get.html
+Intensity and coordinate files: DIRBE_BAND2A_ZSMA.FITS and DIRBE_SKYMAP_INFO.FITS.
+https://lambda.gsfc.nasa.gov/product/cobe/dirbe_ancil_qs_get.html
+
+Local three-dimensional interstellar dust
+
+Credit: Gordian Edenhofer, Catherine Zucker, Philipp Frank, Andrew K.
+Saydjari, Joshua S. Speagle, Douglas Finkbeiner and Torsten Ensslin.
+Edenhofer et al. (2023), A Parsec-Scale Galactic 3D Dust Map out to
+1.25 kpc from the Sun. Numerical dataset, doi:10.5281/zenodo.8212070.
+The local dust density is integrated along sightlines to model foreground
+attenuation. Licensed under Creative Commons Attribution 4.0 International.
+https://zenodo.org/records/8212070
+Input file: mean_and_std_healpix.fits.
+https://creativecommons.org/licenses/by/4.0/
+
+Galactic reddening
+
+Credit: David J. Schlegel, Douglas P. Finkbeiner and Marc Davis.
+Schlegel, Finkbeiner & Davis (1998), Maps of Dust Infrared Emission for
+Use in Estimation of Reddening and Cosmic Microwave Background Radiation
+Foregrounds, ApJ 500, 525. Numerical dataset, doi:10.7910/DVN/EWCNL5.
+The SFD98 map supplies the full dust column and finer angular structure.
+The Harvard Dataverse distribution is dedicated under CC0 1.0.
+https://doi.org/10.7910/DVN/EWCNL5
+Input files: SFD_dust_4096_ngp.fits and SFD_dust_4096_sgp.fits.
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Bright-star catalogue
+
+Credit: David Nash / Astronexus, HYG v4.1.
+The rendering uses measured positions, visual magnitudes and colour indices
+from a subset of this catalogue. Coordinates are converted to a Galactic
+frame and the stars are rendered into the panorama.
+Licensed under Creative Commons Attribution-ShareAlike 4.0 International.
+https://github.com/astronexus/HYG-Database/blob/main/hyg/README.md
+Input file: hyg_v41.csv, in the catalogue's hyg/CURRENT directory.
+https://creativecommons.org/licenses/by-sa/4.0/
+
+The rendering converts these measurements into a visible-light-looking
+illustration through exposure, colour, dust-transmission and fine stellar
+detail choices. Infrared observations are interpreted for visual appearance.
+The resulting colours and brightness are an artistic representation.
