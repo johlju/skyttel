@@ -6,7 +6,7 @@ export type ViewSettings = {
   axisCorner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   axisPinned: boolean;
   background: boolean;
-  lightBackground: 'pearl' | 'dawn' | 'ocean';
+  lightBackground: 'pearl' | 'dawn' | 'ocean' | 'archipelago-morning';
   darkBackground: 'atmosphere' | 'mist' | 'universe' | 'milky-way' | 'milky-way-2' | 'ocean';
   panStrength: number;
   zoomStrength: number;

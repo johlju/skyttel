@@ -1410,6 +1410,7 @@ export function SpatialMap({
                 <option value="pearl">Pärlemor</option>
                 <option value="dawn">Gryningsdis</option>
                 <option value="ocean">Under världshavet</option>
+                <option value="archipelago-morning">Skärgårdsmorgon</option>
               </select>
               <label htmlFor={`${labelPrefix}-dark-background`}>Bakgrund i mörkt tema</label>
               <select

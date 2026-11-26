@@ -2,7 +2,7 @@ import { Box3, Color, Matrix4, PerspectiveCamera, Scene, Vector3, WebGLRenderer 
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { PersonalPosition, Position, ViewSettings } from '../shared/personal-view.js';
 import { spaceBackground } from './space-background.js';
-import { cameraGestures } from './spatial-navigation.js';
+import { cameraGestures, initialCameraAzimuth } from './spatial-navigation.js';
 import {
   zeroReference,
   zeroReferenceExtent,
@@ -314,9 +314,9 @@ export function spatialScene(
       .copy(center)
       .add(
         new Vector3(
-          Math.sin(0.35) * Math.cos(0.16),
+          Math.sin(initialCameraAzimuth) * Math.cos(0.16),
           Math.sin(0.16),
-          Math.cos(0.35) * Math.cos(0.16),
+          Math.cos(initialCameraAzimuth) * Math.cos(0.16),
         ).multiplyScalar(overviewDistance),
       );
     controls.update();

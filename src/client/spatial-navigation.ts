@@ -1,3 +1,5 @@
+/** Azimuth of the map's starting view, in radians. */
+export const initialCameraAzimuth = 0.35;
 export const navigationDragThreshold = 8;
 /** Zoom per pixel of Ctrl + wheel delta, which browsers send for trackpad pinch. */
 export const pinchZoomRate = 0.01;

@@ -12,7 +12,7 @@ export const viewSettingsSchema = z
   .object({
     ...presentation,
     background: z.boolean(),
-    lightBackground: z.enum(['pearl', 'dawn', 'ocean']),
+    lightBackground: z.enum(['pearl', 'dawn', 'ocean', 'archipelago-morning']),
     darkBackground: z.enum(['atmosphere', 'mist', 'universe', 'milky-way', 'milky-way-2', 'ocean']),
     panStrength: strength,
     zoomStrength: strength,
