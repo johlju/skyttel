@@ -1,4 +1,6 @@
+import { join } from 'node:path';
 import { type APIRequestContext, request } from '@playwright/test';
+import Database from 'better-sqlite3';
 import { afterEach, expect, test } from 'vitest';
 import type { AssistantObservation } from '../../../src/server/assistant-observation.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
@@ -124,7 +126,7 @@ test('actual restart restores the exact conversation and choice without starting
   expect(started.status(), await started.text()).toBe(201);
   let state: TextAssistantView = await started.json();
   const choice = await post(`${path}/${state.id}/model-choice`, {
-    model: 'gpt-6.1-sol',
+    model: 'gpt-6.2-sol',
     effort: 'low',
   });
   expect(choice.status(), await choice.text()).toBe(200);
@@ -145,11 +147,21 @@ test('actual restart restores the exact conversation and choice without starting
     .not.toBe('working');
   const before = model.requests.length;
   await restart();
+  // Restore settings and completed-task snapshots written by the previous application.
+  const fixture = new Database(join(app.directory, 'skyttel.db'));
+  try {
+    fixture.prepare('UPDATE conversation_model_preferences SET model = ?').run('gpt-6.1-sol');
+    fixture
+      .prepare('UPDATE conversation SET state = replace(state, ?, ?) WHERE id = ?')
+      .run('"gpt-6.2-sol"', '"gpt-6.1-sol"', state.id);
+  } finally {
+    fixture.close();
+  }
   const restored = await browser.get(`${path}/${state.id}`);
   expect(restored.status(), await restored.text()).toBe(200);
   expect(await restored.json()).toMatchObject({
     id: state.id,
-    modelChoice: { model: 'gpt-6.1-sol', effort: 'low' },
+    modelChoice: { model: 'gpt-6.2-sol', effort: 'low' },
     paused: true,
     conversation: [
       { role: 'user', text: 'Byt cykelns namn till Blå, men ändra inte ägaren.' },
@@ -161,8 +173,123 @@ test('actual restart restores the exact conversation and choice without starting
   expect(task).toBeDefined();
   const taskStatus = await browser.get(`${path}/${state.id}/messages/${task?.id}`);
   expect(taskStatus.status(), await taskStatus.text()).toBe(200);
-  expect(await taskStatus.json()).toMatchObject({ paused: true, phase: 'ready' });
+  expect(await taskStatus.json()).toMatchObject({
+    paused: true,
+    phase: 'ready',
+    modelChoice: { model: 'gpt-6.2-sol', effort: 'low' },
+  });
+  const next = await post(path, approvedForVisit);
+  expect(await next.json()).toMatchObject({ modelChoice: { model: 'gpt-6.2-sol', effort: 'low' } });
 });
+
+test.each(['start', 'restore'] as const)(
+  'a conversation %s still opening during shutdown is unavailable until the next server',
+  async (action) => {
+    let reportOpening!: () => void;
+    const opening = new Promise<void>((resolve) => {
+      reportOpening = resolve;
+    });
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const reply = 'Cykeln finns i garaget.';
+    const model = textModel(() => [modelMessage(reply)]);
+    let hold = false;
+    app = await createInstallation(undefined, {
+      modelFetch: model.provider,
+      assistantDispatch: async (incoming, dispatch) => {
+        const listTools =
+          hold &&
+          incoming.method === 'POST' &&
+          new URL(incoming.url).pathname === '/mcp' &&
+          (await incoming.clone().json()).method === 'tools/list';
+        const response = await dispatch(incoming);
+        if (listTools) {
+          hold = false;
+          reportOpening();
+          await held;
+        }
+        return response;
+      },
+    });
+    browser = await request.newContext();
+    await signIn(browser, app.origin);
+    const { household } = await (await createHousehold(browser, app.origin)).json();
+    const path = `${app.origin}/api/households/${household.id}/text-assistant`;
+    const post = (url: string, data: object) =>
+      browser.post(url, { headers: { origin: app.origin }, data });
+    if (action === 'restore') {
+      const started = await post(path, approvedForVisit);
+      expect(started.status()).toBe(201);
+      const state: TextAssistantView = await started.json();
+      const conversation = `${path}/${state.id}`;
+      expect(
+        (
+          await post(`${conversation}/messages`, {
+            revision: state.revision,
+            draftVersion: state.review.version,
+            contentVersion: state.review.contentVersion,
+            requestId: crypto.randomUUID(),
+            text: 'Var finns cykeln?',
+          })
+        ).status(),
+      ).toBe(202);
+      await expect
+        .poll(
+          async () =>
+            ((await (await browser.get(conversation)).json()) as TextAssistantView).modelReply,
+        )
+        .toBe(reply);
+      await restart();
+    }
+
+    const open = () =>
+      action === 'start' ? post(path, approvedForVisit) : browser.get(`${path}/restore`);
+    hold = true;
+    const pending = open();
+    await Promise.race([
+      opening,
+      pending.then(async (response) => {
+        throw new Error(
+          `Conversation opened before shutdown: ${response.status()} ${await response.text()}`,
+        );
+      }),
+    ]);
+    const restarted = app.restart();
+    try {
+      // The old listener stops accepting new connections after the app closes.
+      // The admitted HTTP request still owns its connection until released.
+      await expect
+        .poll(async () =>
+          fetch(`${app.origin}/healthz`, { headers: { connection: 'close' } }).then(
+            (response) => response.status,
+            () => undefined,
+          ),
+        )
+        .toBeUndefined();
+    } finally {
+      release();
+      await restarted;
+    }
+    const refused = await pending;
+    expect(refused.status()).toBe(503);
+    expect(await refused.json()).toEqual({ error: 'assistant_unavailable' });
+    browser = await restartWithSession(browser, () => restarted);
+    const reopened = await open();
+    expect(reopened.status()).toBe(action === 'start' ? 201 : 200);
+    if (action === 'restore')
+      expect(await reopened.json()).toMatchObject({
+        conversation: {
+          paused: true,
+          conversation: [
+            { role: 'user', text: 'Var finns cykeln?' },
+            { role: 'assistant', text: reply },
+          ],
+        },
+      });
+  },
+);
 
 test('a model response after shutdown leaves restored work paused and never starts its queue', async () => {
   let release!: (output: unknown[]) => void;
@@ -418,8 +545,9 @@ test.each([false, true])(
       text,
       queue: true,
     });
+    const originalRequest = body(instruction);
     try {
-      expect((await post(`${path}/${state.id}/messages`, body(instruction))).status()).toBe(202);
+      expect((await post(`${path}/${state.id}/messages`, originalRequest)).status()).toBe(202);
       await expect.poll(() => model.requests.length).toBe(1);
       app.setConversationConsentTextVersion(4);
       const refused = await post(`${path}/${state.id}/messages`, body('Ett nytt uppdrag.'));
@@ -434,8 +562,12 @@ test.each([false, true])(
         .toBe('ready');
       expect(state.consentTextVersion).toBe(3);
       expect(state.conversation).toEqual([
-        { role: 'user', text: instruction },
-        { role: 'assistant', text: 'Det gamla arbetet är klart under sina ursprungliga villkor.' },
+        { role: 'user', text: instruction, requestId: originalRequest.requestId },
+        {
+          role: 'assistant',
+          text: 'Det gamla arbetet är klart under sina ursprungliga villkor.',
+          requestId: originalRequest.requestId,
+        },
       ]);
       if (approved) {
         const acceptance = await post(`${root}/conversation-consent`, { textVersion: 4 });

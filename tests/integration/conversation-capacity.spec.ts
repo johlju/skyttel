@@ -99,7 +99,10 @@ test('KONTEXT-04: textmätaren följer modellens mätning och nytt samtal tömme
     setTextPercent(92);
     await send(page, 'Beskriv det igen.');
     await expect(meter(page)).toHaveAttribute('value', '92');
-    await page.getByRole('button', { name: 'Nytt samtal', exact: true }).click();
+    await page
+      .getByRole('region', { name: 'Skriv till Skyttel', exact: true })
+      .getByRole('button', { name: 'Nytt samtal', exact: true })
+      .click();
     await expect(meter(page)).toHaveAttribute('value', '0');
     await expect(page.getByRole('log', { name: 'Samtalstext' })).not.toContainText('Ett provsvar.');
   } finally {
@@ -159,7 +162,10 @@ test('KONTEXT-05: rösten visar procent från 85 och läser tröskeln en gång',
     expect(
       await page.evaluate(() => (window as unknown as { contextWords: string[] }).contextWords),
     ).toEqual(['Kontexten är 85 procent full']);
-    await page.getByRole('button', { name: 'Nytt samtal', exact: true }).click();
+    await page
+      .getByRole('region', { name: 'Skriv till Skyttel', exact: true })
+      .getByRole('button', { name: 'Nytt samtal', exact: true })
+      .click();
     await expect(meter(page)).toHaveAttribute('value', '0');
     await expect.poll(() => live.channels.size).toBe(1);
     await expect.poll(() => live.requests.length).toBe(2);
@@ -197,7 +203,10 @@ test('KONTEXT-06: ogiltig mätning och gamla rösthändelser ändrar inte den ny
     await page.waitForTimeout(600);
     await expect(meter(page)).toHaveAttribute('value', '85');
     const old = [...live.channels.values()][0];
-    await page.getByRole('button', { name: 'Nytt samtal', exact: true }).click();
+    await page
+      .getByRole('region', { name: 'Skriv till Skyttel', exact: true })
+      .getByRole('button', { name: 'Nytt samtal', exact: true })
+      .click();
     await expect(meter(page)).toHaveAttribute('value', '0');
     await expect.poll(() => live.requests.length).toBe(2);
     old.emit('session.usage.updated', {

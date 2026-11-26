@@ -35,7 +35,7 @@ FROM node-ready AS codex-ready
 
 # Use the same verified standalone installer as Kravhantering.
 COPY .devcontainer/install-codex.sh /usr/local/share/skyttel/install-codex.sh
-RUN install -d -o vscode -g vscode -m 0755 /home/vscode/.codex && \
+RUN --mount=type=secret,id=codex_release install -d -o vscode -g vscode -m 0755 /home/vscode/.codex && \
     CODEX_HOME=/home/vscode/.codex \
     CODEX_INSTALL_DIR=/usr/local/bin \
     CODEX_NON_INTERACTIVE=1 \

@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash } from 'node:crypto';
 import type { ConversationConsentProvenance } from './conversation-consent.js';
 import { TraceJsonFailure, traceJson } from './trace-json.js';
+import { isVoiceMessageRefusalCode } from './voice-message-refusal.js';
 
 /** Reviewed, opt-in, in-memory observations shared by evaluation and live export.
  * This module owns no storage, transport or retries. Production never imports
@@ -257,12 +258,18 @@ const safeErrors = new Set([
   'voice_disconnected',
   'backend_failed',
 ]);
-function errorFields(value: unknown, names: readonly string[]) {
+function errorFields(
+  value: unknown,
+  names: readonly string[],
+  additionalError?: (error: string) => boolean,
+) {
   const admitted = fields(value, names);
   const error = (value as { error?: unknown })?.error;
   if (error !== undefined)
     admitted.error =
-      typeof error === 'string' && safeErrors.has(error) ? error : 'observation_failed';
+      typeof error === 'string' && (safeErrors.has(error) || additionalError?.(error))
+        ? error
+        : 'observation_failed';
   return admitted;
 }
 
@@ -484,7 +491,11 @@ function data(event: AssistantObservation, project: ProjectArray) {
       return fields(event.data, ['delegationId', 'requestId', 'text', 'context', 'operation']);
     case 'backend_result':
       return {
-        ...errorFields(event.data, ['delegationId', 'requestId', 'operation']),
+        ...errorFields(
+          event.data,
+          ['delegationId', 'requestId', 'operation'],
+          isVoiceMessageRefusalCode,
+        ),
         view: backendResult((event.data as { view?: unknown })?.view, project),
       };
   }

@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = realpathSync(process.cwd());
 const modules = resolve(root, 'node_modules');
 const recovery = 'Run npm run deps:prepare in this checkout.';
+const require = createRequire(resolve(root, 'package.json'));
 
 // The repository declares space-separated numeric engine comparators.
 // Reject other syntax explicitly instead of accepting a version we cannot check.
@@ -107,7 +108,6 @@ function checkInstallation() {
       }
     }
   }
-  const require = createRequire(resolve(root, 'package.json'));
   const tooling = [
     'typescript',
     'tsx',
@@ -179,4 +179,21 @@ try {
 } catch (error) {
   console.error(`Skyttel dependency setup failed: ${error.message}\n${recovery}`);
   process.exitCode = 78;
+}
+
+if (!process.exitCode && process.argv[3] === '--chromium') {
+  try {
+    const { chromium } = require('@playwright/test');
+    const browser = await chromium.launch();
+    await browser.close();
+  } catch (error) {
+    const missing = error.message
+      .split('\n')
+      .find((line) => line.includes("Executable doesn't exist"));
+    const detail = missing
+      ? `${missing}\nInstall the pinned browser with npm run test:env -- playwright install chromium.`
+      : error.message;
+    console.error(`Skyttel Chromium setup failed: ${detail}`);
+    process.exitCode = 78;
+  }
 }

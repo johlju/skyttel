@@ -4,6 +4,10 @@
   "language": "sv,en",
   "import": ["@cspell/dict-sv/cspell-ext.json"],
   "words": [
+    "mikrofontonen",
+    "låsfärg",
+    "låsfärgen",
+    "låsfrågans",
     "equirectangular",
     "Brunier",
     "Avrea",
@@ -36,6 +40,8 @@
     "batchsvar",
     "batchintyg",
     "läsbehörighet",
+    "läsfråga",
+    "läsfrågan",
     "läsresultat",
     "läsomgång",
     "tokenisering",
@@ -1119,7 +1125,9 @@
     "modellbegäranden",
     "batchsvaret",
     "delbatch",
-    "förtydligandereplik"
+    "förtydligandereplik",
+    "interestfor",
+    "Tauri"
   ],
   "overrides": [
     {

@@ -133,6 +133,41 @@ test('projected symbols expose perspective size and depth while their canvas rem
   expect([...pixel]).toEqual([19, 46, 37, 255]);
 });
 
+test('automatic panning keeps depth and zoom and leaves an oversized selection in place', {
+  tags: ['technical'],
+}, () => {
+  const { scene, points, history } = openScene();
+  scene.update(
+    ['left', 'right'],
+    [
+      { id: 'left', x: -9, y: 0, z: 2, version: 1 },
+      { id: 'right', x: 9, y: 0, z: -6, version: 1 },
+    ],
+  );
+  const before = points();
+  const targets = before.map((point) => ({ ...point, width: 44, height: 44 }));
+  const right = Math.max(...targets.map((target) => target.x + target.width / 2)) - 60;
+  const area = { top: 0, bottom: 600, left: 0, right };
+  scene.panIntoView(targets, [{ ...area, right: 100 }]);
+  expect(points()).toEqual(before);
+  expect(history().canGoBack).toBe(false);
+
+  scene.panIntoView(targets, [area]);
+  const after = points();
+  expect(Math.max(...after.map((point) => point.x + 22))).toBeCloseTo(right);
+  for (const [index, point] of after.entries()) {
+    expect(point.y).toBeCloseTo(before[index].y);
+    expect(point.depth).toBeCloseTo(before[index].depth);
+    expect(point.scale).toBeCloseTo(before[index].scale);
+  }
+  expect(history()).toEqual({ canGoBack: false, changed: true });
+  scene.navigate('left');
+  expect(scene.previousView()).toBe(true);
+  expect(points()[0].x).toBeCloseTo(after[0].x);
+  scene.reset();
+  expect(history().changed).toBe(false);
+});
+
 test('the mist background follows pan, rotation and zoom but stays fixed during personal placement', () => {
   const { scene, canvas } = openScene();
   scene.update(['home']);

@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
 import { createHousehold, openProfile, signIn } from '../support/client.js';
 import {
+  closeConversationText,
   microphoneButton,
   openConversationText,
   openSavedHistory,
@@ -323,9 +324,7 @@ test('KONTEXT-03: skrivna och talade kommandon börjar om samtalet och kastar ut
     await turnMicrophoneOn(page);
     await field(page).fill('Oskickat');
     speak(live, 'Nytt samtal');
-    await expect(log(page)).toHaveText(
-      'Skyttel: Nytt samtal. 1 osparad ändring ligger kvar i ditt utkast.',
-    );
+    await expect(log(page)).toHaveText('Här visas det du och Skyttel säger och skriver.');
     await expect.poll(() => live.requests.length).toBe(2);
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true');
     await expect(field(page)).toHaveValue('Oskickat');
@@ -372,15 +371,18 @@ test('KONTEXT-03: skrivna och talade kommandon börjar om samtalet och kastar ut
     await send(page, 'Kasta utkastet');
     await expect.poll(async () => (await read()).draft.changes.length).toBe(0);
     await expect(log(page)).toContainText('Utkastet är kastat.');
+    // The discard adds progress rows, independently of the new dialogue.
+    const dialogue = log(page).locator(':scope > li:not(.work-step)');
+    const resetTranscript = ['Skyttel: Nytt samtal. Utkastet är tomt.'];
     await send(page, 'Nytt samtal och kasta utkastet');
-    await expect(log(page)).toHaveText('Skyttel: Nytt samtal. Utkastet är tomt.');
+    await expect(dialogue).toHaveText(resetTranscript);
     await expect(field(page)).toHaveValue('');
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
     await turnMicrophoneOn(page);
     speak(live, 'Kasta utkastet och nytt samtal');
     await expect.poll(() => live.requests.length).toBe(6);
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true');
-    await expect(log(page)).toHaveText('Skyttel: Nytt samtal. Utkastet är tomt.');
+    await expect(dialogue).toHaveText(resetTranscript);
     await send(page, 'Har vi börjat om?');
     await expect.poll(() => model.requests.length).toBe(3);
     expect(model.requests[2].input).toHaveLength(1);
@@ -416,6 +418,7 @@ test('KONTEXT-23: text och röst läser aktuellt förslag efter en manuell rätt
     await send(page, 'Vad heter Lo Exempel i förslaget?');
     await expect(log(page)).toContainText('Lo-förslaget heter Lo Exempel.');
     await readVoiceProposal(page, 'Lo Exempel');
+    await closeConversationText(page);
     const form = await editTableObject(page, 'Lo Exempel');
     await form.getByLabel('Namn', { exact: true }).fill('Lo Manuell');
     await form.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();

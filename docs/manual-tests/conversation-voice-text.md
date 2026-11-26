@@ -1,9 +1,9 @@
 # Manuella testfall för röst och text i samma samtal
 
-Fallen provar skrivna uppdrag med mikrofonen på och av, ordnade svar och
-uppläsning av samtalstexten. Anteckna commit, webbläsare och godkänt eller
-underkänt resultat vid körning. Kontrollerade ljudspår är tysta; faktiskt hört
-tal och skärmläsarens uppläsning redovisas separat.
+Fallen provar samma utkast i röst och text, fortsatt arbete efter ljudavbrott,
+ordnade svar och uppläsning av samtalstexten. Anteckna commit, webbläsare och
+godkänt eller underkänt resultat vid körning. Kontrollerade ljudspår är tysta.
+Faktiskt hört tal och skärmläsarens uppläsning redovisas separat.
 
 ## Konfigurerade användare
 
@@ -36,9 +36,10 @@ loggar in med Google i den kontrollerade installationen.
 
 ## Gemensamma svar
 
-### RÖSTTEXT-01: skrivet uppdrag med mikrofonen på får röst och text utan
+### RÖSTTEXT-01: följ samma cykel i röst och text efter ljudavbrott
 
-**Syfte:** Få svar med röst på ett skrivet uppdrag och läsa svaret senare.
+**Syfte:** Följ Alex blå cykel i samma samtal och granska utkastet efter att
+ljudet bryts.
 
 **Användare:** Alex.
 
@@ -58,7 +59,10 @@ loggar in med Google i den kontrollerade installationen.
   },
   "reference": "Chromium och kontrollerade text-/mediesvar enligt angiven separat förberedelse; faktisk röst eller uppläsning bedöms separat.",
   "outcomes": [
-    "Få svar med röst på ett skrivet uppdrag och läsa svaret senare."
+    "Ett skrivet svar går till rösten och kan läsas när textvyn öppnas igen.",
+    "Röstens cykelförslag syns i utkastet och den muntliga följdfrågan besvaras utifrån det skrivna valet.",
+    "Den talade låsfärgen hör till rätt cykel och frågan om märket väntar.",
+    "Efter ljudavbrottet kan Alex fortsätta i text och granska ett enda osparat förslag."
   ]
 }
 ```
@@ -70,6 +74,14 @@ loggar in med Google i den kontrollerade installationen.
 vid respektive UI-steg. Operatören sköter dess svar/fel och läser tekniska
 resurser separat. Utför arbetsflödet en gång.
 
+För separat lyssning, använd den riktiga utrustningen i den allmänna
+förberedelsen. Följ steg 5–8 i ett nytt samtal med tomt utkast. Lyssna efter
+cykelns namn när förslaget görs med stängd textvy. Med mikrofonen av ska
+frågorna komma i text. När du slår på den igen, ställ följdfrågan och jämför
+namnet du hör med textsvaret. Svara om låset och lyssna efter ändringen på
+rätt cykel. Anteckna vad som faktiskt hörs. Använd den kontrollerade
+installationen för att bryta ljudet vid den angivna ändringen.
+
 **Steg:**
 
 1. Slå på **Prata med Skyttel**. Skicka **Berätta om ordningen.** och låt
@@ -80,10 +92,24 @@ resurser separat. Utför arbetsflödet en gång.
 4. Välj **Nytt samtal** med mikrofonen på och läs beskedet om tomt utkast.
    Teknisk kommentaröverlämning granskas separat; faktiskt ljud hör till
    RÖSTTEXT-05.
+5. Stäng textvyn. Säg **Föreslå Alex blå cykel av typen Fordon.** Öppna
+   textvyn och välj **Visa utkastet**. Läs cykelns namn i förslaget.
+6. Slå av mikrofonen. Skriv **Till utflykten väljer jag Alex blå cykel. Fråga
+   om låsets färg och cykelns märke.** Läs båda frågorna.
+7. Slå på mikrofonen, stäng textvyn och fråga **Vilken cykel väljer jag till
+   utflykten?** Lyssna på svaret vid verkligt talprov. Öppna textvyn igen.
+8. Säg **Den har ett grönt lås.** Bryt ljudet enligt förberedelsen så snart
+   samtalstexten visar den genomförda ändringen. Skriv **Vad ändrades i
+   förslaget och vilken fråga återstår?** med mikrofonen av.
+9. Öppna cykelns förslag i utkastet och läs låsfärgen. Stäng dialogen och
+   kontrollera sparknappen. Skriv **Strunta i märket.** och kontrollera den
+   igen. Öppna **Rapporter** och läs ändringshistoriken.
+10. Välj **Tillbaka till arbetet**, öppna utkastet och välj **Spara hela
+    utkastet**. Läs sparbekräftelsen och ändringshistoriken.
 
 **Förväntat resultat:**
 
-- Röstrutan visar **Skyttel arbetar** även för det skrivna uppdraget.
+- Röstrutan visar **Arbetar** även för det skrivna uppdraget.
   Arbetsraden syns i samtalstexten. Arbetsbeskedet erbjuds som DOM-status en
   gång.
 - Svaret skickas till rösten och finns i samtalstexten när textvyn öppnas
@@ -93,6 +119,14 @@ resurser separat. Utför arbetsflödet en gång.
   gamla svar. Faktiskt hört tal kräver en verklig ljudkontroll.
 - Nytt samtals besked överlämnas till rösten när mikrofonen är på och dubbleras
   inte av samtalstextens uppläsning.
+- Det talade förslaget finns i utkastet. Den muntliga följdfrågan besvaras med
+  **Till utflykten väljer du Alex blå cykel.** Samma svar går att läsa.
+- Efter **Rösten avbröts** går det att skriva vidare. Svaret anger grönt lås
+  på Alex blå cykel och bara frågan **Vilket märke har cykeln?** återstår.
+- Utkastet visar en cykel med **Grönt (Text)** som låsfärg. Sparknappen är
+  spärrad medan märket väntar. När Alex avstår från märket går det att spara.
+  Ändringshistoriken är tom tills Alex väljer att spara. Därefter visas
+  sparbekräftelsen och cykeln finns i ändringshistoriken.
 
 ### RÖSTTEXT-02: mikrofonen av ger bara text och gamla svar spelas inte upp
 
@@ -187,8 +221,8 @@ resurser separat. Utför arbetsflödet en gång.
 
 1. Skicka **Första frågan.** och **Andra frågan.** utan att släppa svaren. Läs
    köbeskedet.
-2. Låt förberedelsens hela upprepade första svar och sedan **Andra svaret.**
-   komma. Läs båda i ordning.
+2. Låt båda svaren bli klara innan ljudet börjar. Spela upp det upprepade
+   första svaret. Låt det spela färdigt och läs båda svaren i ordning.
 3. Låt **Ett talat tillägg.** och inkommande aktivitet tillkomma. Läs den
    vanliga Skyttel-raden.
 4. Stäng av mikrofonen och skicka **Min egen text ska inte läsas.**. Fokusera
@@ -199,9 +233,10 @@ resurser separat. Utför arbetsflödet en gång.
 
 **Förväntat resultat:**
 
-- Ett meddelande väntar bakom det första. Båda fullständiga svaren överlämnas en
-  gång och i ordning. Å, ä och ö bevaras över svarens paketgränser. Båda
-  svaren finns i samtalstexten.
+- Ett meddelande väntar bakom det första. Båda fullständiga svaren överlämnas
+  en gång och i ordning. Det andra svaret väntar tills den första
+  uppläsningen är klar. Å, ä och ö bevaras över svarens paketgränser.
+  Båda svaren finns i samtalstexten.
 - Det talade tillägget finns som vanlig Skyttel-rad. Statusen för hjälpmedel
   erbjuder aldrig användarens egna rader eller svar som Skyttel säger med
   rösten.
@@ -209,9 +244,10 @@ resurser separat. Utför arbetsflödet en gång.
   väntar på sin tur. Öppnad textvy upprepar inte historiska svar. Ingen kontroll
   får fokus av att ett svar kommer.
 
-### RÖSTTEXT-04: ett skrivet obekräftat sparpåstående blir inget verifierat
+### RÖSTTEXT-04: bara en aktuell sparbegäran ger kvitto för cykeln
 
-**Syfte:** Behålla gränsen mellan ett modellsvar och ett sparkvitto.
+**Syfte:** Följ ett granskat cykelförslag från röst till text. Kontrollera
+hur kartan skiljer förslaget från ett bekräftat sparande i historiken.
 
 **Användare:** Alex.
 
@@ -226,12 +262,27 @@ resurser separat. Utför arbetsflödet en gång.
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/conversation-voice-text.spec.ts",
     "caseId": "RÖSTTEXT-04"
   },
   "reference": "Chromium och kontrollerade text-/mediesvar enligt angiven separat förberedelse; faktisk röst eller uppläsning bedöms separat.",
   "outcomes": [
-    "Behålla gränsen mellan ett modellsvar och ett sparkvitto."
+    "En läsfråga ger inget kvitto även om modellen säger Sparat.",
+    "Efter Avbryt och ett förtydligande finns cykeln kvar i utkastet och ingen sparbekräftelse visas.",
+    "En ny sparbegäran ger en bekräftelse och cykeln visas som sparad i kartan utan omladdning.",
+    "Sparkvittot visar tidpunkt, sparandets och användarens identitet samt ett tillagt objekt av typen Fordon."
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-whole-draft-save.test.ts",
+      "title": "an old whole-draft approval with a plain reply cannot save newer proposals and a rejected attempt needs fresh authority",
+      "purpose": "En rättelse under kontrollen av hela utkastet får inte sparas på den tidigare begäran."
+    }
   ]
 }
 ```
@@ -243,6 +294,9 @@ resurser separat. Utför arbetsflödet en gång.
 vid respektive UI-steg. Operatören sköter dess svar/fel och läser tekniska
 resurser separat. Utför arbetsflödet en gång.
 
+Det automatiska testet jämför också sparandets och användarens identitet
+och tidpunkten i historiken med det bekräftade utfallet från servern.
+
 **Steg:**
 
 1. Skicka **Berätta om utkastet.** och läs det förberedda obekräftade
@@ -252,13 +306,36 @@ resurser separat. Utför arbetsflödet en gång.
 3. Öppna **Visa utkastet** och läs **Utkastet är tomt.**. Öppna
    **Rapporter → Ändringshistorik** och läs **Inga genomförda sparanden.**.
    Välj **Tillbaka till arbetet**.
+4. Säg **Föreslå Alex blå cykel av typen Fordon.** Öppna utkastet och välj
+   **Visa förslaget: Alex blå cykel**. Läs typen **Fordon**, stäng dialogen
+   och stäng av mikrofonen. Skicka **Vilket fordon finns i mitt utkast?**
+   Läs cykelns namn i svaret. Förslaget finns kvar.
+5. Skicka **Spara hela utkastet.** Tryck på **Escape** i meddelandefältet
+   medan Skyttel arbetar.
+   Skicka **Jag menade den blå cykeln.** Läs svaret och kontrollera att
+   cykeln finns kvar i utkastet utan sparbekräftelse. Kartan visar fortfarande
+   cykeln med förslagets plustecken. Öppna **Rapporter → Ändringshistorik**
+   och läs **Inga genomförda sparanden.**.
+6. Välj **Tillbaka till arbetet**, granska cykeln igen och skicka
+   **Spara hela utkastet.** Läs sparbekräftelsen och kontrollera utkastet,
+   cykeln i kartan och ändringshistoriken utan att ladda om sidan. Läs
+   tidpunkten och vem som sparade. Välj **Identifiera sparandet och
+   användaren** och läs identifierarna och tidpunkten. Välj **Visa
+   ändringarna** och läs uppgifterna före och efter sparandet.
 
 **Förväntat resultat:**
 
 - Påståendet står i samtalstexten och överlämnas som obekräftad samtalstext till
   rösten. Det är inget verifierat resultat.
 - Ingen grön bock eller **Sparat** -status visas. Röstrutan återgår till
-  **Lyssnar**. Kartan är tom och inga sparförsök eller kvitton har skapats.
+  **Lyssnar** efter läsfrågan.
+- Det sena svaret efter **Avbryt** och förtydligandet lämnar cykeln osparad.
+- Först den nya sparbegäran ger **Utkastet är sparat**. Utkastet är tomt,
+  kartan visar cykeln som sparad och historiken innehåller en ändringsgrupp.
+  Sparkvittot visar tidpunkten, **Alex Exempel**, sparandets och användarens
+  identitet samt **1 objekt**. Det står **Fanns inte i kartan** före
+  sparandet. Efter sparandet visas namnet **Alex blå cykel** och typen
+  **Fordon**.
 
 ## Tillgänglighetsbedömning
 
@@ -372,3 +449,56 @@ användarrader, redan talade svar eller gammal samtalstext.
 
 - Bara nya tysta Skyttel-svar hörs i hjälpmedlets tur.
 - Röst och skärmläsare dubblerar inte svar eller historiska rader.
+
+### RÖSTTEXT-07: ett skrivet förtydligande hörs efter Avbryt
+
+**Syfte:** Fortsätt i text efter att ha tystat en hörbar replik. Kontrollera
+att den öppna röstanslutningen spelar upp det nya svaret från början.
+
+**Användare:** Alex i den kontrollerade installationen.
+
+**Förutsättningar:** Dator, textvyn öppen och mikrofonen på.
+
+**Automatiskt motsvarande test:**
+[conversation-voice-text.spec.ts](../../tests/integration/conversation-voice-text.spec.ts),
+RÖSTTEXT-07.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/conversation-voice-text.spec.ts",
+    "caseId": "RÖSTTEXT-07"
+  },
+  "reference": "Chromium med styrt modellsvar och syntetiska toner på den verkliga ljudvägen.",
+  "outcomes": [
+    "Avbryt tystar uppläsningen. Ett sent ljud från den gamla repliken hörs inte innan förtydligandet.",
+    "Ett skrivet förtydligande ger ett nytt svar som hörs från början. Mikrofonen är på och samtalstexten visar förtydligandet och svaret."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Separat förberedelse:** Följ
+[tidslinjen för RÖSTTEXT-07](voice-controls-preparation.md#tidslinje-rösttext-07)
+för de styrda ljuden och modellens svar.
+
+**Steg:**
+
+1. Låt Skyttel tala enligt tidslinjen. Välj **Avbryt** i röstrutan medan det
+   hörs. Läs **Lyssnar**.
+2. Låt den gamla replikens sena ljud komma enligt tidslinjen. Lyssna och
+   kontrollera att mikrofonen fortfarande är på.
+3. Skicka **Jag menar cykeln.** utan att tala. Lyssna från början av svaret
+   och läs förtydligandet och svaret i samtalstexten.
+
+**Förväntat resultat:**
+
+- Pågående ljud tystnar och det sena ljudet förblir tyst före förtydligandet.
+- Svaret på förtydligandet hörs från början i samma röstanslutning. Mikrofonen
+  är på. Samtalstexten visar **Jag menar cykeln.** och **Jag förstår att du
+  menar cykeln.**

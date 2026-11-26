@@ -156,7 +156,7 @@ test('an available choice can reach an enabled pair with no enabled intermediate
             modelChoice: choice,
             enabledModelChoices: [
               { model: 'gpt-6.1-terra', effort: 'high' },
-              { model: 'gpt-6.1-sol', effort: 'low' },
+              { model: 'gpt-6.2-sol', effort: 'low' },
             ],
           },
           configureModel: async (next) => {
@@ -173,10 +173,10 @@ test('an available choice can reach an enabled pair with no enabled intermediate
     .getByRole('dialog')
     .getByRole('button', { name: 'GPT-6.1 Terra', exact: true })
     .click();
-  const alternative = page.getByRole('button', { name: 'Välj GPT-6.1 Sol, Låg', exact: true });
+  const alternative = page.getByRole('button', { name: 'Välj GPT-6.2 Sol, Låg', exact: true });
   await expect.element(alternative, { timeout: 1000 }).toBeVisible();
   await alternative.click();
-  await expect.element(page.getByRole('radio', { name: 'GPT-6.1 Sol', exact: true })).toBeChecked();
+  await expect.element(page.getByRole('radio', { name: 'GPT-6.2 Sol', exact: true })).toBeChecked();
   await page.getByRole('button', { name: 'Välj GPT-6.1 Terra, Hög', exact: true }).click();
   await expect
     .element(page.getByRole('radio', { name: 'GPT-6.1 Terra', exact: true }))

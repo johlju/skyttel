@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import type { Page } from '@playwright/test';
 import { contrast } from '../support/accessibility.js';
 import { createHousehold, signIn, utilityButton } from '../support/client.js';
 import {
@@ -11,16 +13,53 @@ import {
 } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
-import { liveProvider } from '../support/live-provider.js';
+import { liveProvider, speak } from '../support/live-provider.js';
 import { advanceActiveLogin } from '../support/session-time.js';
 import { expect, test } from '../support/test.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
+async function prepareMissingDelivery(page: Page) {
+  const preparation = await readFile(
+    new URL('../../docs/manual-tests/conversation-delivery.md', import.meta.url),
+    'utf8',
+  );
+  const script = [...preparation.matchAll(/```javascript\n([\s\S]*?)\n```/g)]
+    .map((match) => match[1])
+    .find((source) => source.includes('window.skyttelDeliveryPreparation ='));
+  if (!script) throw new Error('Missing LEV-04 delivery preparation');
+  await page.addInitScript({ content: script });
+  return {
+    restoreConnection: () => page.evaluate('window.skyttelDeliveryPreparation.restoreConnection()'),
+    dropBeforeNextMessage: () =>
+      page.evaluate('window.skyttelDeliveryPreparation.dropBeforeNextMessage()'),
+  };
+}
+
+async function readMapLayout(page: Page) {
+  // The narrow text view covers the map. Returning from Settings restores
+  // its layout after the retained region has already reappeared in the DOM.
+  const region = page.getByRole('region', { name: 'Rymdkarta', exact: true, includeHidden: true });
+  const navigation = page.getByRole('navigation', { name: 'Kartans verktyg', exact: true });
+  await Promise.all([expect(region).toBeVisible(), expect(navigation).toBeVisible()]);
+  const [map, tools] = await Promise.all([region.boundingBox(), navigation.boundingBox()]);
+  if (!map || !tools) throw new Error('Missing map or map tools');
+  return {
+    mapSize: { width: map.width, height: map.height },
+    toolsPosition: { x: tools.x, y: tools.y },
+  };
+}
+
 test('LEV-04: saknad leveranskanal kräver uttryckliga nya försök för text och röst', async ({
   page,
 }) => {
+  const viewports = [
+    { width: 1280, height: 800 },
+    { width: 390, height: 800 },
+    { width: 320, height: 600 },
+  ];
   const full = `${'Svaret efter ditt uttryckliga återförsök. '.repeat(80)}Sista raden i hela svaret.`;
-  const model = textModel(() => [modelMessage(full)]);
+  const voiceReply = 'Hela röstsvarstexten efter återanslutning.';
+  const model = textModel(() => [modelMessage(model.requests.length === 1 ? full : voiceReply)]);
   const live = liveProvider();
   const app = await createInstallation(undefined, {
     modelFetch: model.provider,
@@ -34,21 +73,13 @@ test('LEV-04: saknad leveranskanal kräver uttryckliga nya försök för text oc
   });
   try {
     await page.addInitScript({ content: liveBrowserFixtureSource });
-    await page.addInitScript(() => {
-      const originalWebSocket = new Proxy(window.WebSocket, {
-        construct(target, args) {
-          const socket = Reflect.construct(target, args) as WebSocket;
-          if (String(args[0]).endsWith('/delivery'))
-            Object.assign(window, { deliverySocket: socket });
-          return socket;
-        },
-      });
-      Object.assign(window, { originalWebSocket });
-      Object.defineProperty(window, 'WebSocket', { configurable: true, value: undefined });
-    });
+    const delivery = await prepareMissingDelivery(page);
     await signIn(page.request, app.origin);
     await createHousehold(page.request, app.origin, 'Leveransprov');
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.setViewportSize(viewports[0]);
     await page.goto(app.origin);
+    await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', 'dark');
     await startConversationWithText(page);
     const textView = page.getByRole('region', { name: 'Skriv till Skyttel', exact: true });
     const input = textView.getByRole('textbox', { name: 'Meddelande till Skyttel' });
@@ -74,61 +105,47 @@ test('LEV-04: saknad leveranskanal kräver uttryckliga nya försök för text oc
         microphoneTracks: [{ state: 'ended' }],
       });
     expect(live.requests).toEqual([]);
-    await page.evaluate(() => {
-      Object.defineProperty(window, 'WebSocket', {
-        configurable: true,
-        value: (window as Window & { originalWebSocket?: typeof WebSocket }).originalWebSocket,
-      });
-    });
+    await delivery.restoreConnection();
     // Restoring the transport alone never sends the retained instruction.
     await expect(input).toHaveValue('Beskriv cykeln.');
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
     expect(messages).toEqual([]);
     expect(live.requests).toEqual([]);
+    const openLayouts = new Map<number, Awaited<ReturnType<typeof readMapLayout>>>();
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport);
+      await expect(textView).toBeInViewport({ ratio: 1 });
+      openLayouts.set(viewport.width, await readMapLayout(page));
+    }
+    await page.setViewportSize(viewports[0]);
     await send.click();
     await expect(input).toHaveValue('');
     const delivered = textView.getByRole('log', { name: 'Samtalstext' });
     await expect(delivered).toContainText(full);
     expect(messages).toHaveLength(1);
     expect(model.requests).toHaveLength(1);
-    await page.emulateMedia({ colorScheme: 'dark' });
-    await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', 'dark');
-    for (const width of [1280, 390, 320]) {
-      await page.setViewportSize({ width, height: width === 320 ? 600 : 800 });
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport);
       await expect(textView).toBeInViewport({ ratio: 1 });
       await expect(delivered).toContainText(full);
       await delivered.getByText(/Sista raden i hela svaret/).scrollIntoViewIfNeeded();
       await expect(
         textView.getByRole('textbox', { name: 'Meddelande till Skyttel' }),
       ).toBeVisible();
+      await expect.poll(() => readMapLayout(page)).toEqual(openLayouts.get(viewport.width));
       await (await utilityButton(page, 'Inställningar')).click();
       const heading = page.getByRole('heading', { level: 1, name: 'Inställningar', exact: true });
       await expect(heading).toBeFocused();
       await expect(heading).toBeInViewport({ ratio: 1 });
       await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
+      await expect.poll(() => readMapLayout(page)).toEqual(openLayouts.get(viewport.width));
     }
     await turnMicrophoneOn(page);
     await expect(voiceBox(page)).toHaveText('Lyssnar');
     expect(live.requests).toHaveLength(1);
-    // The server also proves rejection if a once-ready channel disappears
-    // before admission; that is not an unknown save or an accepted task.
-    await page.route('**/messages', async (route) => {
-      await page.evaluate(async () => {
-        const socket = (window as Window & { deliverySocket?: WebSocket }).deliverySocket;
-        if (!socket) throw new Error('The original delivery socket must exist');
-        await new Promise<void>((resolve) => {
-          socket.addEventListener('close', () => resolve(), { once: true });
-          socket.close();
-        });
-      });
-      await route.continue();
-    });
+    await delivery.dropBeforeNextMessage();
     await input.fill('Skapa inget nytt.');
-    const denied = page.waitForResponse(
-      (response) => response.url().endsWith('/messages') && response.status() === 409,
-    );
     await send.click();
-    expect((await (await denied).json()).error).toBe('assistant_delivery_unavailable');
     await expect(textView.getByRole('alert')).toHaveText(
       'Instruktionen skickades inte. Skyttel kunde inte öppna anslutningen för hela svaret. Texten finns kvar; försök igen när kontakten fungerar.',
     );
@@ -137,10 +154,18 @@ test('LEV-04: saknad leveranskanal kräver uttryckliga nya försök för text oc
       'Skapa inget nytt.',
     );
     expect(model.requests).toHaveLength(1);
+    speak(live, 'Beskriv cykeln med rösten.');
+    await expect(delivered).toContainText(voiceReply);
+    await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true');
+    await expect(input).toHaveValue('Skapa inget nytt.');
+    expect(model.requests).toHaveLength(2);
+    expect(live.requests).toHaveLength(1);
+    const { toolsPosition } = await readMapLayout(page);
     await closeConversationText(page);
+    await expect(textView).not.toBeVisible();
     const tools = page.getByRole('navigation', { name: 'Kartans verktyg' });
     await expect(tools).toBeInViewport({ ratio: 1 });
-    await expect.poll(async () => (await tools.boundingBox())?.y).toBeLessThan(50);
+    await expect.poll(() => readMapLayout(page)).toMatchObject({ toolsPosition });
   } finally {
     await page.close();
     await app.close();

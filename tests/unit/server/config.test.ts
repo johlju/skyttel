@@ -6,11 +6,20 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe('installation configuration', () => {
   test('only explicit supported conversation model and reasoning combinations can be activated', () => {
-    const choices = [{ model: 'gpt-6.1-sol', effort: 'medium' }];
+    const choices = [{ model: 'gpt-6.2-sol', effort: 'medium' }];
     expect(
       readConfig({
         ...configurationEnvironment(),
         SKYTTEL_CONVERSATION_MODELS: JSON.stringify(choices),
+      }).conversationModels,
+    ).toEqual(choices);
+    expect(
+      readConfig({
+        ...configurationEnvironment(),
+        SKYTTEL_CONVERSATION_MODELS: JSON.stringify([
+          { model: 'gpt-6.1-sol', effort: 'medium' },
+          ...choices,
+        ]),
       }).conversationModels,
     ).toEqual(choices);
     expect(
@@ -22,6 +31,7 @@ describe('installation configuration', () => {
       '{}',
       '[null]',
       '[{"model":"unknown","effort":"high"}]',
+      '[{"model":"gpt-6.0-sol","effort":"high"}]',
       '[{"model":"gpt-6.1-terra","effort":"max"}]',
     ])
       expect(() =>

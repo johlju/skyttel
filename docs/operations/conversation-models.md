@@ -7,7 +7,7 @@ verifierar varken OpenAI-kontots åtkomst eller modellens kvalitet.
 ## Konfiguration
 
 `SKYTTEL_CONVERSATION_MODELS` är en JSON-lista med objekt som har
-`model` och `effort`. Modellerna är `gpt-6.1-terra` och `gpt-6.1-sol`;
+`model` och `effort`. Modellerna är `gpt-6.1-terra` och `gpt-6.2-sol`;
 nivåerna är `low`, `medium` och `high`. Om variabeln saknas är alla sex
 kombinationer aktiverade. En tom lista stänger av modellarbete utan att
 radera personliga val. Ogiltig konfiguration hindrar serverstart.
@@ -17,12 +17,14 @@ Exempel med enbart höga nivåer:
 ```sh
 export SKYTTEL_CONVERSATION_MODELS='[
   {"model":"gpt-6.1-terra","effort":"high"},
-  {"model":"gpt-6.1-sol","effort":"high"}
+  {"model":"gpt-6.2-sol","effort":"high"}
 ]'
 ```
 
 Ändra installationens miljö och starta om servern enligt dess vanliga
 driftsrutin. Leverantörens modellista lägger aldrig automatiskt till val.
+Befintliga Sol-val för installationen, användaren och sparade samtal använder
+automatiskt den nya versionen med samma resonemangsnivå.
 Utan sparat personligt val används Terra/hög. Ett avstängt standardval
 eller sparat val bevaras med ett felbesked; användaren väljer själv ett
 aktiverat alternativ. Personliga val hör till Skyttel-användaren och
@@ -100,7 +102,7 @@ befintliga medgivande och åtkomstregler.
 De stödda profilerna har 1 050 000 kontexttoken och högst 128 000
 utmatningstoken enligt de officiella
 [Terra](https://developers.openai.com/api/docs/models/gpt-6.1-terra)- och
-[Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol)-sidorna,
-kontrollerade 2026-11-03. `store:false` behålls. Kostnadsöversikten visar
+[Sol](https://developers.openai.com/api/docs/models/gpt-6.2-sol)-sidorna,
+kontrollerade i november 2026. `store:false` behålls. Kostnadsöversikten visar
 saknade modellpriser som okända; den befintliga prislistan ger inte ett
 pris för Terra. Använd faktisk leverantörsdebitering för avstämning.

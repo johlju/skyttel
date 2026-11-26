@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, expect, test, vi } from 'vitest';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
@@ -8,6 +8,7 @@ import {
   startConversationWithVoice,
 } from '../../support/conversation-dom.js';
 import { StandaloneConversation } from '../../support/conversation-harness.js';
+import { deferredResponse } from '../../support/conversation-hook.js';
 import { closeVoiceConnection, StandaloneVoice } from '../../support/voice-harness.js';
 
 class Track extends EventTarget {
@@ -203,6 +204,7 @@ function meteredAudio() {
   vi.stubGlobal(
     'AudioContext',
     class {
+      audioWorklet = { async addModule() {} };
       get state() {
         return context.state;
       }
@@ -468,57 +470,145 @@ test("the bars follow the microphone's sound level while the user talks", async 
   await waitFor(() => expect(tallest()).toBe(0));
 });
 
-test('Avbryt discards the interrupted output across long pauses and permits a fresh answer', async () => {
+test('Avbryt keeps capturing the correction while interrupted speech drains', async () => {
   const { signals } = meteredAudio();
-  const cancel = vi.fn(async () => {});
-  const { component, view, audios, changed, track, getUserMedia } = setup();
-  const show = (phase: TextAssistantView['phase']) =>
-    component.rerender(
-      <StandaloneVoice
-        householdId="linden"
-        assistant={{ ...view, phase }}
-        onAssistant={changed}
-        onAccessLost={() => {}}
-        onCancel={cancel}
-      />,
-    );
-  show('ready');
+  const { track, getUserMedia, calls } = setup();
   const { peer, remote } = await startWithAudio();
   signals.set(remote, 22);
   await screen.findByText('Skyttel talar');
   await userEvent.click(screen.getByRole('button', { name: 'Avbryt' }));
-  expect(peer.connectionState).toBe('closed');
-  expect(remote.stop).toHaveBeenCalled();
-  expect((audios[0].srcObject as unknown as Stream)?.getTracks() ?? []).not.toContain(remote);
-  expect(audios).toHaveLength(1);
-  expect(track.stop).not.toHaveBeenCalled();
-  expect(cancel).toHaveBeenCalledOnce();
-  expect(document.activeElement).toBe(microphoneButton());
-  await waitFor(() => expect(Peer.all[1]?.channel.readyState).toBe('open'));
-  vi.useFakeTimers();
-  signals.set(remote, 0);
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(1500);
-  });
-  signals.set(remote, 22);
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(200);
-  });
-  expect(screen.queryByText('Skyttel talar')).toBeNull();
-  vi.useRealTimers();
-  await act(async () =>
-    Peer.all[1].channel.emit({ type: 'session.started', session: { id: 'new-provider-session' } }),
-  );
-  expect(voiceBox()?.textContent).toBe('Lyssnar');
+  expect(peer.connectionState).toBe('connected');
   expect(track.enabled).toBe(true);
   expect(getUserMedia).toHaveBeenCalledOnce();
-  signals.set(Peer.all[1].remote, 22);
-  await screen.findByText('Skyttel talar');
-  signals.set(Peer.all[1].remote, 0);
+  expect(calls.some(({ url }) => url.endsWith('/interrupt'))).toBe(true);
   await screen.findByText('Lyssnar');
-  show('working');
+  expect(document.activeElement).toBe(microphoneButton());
+  expect(remote.stop).not.toHaveBeenCalled();
+});
+
+test.each([
+  { action: 'interrupt', success: false },
+  { action: 'interrupt', success: true },
+  { action: 'stop', success: false },
+  { action: 'stop', success: true },
+])(
+  'a typed correction waits for confirmed interruption: $action success=$success',
+  async ({ action, success }) => {
+    const { signals } = meteredAudio();
+    const { component, view } = setup();
+    component.unmount();
+    const heldResponse = deferredResponse();
+    const messages: unknown[] = [];
+    const voiceResult = (phase: string) => ({
+      voice: { id: 'voice', phase, seconds: null, usageFinal: false },
+      assistant: view,
+      sdp: 'answer',
+    });
+    const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith(`/${action}`)) return heldResponse.promise;
+      if (url.endsWith('/stop')) return Response.json({}, { status: 503 });
+      if (url.includes('/voice'))
+        return Response.json(voiceResult(action === 'stop' ? 'working' : 'listening'));
+      if (url.endsWith('/messages')) messages.push(JSON.parse(String(init?.body)));
+      return Response.json(
+        init?.method === 'POST' || url.endsWith('/text-session') ? view : { available: true },
+      );
+    });
+    vi.stubGlobal('fetch', fetch);
+    render(
+      <StandaloneConversation
+        householdId="linden"
+        onMapChange={vi.fn()}
+        onAccessLost={vi.fn()}
+        onSelectItem={async () => false}
+      />,
+    );
+    await startConversationWithVoice();
+    await openConversationText();
+    await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
+    const peer = Peer.all[0];
+    await act(async () =>
+      peer.channel.emit({ type: 'session.started', session: { id: 'provider' } }),
+    );
+    if (action === 'interrupt') signals.set(peer.remote, 22);
+    await screen.findByText(action === 'interrupt' ? 'Skyttel talar' : 'Arbetar');
+    const input = screen.getByRole<HTMLTextAreaElement>('textbox', {
+      name: 'Meddelande till Skyttel',
+    });
+    const text = 'Jag menar cykeln.';
+    fireEvent.change(input, { target: { value: text } });
+    await userEvent.click(screen.getByRole('button', { name: 'Avbryt' }));
+    expect(fetch.mock.calls.some(([url]) => url.endsWith(`/${action}`))).toBe(true);
+    await userEvent.click(screen.getByRole('button', { name: 'Skicka' }));
+    expect(messages).toEqual([]);
+    await act(async () =>
+      heldResponse.resolve(
+        success
+          ? Response.json(voiceResult(action === 'stop' ? 'closed' : 'listening'))
+          : Response.json({}, { status: 503 }),
+      ),
+    );
+    expect(messages).toEqual(success ? [expect.objectContaining({ text })] : []);
+    expect(input.value).toBe(success ? '' : text);
+    expect(screen.getByRole('log', { name: 'Samtalstext' }).textContent?.includes(text)).toBe(
+      success,
+    );
+  },
+);
+
+test('Avbryt uses the provider timeline when output transcripts lag playback', async () => {
+  const { signals } = meteredAudio();
+  const { calls } = setup();
+  const postMessage = vi.fn();
+  vi.stubGlobal(
+    'AudioWorkletNode',
+    class {
+      port = { postMessage, close() {} };
+      connect() {}
+      disconnect() {}
+    },
+  );
+  const clock = vi.spyOn(performance, 'now').mockReturnValue(10_000);
+  const { peer, remote } = await startWithAudio();
+  const input = (end: number) =>
+    peer.channel.emit({
+      type: 'session.input_transcript.delta',
+      start_ms: end - 10,
+      end_ms: end,
+      delta: 'Ord ',
+    });
+  clock.mockReturnValue(10_100);
+  await act(async () => input(5100));
+  clock.mockReturnValue(10_400);
+  await act(async () =>
+    peer.channel.emit({
+      type: 'session.output_transcript.delta',
+      start_ms: 5050,
+      end_ms: 6000,
+      delta: 'Svar.',
+    }),
+  );
+  signals.set(remote, 22);
+  await screen.findByText('Skyttel talar');
+  clock.mockReturnValue(10_500);
   await userEvent.click(screen.getByRole('button', { name: 'Avbryt' }));
-  expect(cancel).toHaveBeenCalledTimes(2);
+  expect(calls.find(({ url }) => url.endsWith('/interrupt'))?.body).toEqual({
+    interruptedThroughMs: 5500,
+  });
+  for (const start of [-1, 5600]) {
+    await act(async () =>
+      peer.channel.emit({
+        type: 'session.input_transcript.delta',
+        start_ms: start,
+        end_ms: 5501,
+        delta: 'Ord ',
+      }),
+    );
+  }
+  await act(async () => input(5500));
+  expect(postMessage).not.toHaveBeenCalledWith('correction');
+  await act(async () => input(5501));
+  expect(postMessage).toHaveBeenCalledWith('correction');
 });
 
 test('a screen reader is told Lyssnar once, Skyttel arbetar, and Mikrofonen är av when the box goes', async () => {
@@ -564,7 +654,7 @@ test('a screen reader is told Lyssnar once, Skyttel arbetar, and Mikrofonen är 
   expect(announced()).toBe(first);
   phase = 'working';
   await waitFor(() => expect(announcement()).toBe('Skyttel arbetar'), { timeout: 2000 });
-  expect(voiceBox()?.textContent).toBe('Skyttel arbetar');
+  expect(voiceBox()?.textContent).toBe('Arbetar');
   phase = 'listening';
   signals.set(remote, 22);
   await screen.findByText('Skyttel talar');
@@ -619,6 +709,102 @@ test('with the microphone off the connection stays while Skyttel finishes, and t
   expect(calls.filter((call) => call.url === base)).toHaveLength(1);
   expect(calls.some((call) => call.url.endsWith('/stop'))).toBe(false);
 });
+
+test.each(['resume', 'cancel', 'written work', 'spoken work'] as const)(
+  'the paused microphone waits for voice to see the written reply before capture (%s)',
+  async (action) => {
+    const { track, view, component, changed, accessLost } = setup();
+    await startWithAudio();
+    fireEvent.click(microphoneButton());
+    expect(track.enabled).toBe(false);
+
+    let shown: TextAssistantView = {
+      ...view,
+      revision: view.revision + 1,
+      questionPending: true,
+    };
+    const show = () =>
+      component.rerender(
+        <StandaloneVoice
+          householdId="linden"
+          assistant={shown}
+          onAssistant={changed}
+          onAccessLost={accessLost}
+        />,
+      );
+    show();
+    let answerPoll: ((response: Response) => void) | undefined;
+    const pausedPoll = vi.fn();
+    const response = (url: string) =>
+      Response.json({
+        assistant: shown,
+        voice: {
+          id: 'voice-session',
+          phase: url.endsWith('/stop')
+            ? 'closed'
+            : shown.taskSource === 'voice'
+              ? 'working'
+              : 'listening',
+          seconds: null,
+          usageFinal: false,
+        },
+      });
+    vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
+      if (!url.endsWith('/poll')) return response(url);
+      pausedPoll(JSON.parse(String(init.body)));
+      if (answerPoll) return response(url);
+      return new Promise<Response>((resolve) => {
+        answerPoll = resolve;
+      });
+    });
+
+    fireEvent.click(microphoneButton());
+    expect(track.enabled).toBe(false);
+    expect(microphoneButton().getAttribute('aria-pressed')).toBe('false');
+    await waitFor(() =>
+      expect(pausedPoll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          revision: shown.revision,
+          draftVersion: shown.review.version,
+          contentVersion: shown.review.contentVersion,
+          microphoneOn: false,
+        }),
+      ),
+    );
+    expect(track.enabled).toBe(false);
+    if (action === 'cancel') fireEvent.click(microphoneButton());
+    const workStarted = action === 'written work' || action === 'spoken work';
+    if (workStarted) {
+      shown = {
+        ...shown,
+        revision: shown.revision + 1,
+        phase: 'working',
+        taskSource: action === 'written work' ? 'text' : 'voice',
+      };
+      show();
+    }
+    await act(async () => answerPoll?.(response('poll')));
+    if (workStarted) {
+      changed.mockClear();
+      await waitFor(() => {
+        expect(pausedPoll).toHaveBeenLastCalledWith(
+          expect.objectContaining({ revision: shown.revision, microphoneOn: false }),
+        );
+        expect(changed).toHaveBeenCalledWith(shown);
+      });
+    }
+    const resumes = action === 'resume' || action === 'spoken work';
+    expect(track.enabled).toBe(resumes);
+    expect(microphoneButton().getAttribute('aria-pressed')).toBe(String(resumes));
+    if (action === 'written work') {
+      shown = { ...shown, phase: 'ready' };
+      show();
+      await waitFor(() => expect(changed).toHaveBeenCalledWith(shown));
+      expect(track.enabled).toBe(false);
+    }
+    expect(Peer.all).toHaveLength(1);
+  },
+);
 
 test('the muted connection outlasts delayed delegation and quiet gaps in the answer', async () => {
   const { track, calls } = setup();
@@ -688,14 +874,14 @@ test('a task that was said is worked through with the microphone off, including 
     Peer.all[0].channel.emit({ type: 'session.started', session: { id: 'provider-session' } });
     await vi.advanceTimersByTimeAsync(600);
   });
-  expect(voiceBox()?.textContent).toBe('Skyttel arbetar');
+  expect(voiceBox()?.textContent).toBe('Arbetar');
   fireEvent.click(microphoneButton());
   expect(track.enabled).toBe(false);
   await act(async () => {
     await vi.advanceTimersByTimeAsync(3000 * 3);
   });
   // The box stays for the task that was said, with the stop icon, and the microphone can be turned on.
-  expect(voiceBox()?.textContent).toBe('Skyttel arbetar');
+  expect(voiceBox()?.textContent).toBe('Arbetar');
   expect(screen.getByRole('button', { name: 'Avbryt' })).toBeDefined();
   expect(microphoneButton().disabled).toBe(false);
   expect(urls.some((url) => url.endsWith('/stop'))).toBe(false);
@@ -717,18 +903,22 @@ test.each(['a new conversation', 'revoked access'])(
   async (ending) => {
     const { component } = setup();
     component.unmount();
+    let view = assistant();
+    let freshVoiceStart: Record<string, unknown> | undefined;
     vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/text-assistant') && init?.body && JSON.parse(String(init.body)).previousId)
+        view = { ...assistant(), id: 'next-text-session' };
+      if (url.endsWith('/next-text-session/voice'))
+        freshVoiceStart = JSON.parse(String(init?.body));
       if (url.endsWith('/messages')) return Response.json({ error: 'forbidden' }, { status: 403 });
       if (url.includes('/voice'))
         return Response.json({
           voice: { id: 'voice', phase: 'listening', seconds: null, usageFinal: false },
-          assistant: assistant(),
+          assistant: view,
           sdp: 'answer',
         });
       return Response.json(
-        init?.method === 'POST' || url.endsWith('/text-session')
-          ? assistant()
-          : { available: true },
+        init?.method === 'POST' || url.endsWith(`/${view.id}`) ? view : { available: true },
       );
     });
     render(
@@ -771,18 +961,22 @@ test.each(['a new conversation', 'revoked access'])(
     expect(screen.getByRole('status').textContent).toContain('Nya förslag är osparade');
     expect(voiceBox()?.textContent).toBe('Lyssnar');
     const newConversation = () =>
-      screen.getByRole('button', { name: 'Nytt samtal' }) as HTMLButtonElement;
+      within(
+        screen.getByRole('region', { name: 'Skriv till Skyttel' }),
+      ).getByRole<HTMLButtonElement>('button', { name: 'Nytt samtal' });
     if (ending === 'a new conversation') {
       expect(log.textContent).toContain('Kim betalar för musiken.');
       await userEvent.click(newConversation());
+      await waitFor(() => expect(freshVoiceStart).toMatchObject({ newConversation: true }));
       await fragment('output', 'För sent.', 7000, 7500);
       expect(log.textContent).not.toContain('För sent.');
     } else {
       await userEvent.type(screen.getByLabelText('Meddelande till Skyttel'), 'Privat text');
       await userEvent.click(screen.getByRole('button', { name: 'Skicka' }));
     }
+    const currentLog = () => screen.getByRole('log', { name: 'Samtalstext' });
     const emptied = 'Här visas det du och Skyttel säger och skriver.';
-    await waitFor(() => expect(log.textContent).toBe(emptied));
+    await waitFor(() => expect(currentLog().textContent).toBe(emptied));
     if (ending === 'revoked access') {
       expect(newConversation().disabled).toBe(false);
       // The consent for the visit still applies, so the next conversation starts directly.
@@ -790,7 +984,7 @@ test.each(['a new conversation', 'revoked access'])(
       await waitFor(() => expect(newConversation().disabled).toBe(false));
     }
     expect(queryConsentBox()).toBeNull();
-    expect(log.textContent).toBe(emptied);
+    expect(currentLog().textContent).toBe(emptied);
   },
 );
 
@@ -885,6 +1079,8 @@ test('voice starts only on request, gates microphone on protocol readiness and s
   expect(calls[0].body).toBeUndefined();
   expect(calls[1].body).toEqual({
     sdp: 'synthetic-offer',
+    confirmBrowserInput: true,
+    freshConversationControls: true,
     revision: 2,
     draftVersion: 3,
     contentVersion: 1,
@@ -1436,7 +1632,7 @@ test('the microphone cannot be turned on while Skyttel works with a written mess
 });
 
 test.each([
-  ['working', 'Skyttel arbetar'],
+  ['working', 'Arbetar'],
   ['recovery', 'Lyssnar'],
   ['closed', null],
   ['closing', null],
@@ -1606,6 +1802,67 @@ test('an older voice reply cannot overwrite a newer displayed text revision', as
     speakerActive: false,
   });
   expect(changed).not.toHaveBeenCalled();
+});
+
+test('a refused spoken request replaces an earlier unconfirmed reply and is announced once', async () => {
+  const { view } = setup();
+  let refused = false;
+  const response = {
+    id: 'earlier-reply',
+    revision: view.revision,
+    text: 'Det tidigare svaret.',
+    questionPending: false,
+  };
+  const refusal = {
+    id: 'refused-request',
+    text: 'Uppdraget startade inte. Säg uppdraget igen när anslutningen fungerar.',
+  };
+  vi.mocked(fetch).mockImplementation(async (url) => {
+    const path = String(url);
+    if (path === base.replace(/\/voice$/, '')) return Response.json(view);
+    return Response.json({
+      sdp: 'synthetic-answer',
+      assistant: view,
+      voice: {
+        id: 'voice-session',
+        phase: 'listening',
+        seconds: null,
+        usageFinal: false,
+        ...(path.endsWith('/poll') ? { response, ...(refused ? { refusal } : {}) } : {}),
+      },
+    });
+  });
+  vi.useFakeTimers();
+  await act(async () => {
+    fireEvent.click(microphoneButton());
+  });
+  expect(Peer.all[0]?.channel.readyState).toBe('open');
+  await act(async () => {
+    Peer.all[0].channel.emit({ type: 'session.started', session: { id: 'provider-session' } });
+    await vi.advanceTimersByTimeAsync(16_000);
+  });
+  expect(screen.getByRole('region', { name: 'Samtalsnotis' }).textContent).toContain(
+    'Uppläsningen kunde inte bekräftas.',
+  );
+  refused = true;
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000);
+  });
+  expect(screen.getByRole('region', { name: 'Samtalsnotis' }).textContent).toContain(refusal.text);
+  const live = document.querySelector('.notice-announcement[aria-live="polite"]');
+  const announcement = live?.firstElementChild;
+  expect(announcement?.textContent).toBe(refusal.text);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(16_000);
+  });
+  expect(live?.firstElementChild).toBe(announcement);
+  refused = false;
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000);
+  });
+  expect(screen.queryByRole('region', { name: 'Samtalsnotis' })).toBeNull();
+  expect(microphoneButton().getAttribute('aria-pressed')).toBe('true');
+  expect(voiceBox()?.textContent).not.toContain('Sparat');
 });
 
 test('expired login authority stops capture and asks for the entire voice instruction again', async () => {

@@ -610,7 +610,9 @@ for (const width of [1280, 320]) {
       await page.goto(`${installation.origin}/households/${data.household.id}`);
       await page.getByRole('button', { name: 'Utkast', exact: true }).click();
       const message = page.getByLabel('Meddelande till Skyttel', { exact: true });
+      if (width === 320) await page.getByRole('button', { name: 'Text', exact: true }).click();
       await message.fill('Min oskickade fråga ska finnas kvar');
+      if (width === 320) await page.getByRole('button', { name: /^Visa utkastet/ }).click();
       const draft = page.getByRole('region', { name: 'Utkastet', exact: true });
       await readRemovalProposals(page, await data.read());
       const discard = draft.getByRole('button', { name: 'Kasta hela utkastet', exact: true });

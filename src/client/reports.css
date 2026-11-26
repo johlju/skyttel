@@ -21,6 +21,9 @@
   justify-content: space-between;
   gap: 12px;
 }
+.household-map:has(.voice-box) .household-reports > header {
+  justify-content: flex-start;
+}
 .household-reports :is(button, a) {
   min-height: 44px;
   padding: 10px 12px;

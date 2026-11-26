@@ -7,9 +7,9 @@ import type {
 } from '../shared/costs.js';
 
 export const currentRates: CostRateCard = {
-  id: 'openai-sol-2026-10-12',
-  checkedAt: '2026-10-12',
-  model: 'gpt-6.1-sol',
+  id: 'openai-sol-2026-11-25',
+  checkedAt: '2026-11-25',
+  model: 'gpt-6.2-sol',
   liveUsdPerMinute: 0.05,
   liveMinimumSeconds: 15,
   terra: {
@@ -19,7 +19,7 @@ export const currentRates: CostRateCard = {
   },
   sources: [
     { title: 'GPT-Live', url: 'https://developers.openai.com/api/docs/models/gpt-live-1' },
-    { title: 'GPT-6.1 Sol', url: 'https://developers.openai.com/api/docs/models/gpt-6.1-sol' },
+    { title: 'GPT-6.2 Sol', url: 'https://developers.openai.com/api/docs/models/gpt-6.2-sol' },
     { title: 'Cache', url: 'https://developers.openai.com/api/docs/guides/prompt-caching' },
     {
       title: 'Live-initiering',
@@ -59,6 +59,19 @@ export interface CostAttempt {
   endedAt: string | null;
   measurement: string;
   rates: string;
+}
+
+function reportedRateCard(rate: CostRateCard): CostRateCard {
+  if (rate.id !== 'openai-sol-2026-10-12') return rate;
+  return {
+    ...rate,
+    model: 'Sol (historisk prislista)',
+    sources: rate.sources.map((source) =>
+      source.url.endsWith(`/models/${rate.model}`)
+        ? { title: 'OpenAI-priser', url: 'https://developers.openai.com/api/docs/pricing' }
+        : source,
+    ),
+  };
 }
 
 function category(): CostCategory {
@@ -164,5 +177,9 @@ export function summarizeAttempts(attempts: CostAttempt[], sekPerUsd: number) {
   }
   live.estimatedSek = live.estimatedUsd * sekPerUsd;
   terra.estimatedSek = terra.estimatedUsd * sekPerUsd;
-  return { live, terra, rates: cards.size ? [...cards.values()] : [currentRates] };
+  return {
+    live,
+    terra,
+    rates: cards.size ? [...cards.values()].map(reportedRateCard) : [currentRates],
+  };
 }

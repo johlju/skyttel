@@ -174,7 +174,13 @@ jobs:
           package-manager-cache: false
       - run: node scripts/install-repository-npm.mjs
       - run: npm ci
+      - name: Resolve public Codex release metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api repos/openai/codex/releases/latest > "$RUNNER_TEMP/codex-release.json"
       - run: npm run test:devcontainer
+        env:
+          SKYTTEL_CODEX_RELEASE_METADATA: ${{ runner.temp }}/codex-release.json
 
   security:
     uses: ./.github/workflows/security.yml

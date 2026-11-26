@@ -69,6 +69,37 @@ test('an incomplete browser coverage installation is a setup failure before exec
   assert.equal(existsSync(join(fixture.directory, 'started')), false);
 });
 
+test('Chromium-dependent verification reports the selected cache before starting tests', (t) => {
+  const fixture = dependencyFixture(t);
+  const cache = join(fixture.directory, 'browser cache');
+  const marker = join(fixture.directory, 'started');
+  fixture.write(
+    'node_modules/@playwright/test/index.cjs',
+    `const fs = require('node:fs');
+     const path = require('node:path');
+     exports.chromium = { async launch() {
+       const executable = path.join(process.env.PLAYWRIGHT_BROWSERS_PATH, 'headless-shell');
+       if (!fs.existsSync(executable)) throw new Error("Executable doesn't exist at " + executable);
+       return { async close() { fs.writeFileSync('closed-browser', 'closed'); } };
+     } };`,
+  );
+  const options = { env: { ...fixture.env, PLAYWRIGHT_BROWSERS_PATH: cache } };
+  const command = [process.execPath, '-e', 'require("node:fs").writeFileSync("started", "ran")'];
+  const missing = fixture.run(['--chromium', ...command], options);
+  assert.equal(missing.status, 78, missing.stderr);
+  assert.ok(missing.stderr.includes(join(cache, 'headless-shell')), missing.stderr);
+  assert.match(missing.stderr, /npm run test:env -- playwright install chromium/);
+  assert.equal(existsSync(marker), false);
+
+  assert.equal(fixture.run(command, options).status, 0, 'server-only verification skips Chromium');
+  rmSync(marker);
+  fixture.write('browser cache/headless-shell', 'installed browser');
+  const installed = fixture.run(['--chromium', ...command], options);
+  assert.equal(installed.status, 0, installed.stderr);
+  assert.equal(existsSync(join(fixture.directory, 'closed-browser')), true);
+  assert.equal(existsSync(marker), true);
+});
+
 test('a dependency alias to another checkout is rejected without touching either checkout', (t) => {
   const source = dependencyFixture(t);
   const worktree = dependencyFixture(t, { installed: false });

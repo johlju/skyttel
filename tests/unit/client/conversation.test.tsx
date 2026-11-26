@@ -83,7 +83,7 @@ function session(): TextAssistantView {
 }
 /**
  * Answers as the server does and records every command it receives. A start
- * needs a consent for text version 4: saved, or stated for the visit.
+ * needs a consent for text version 5: saved, or stated for the visit.
  */
 function server({
   saved = null,
@@ -111,7 +111,8 @@ function server({
     commands.push(url.slice(path.length) || '/');
     if (url === path) {
       starts.push(body);
-      if (saved?.textVersion !== 4 && body.consent?.textVersion !== 4)
+      if (body.previousId) current = { ...session(), id: 'fresh' };
+      if (saved?.textVersion !== 5 && body.consent?.textVersion !== 5)
         return Response.json({ error: 'conversation_consent_required' }, { status: 403 });
     }
     if (url.includes('/voice'))
@@ -306,13 +307,11 @@ test('the conversation is started, written to, cancelled and started over withou
   // draft keeps, and the conversation and the unsent text stay.
   act(() => result.current.setText('Oskickat'));
   await act(() => result.current.newConversation());
-  expect(result.current.session?.id).toBe('session');
-  expect(result.current.transcript.map((row) => [row.role, row.text])).toEqual([
-    ['assistant', 'Nytt samtal. Utkastet är tomt.'],
-  ]);
+  expect(result.current.session?.id).toBe('fresh');
+  expect(result.current.transcript).toEqual([]);
   expect(result.current.text).toBe('Oskickat');
-  expect(conversationOngoing(result.current, false)).toBe(true);
-  expect(commands).toEqual(['/', '/session/messages', '/session/cancel', '/session/new']);
+  expect(conversationOngoing(result.current, false)).toBe(false);
+  expect(commands).toEqual(['/', '/session/messages', '/session/cancel', '/']);
 });
 
 test('a new conversation needs a conversation, and one that is not answered keeps the conversation text', async () => {
@@ -326,9 +325,11 @@ test('a new conversation needs a conversation, and one that is not answered keep
   await waitFor(() => expect(result.current.session?.id).toBe('session'));
   act(() => result.current.setText('Lägg till cykeln.'));
   await act(() => result.current.send());
+  await act(() => result.current.cancel());
   const respond = globalThis.fetch;
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
-    if (url.endsWith('/new')) throw new TypeError('Synthetic network failure');
+    if (url === path && init?.method === 'POST' && JSON.parse(String(init.body)).previousId)
+      throw new TypeError('Synthetic network failure');
     return respond(url, init);
   });
   await act(() => result.current.newConversation());
@@ -351,7 +352,8 @@ test('a new conversation that is answered after the user has left the map change
   server();
   const respond = globalThis.fetch;
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
-    if (url.endsWith('/new')) await held;
+    if (url === path && init?.method === 'POST' && JSON.parse(String(init.body)).previousId)
+      await held;
     return respond(url, init);
   });
   const { result, rerender } = renderHook(
@@ -431,7 +433,7 @@ test('without a valid consent the consent box asks first, and the chosen button 
   // The conversation has started with text: the microphone is not started.
   expect(result.current.voice.starting).toBe(false);
   expect(commands).toEqual(['/']);
-  expect(starts).toEqual([{ consent: { textVersion: 4 } }]);
+  expect(starts).toEqual([{ consent: { textVersion: 5 } }]);
 
   // A started conversation is not started again.
   act(() => result.current.begin('voice'));
@@ -441,9 +443,9 @@ test('without a valid consent the consent box asks first, and the chosen button 
   // A new conversation does not ask again.
   await act(() => result.current.newConversation());
   expect(result.current.consent.asking).toBeNull();
-  expect(result.current.session?.id).toBe('session');
-  expect(commands).toEqual(['/', '/session/new']);
-  expect(starts).toHaveLength(1);
+  expect(result.current.session?.id).toBe('fresh');
+  expect(commands).toEqual(['/', '/']);
+  expect(starts).toHaveLength(2);
 });
 
 test('a remembered consent is saved before the conversation starts, and a saved consent starts conversations directly', async () => {
@@ -459,7 +461,7 @@ test('a remembered consent is saved before the conversation starts, and a saved 
   await waitFor(() => expect(result.current.session?.id).toBe('session'));
   expect(started).toHaveBeenCalledOnce();
   expect(result.current.consent).toMatchObject({
-    saved: { textVersion: 4, savedAt: '2026-10-01T08:00:00.000Z' },
+    saved: { textVersion: 5, savedAt: '2026-10-01T08:00:00.000Z' },
     visit: false,
     valid: true,
     asking: null,
@@ -495,7 +497,7 @@ test('a saved consent for an older consent text asks again', async () => {
   expect(commands).toEqual([]);
   await act(() => result.current.approve(true));
   await waitFor(() => expect(result.current.session?.id).toBe('session'));
-  expect(result.current.consent.saved?.textVersion).toBe(4);
+  expect(result.current.consent.saved?.textVersion).toBe(5);
 });
 
 test('a consent that cannot be saved keeps the consent box open and starts nothing', async () => {
@@ -556,7 +558,7 @@ test('a consent that is being saved is not withdrawn by closing the consent box'
     await approved;
   });
   await waitFor(() => expect(result.current.session?.id).toBe('session'));
-  expect(result.current.consent.saved?.textVersion).toBe(4);
+  expect(result.current.consent.saved?.textVersion).toBe(5);
   expect(commands).toEqual(['consent', '/']);
 });
 
@@ -566,7 +568,7 @@ test('a start requested before the server has answered waits and then starts', a
     answer = resolve;
   });
   const { commands } = server({
-    saved: { textVersion: 4, savedAt: '2026-10-01T08:00:00.000Z' },
+    saved: { textVersion: 5, savedAt: '2026-10-01T08:00:00.000Z' },
   });
   const respond = globalThis.fetch;
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
@@ -623,7 +625,7 @@ test('a start that the server refuses for want of consent asks again without los
   const lost = vi.fn();
   // This client believes that a consent is saved. The server no longer has it.
   const { starts } = server({
-    saved: { textVersion: 4, savedAt: '2026-10-01T08:00:00.000Z' },
+    saved: { textVersion: 5, savedAt: '2026-10-01T08:00:00.000Z' },
   });
   const respond = globalThis.fetch;
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) =>
@@ -641,7 +643,7 @@ test('a start that the server refuses for want of consent asks again without los
   expect(lost).not.toHaveBeenCalled();
   await act(() => result.current.approve(false));
   await waitFor(() => expect(result.current.session?.id).toBe('session'));
-  expect(starts).toEqual([{ consent: { textVersion: 4 } }]);
+  expect(starts).toEqual([{ consent: { textVersion: 5 } }]);
 });
 
 test('access that is lost while the consent is saved ends the work in the household', async () => {
@@ -663,7 +665,7 @@ test('access that is lost while the consent is saved ends the work in the househ
 });
 
 test('a start that fails for another reason does not ask for the consent again', async () => {
-  server({ saved: { textVersion: 4, savedAt: '2026-10-01T08:00:00.000Z' } });
+  server({ saved: { textVersion: 5, savedAt: '2026-10-01T08:00:00.000Z' } });
   const respond = globalThis.fetch;
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
     if (url === path && init?.method === 'POST') throw new TypeError('Synthetic lost response');
@@ -705,7 +707,7 @@ test('a saved consent that is answered after the user has left the map is not fo
   rerender({ enabled: true });
   await waitFor(() => expect(result.current.available).toBe(true));
   await act(async () => {
-    answer?.(Response.json({ saved: { textVersion: 4, savedAt: '2026-10-01T08:00:00.000Z' } }));
+    answer?.(Response.json({ saved: { textVersion: 5, savedAt: '2026-10-01T08:00:00.000Z' } }));
     await approved;
   });
   // The new visit reads the consent from the server itself, and nothing has started.

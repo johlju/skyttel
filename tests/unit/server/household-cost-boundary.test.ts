@@ -28,7 +28,7 @@ test('current household archives reimport without replacing or transferring inst
       (
         await owner.post(`${path}/text-assistant/${assistant.id}/model-choice`, {
           headers,
-          data: { model: 'gpt-6.1-sol', effort: 'high' },
+          data: { model: 'gpt-6.2-sol', effort: 'high' },
         })
       ).status(),
     ).toBe(200);
@@ -53,8 +53,8 @@ test('current household archives reimport without replacing or transferring inst
         async () =>
           (await (await owner.get(`${source.origin}${costPath}`)).json()).terra.estimatedUsd,
       )
-      // Both scope interpretation and the worker response contribute usage.
-      .toBeCloseTo(2 * 0.217, 10);
+      // Scope interpretation, the worker and the short title contribute usage.
+      .toBeCloseTo(2 * 0.217 + 0.000036, 10);
     const before = await (await owner.get(`${source.origin}${costPath}`)).json();
     const prepared = await (await owner.post(`${path}/exports`, { headers, data: {} })).json();
     const archive = await (await owner.get(`${path}/exports/${prepared.id}`)).body();

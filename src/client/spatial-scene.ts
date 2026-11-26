@@ -29,7 +29,12 @@ export type ProjectedReferenceLabel = {
   y: number;
   visible: boolean;
 };
-type CameraView = { position: Vector3; target: Vector3; distance: number };
+export type MapArea = { left: number; right: number; top: number; bottom: number };
+export type PanTarget = Pick<ProjectedPoint, 'x' | 'y' | 'depth'> & {
+  width: number;
+  height: number;
+};
+type CameraView = { position: Vector3; target: Vector3; distance: number; mapPan: Vector3 };
 
 /** Owns only graphics and the camera. Household content stays in the shared editor. */
 export function spatialScene(
@@ -67,6 +72,8 @@ export function spatialScene(
   let selection: string[] = [];
   let rotating = false;
   let overviewDistance = 30;
+  // Layout corrections translate the foreground and leave the decorative sky fixed.
+  const mapPan = new Vector3();
   let originalView: CameraView | null = null;
   const history: CameraView[] = [];
   let gestureStart: CameraView | null = null;
@@ -75,12 +82,14 @@ export function spatialScene(
       position: camera.position.clone(),
       target: controls.target.clone(),
       distance: overviewDistance,
+      mapPan: mapPan.clone(),
     };
   }
   function sameView(a: CameraView, b: CameraView) {
     return (
       a.position.distanceToSquared(b.position) < 1e-18 &&
       a.target.distanceToSquared(b.target) < 1e-18 &&
+      a.mapPan.distanceToSquared(b.mapPan) < 1e-18 &&
       Math.abs(a.distance - b.distance) < 1e-9
     );
   }
@@ -193,7 +202,10 @@ export function spatialScene(
     camera.updateMatrixWorld();
     // A bounded translation gives the distant sky gentle pan parallax without
     // ever leaving its sphere. Personal object movement does not move the sky.
-    skyCamera.position.copy(controls.target).multiplyScalar(30 / overviewDistance);
+    skyCamera.position
+      .copy(controls.target)
+      .sub(mapPan)
+      .multiplyScalar(30 / overviewDistance);
     skyCamera.position.multiplyScalar(150 / (150 + skyCamera.position.length()));
     skyCamera.quaternion.copy(camera.quaternion);
     skyCamera.aspect = camera.aspect;
@@ -281,6 +293,7 @@ export function spatialScene(
   function reset() {
     gestures.finish();
     background.reset();
+    mapPan.set(0, 0, 0);
     // Establish the initial view with the real canvas size. A later resize
     // notification must not overwrite the user's first gesture or its history.
     if (canvas.clientWidth && canvas.clientHeight) {
@@ -463,13 +476,51 @@ export function spatialScene(
       camera.position.copy(previous.position);
       controls.target.copy(previous.target);
       overviewDistance = previous.distance;
+      mapPan.copy(previous.mapPan);
       controls.update();
       draw();
       publishHistory();
       onMotion();
       return true;
     },
-    focus(ids: string[], area: { left: number; right: number; top: number; bottom: number }) {
+    panIntoView(targets: PanTarget[], areas: MapArea[]) {
+      if (!targets.length || !canvas.clientHeight) return;
+      // At fixed zoom each target moves by a different pixel distance for the
+      // same translation. Intersect their permitted ranges in camera units.
+      const unitsPerPixel = (2 * Math.tan((camera.fov * Math.PI) / 360)) / canvas.clientHeight;
+      let nearest: Vector3 | undefined;
+      for (const area of areas) {
+        let left = -Infinity;
+        let right = Infinity;
+        let top = -Infinity;
+        let bottom = Infinity;
+        for (const { x, y, depth, width, height } of targets) {
+          const scale = unitsPerPixel * depth;
+          left = Math.max(left, (area.left + width / 2 - x) * scale);
+          right = Math.min(right, (area.right - width / 2 - x) * scale);
+          top = Math.max(top, (area.top + height / 2 - y) * scale);
+          bottom = Math.min(bottom, (area.bottom - height / 2 - y) * scale);
+        }
+        if (left > right || top > bottom) continue;
+        const translation = new Vector3(
+          -Math.max(left, Math.min(0, right)),
+          Math.max(top, Math.min(0, bottom)),
+          0,
+        );
+        if (!nearest || translation.lengthSq() < nearest.lengthSq()) nearest = translation;
+      }
+      if (!nearest?.lengthSq()) return;
+      // A continuous panel resize can make several corrections in one drag.
+      gestures.finish();
+      nearest.applyQuaternion(camera.quaternion);
+      mapPan.add(nearest);
+      camera.position.add(nearest);
+      controls.target.add(nearest);
+      controls.update();
+      draw();
+      publishHistory();
+    },
+    focus(ids: string[], area: MapArea) {
       const values = ids.flatMap((id) =>
         nodes.has(id) && locations.has(id) ? [locations.get(id) as Vector3] : [],
       );

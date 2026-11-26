@@ -23,8 +23,9 @@ ett stopp ska inte innebära att hela begäran överges.
 
 Väntande delar ska följa samtalets livslängd. Sammanfattning, vanliga fel,
 stängd textvy och byte mellan text och röst ska bevara dem. Omladdning,
-utloggning och serveromstart pausar arbetet. Nytt samtal, uttryckligt
-avslut och sju dygns inaktivitet avslutar delarna och deras sparhinder.
+utloggning och serveromstart pausar arbetet. Nytt samtal ger en ny identitet.
+Det tidigare samtalets delar och sparhinder består tills frågorna hanteras
+eller samtalet upphör efter sju dygn utan ny begäran.
 Utkastets förslag och vanliga validering finns kvar. Samtal och utkast
 har därmed skilda livslängder.
 
@@ -76,9 +77,9 @@ Att bara behålla strängar ger varken säker omformulering eller tillräckligt
 underlag för selektivt avslut. Delarna är strukturerat tillstånd inom
 samtalet, utan en separat uppgiftslista. Efter uttryckligt medgivande till
 lagringen bevaras samtalet på installationen, åtskilt per användare och
-hushåll, med en fast utgångstid efter senaste användarmeddelande eller
-uttryckliga återupptagning. Modellarbete och statuskontroller förnyar inte
-tiden. Utkast och registrerade sparförsök har egna livslängder.
+hushåll, med en fast utgångstid efter användarens senaste begäran.
+Modellarbete och statuskontroller förnyar inte tiden. Utkast och
+registrerade sparförsök har egna livslängder.
 
 ## Tillstånd och ansvar
 
@@ -108,8 +109,8 @@ och modellens tolkning ska kunna granskas mot aktuell användaruppgift.
 Regler för enskilda testmeningar ska inte avgöra övergångar.
 
 Avslutade delar behålls under samtalets livslängd,
-så att återlevererade anrop inte återupplivar dem. Nya samtal får ny
-identitet genom `contextRevision` och nya del-ID. Tillståndet ligger
+så att återlevererade anrop inte återupplivar dem. Nya samtal får
+ett eget samtals-ID och nya del-ID. Tillståndet ligger
 utanför den text som sammanfattas och
 bifogas på nytt inför varje modellomgång.
 
@@ -245,7 +246,7 @@ Kastande ska avsluta ändringsdelar och beroende informationsdelar först
 när kastandet är verifierat. Ett misslyckat kastande ska bevara dem.
 Kastande utan nytt samtal ska bevara oberoende informationsdelar.
 
-Nytt samtal, uttryckligt avslut, behörighetsförlust och samtalets utgång
+Uttryckligt avslut, behörighetsförlust och samtalets utgång
 avslutar tillståndet. Omladdning, utloggning och serveromstart bevarar det
 med arbetet pausat. Sammanfattning och stängd textvy bevarar det. Ett byte
 av inmatningssätt använder samma tillstånd.

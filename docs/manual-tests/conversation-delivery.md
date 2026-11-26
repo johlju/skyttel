@@ -173,24 +173,70 @@ i operativsystemet.
 
 **Separat förberedelse:** Öppna webbläsarens utvecklarkonsol och kör
 följande innan du startar samtalet. Det stänger av nya leveranskanaler
-utan att stänga av vanliga sidförfrågningar.
+och förbereder ett avbrott precis före mottagning av nästa skrivna
+instruktion. Vanliga sidförfrågningar fungerar fortfarande.
 
 ```javascript
-const originalWebSocket = window.WebSocket;
-window.WebSocket = undefined;
+(() => {
+  const originalWebSocket = window.WebSocket;
+  const fetch = window.fetch.bind(window);
+  let deliverySocket;
+  let armed = false;
+  window.skyttelDeliveryPreparation = {
+    restoreConnection() {
+      window.WebSocket = new Proxy(originalWebSocket, {
+        construct(target, args) {
+          const socket = Reflect.construct(target, args);
+          if (new URL(args[0], location.href).pathname.endsWith('/delivery')) {
+            deliverySocket = socket;
+          }
+          return socket;
+        },
+      });
+    },
+    dropBeforeNextMessage() {
+      if (deliverySocket?.readyState !== originalWebSocket.OPEN) {
+        throw new Error('Anslutningen för hela svaret är inte öppen.');
+      }
+      armed = true;
+    },
+  };
+  window.WebSocket = undefined;
+  window.fetch = async (input, options) => {
+    const request = new Request(input, options);
+    const path = new URL(request.url).pathname;
+    if (armed && request.method === 'POST' && path.endsWith('/messages')) {
+      armed = false;
+      await new Promise((resolve) => {
+        deliverySocket.addEventListener('close', resolve, { once: true });
+        deliverySocket.close();
+      });
+    }
+    return fetch(request);
+  };
+})();
 ```
 
-Återställ anslutningsstödet när stegen säger det genom att köra
-`window.WebSocket = originalWebSocket;` i samma konsol. Ladda om sidan
-efter provet för att återställa hela förberedelsen.
+- Återställ anslutningsstödet i steg 3 med
+  `window.skyttelDeliveryPreparation.restoreConnection()`.
+- Förbered avbrottet i steg 7 med
+  `window.skyttelDeliveryPreparation.dropBeforeNextMessage()`.
+  Den öppna anslutningen stängs när du väljer **Skicka**, innan
+  instruktionen når servern.
+- För det talade uppdraget i steg 8, skriv
+  `user Beskriv cykeln med rösten.` och därefter `delegate` i
+  startguidens terminal. Släpp det väntande modellsvaret med
+  `reply REQUEST Här är hela svaret på din talade fråga.`, där
+  `REQUEST` är modellförsökets nummer.
+- Ladda om sidan efter provet för att återställa hela förberedelsen.
 
 **Automatiskt motsvarande integrationstest:**
 [task-delivery.spec.ts](../../tests/integration/task-delivery.spec.ts), LEV-04.
 Riktig produktsida och HTTP med syntetiska medier och leverantörer provar
-avvisning före start samt verklig WebSocket vid uttryckligt återförsök.
-Automatiken stänger även en redan öppnad anslutning före serverns
-mottagning och kontrollerar samma tydliga avvisning. Fysisk mikrofon och
-skärmläsare ingår inte.
+avvisning före start och när en öppen anslutning bryts innan
+instruktionen når servern. I samma samtal visar textvyn hela svaret
+på nästa talade uppdrag.
+Fysisk mikrofon och skärmläsare bedöms separat.
 
 <!-- markdownlint-disable MD013 -->
 <!--
@@ -202,11 +248,13 @@ skärmläsare ingår inte.
     "spec": "tests/integration/task-delivery.spec.ts",
     "caseId": "LEV-04"
   },
-  "reference": "Saknat WebSocket-stöd före start; syntetisk mikrofon och faktisk HTTP/WebSocket efter återställning. Text och röst provar samma saknade leveranskanal. Lång svarstext i textvyn och rullning i mörkt systemtema, kartans verktyg och Inställningar vid 1280, 390 och 320 pixlar; höjden minskar från 800 till 600 pixlar i den smalaste varianten.",
+  "reference": "Saknat WebSocket-stöd före start och avbrott på öppen anslutning innan nästa skrivna instruktion når servern. Syntetisk mikrofon och faktisk HTTP/WebSocket. Lång svarstext i textvyn och rullning i mörkt systemtema, kartans verktyg och Inställningar vid 1280, 390 och 320 pixlar; höjden minskar från 800 till 600 pixlar i den smalaste varianten.",
   "outcomes": [
     "Skriven instruktion skickas inte, texten finns kvar och ett tydligt fel visas utan att instruktionen hamnar i samtalstexten.",
     "Röststart misslyckas tydligt och mikrofonen stängs. Återställd anslutning skickar eller startar ingenting automatiskt.",
     "Uttryckligt återförsök skickar instruktionen en gång och ger hela svaret; uttrycklig röststart fungerar igen.",
+    "När anslutningen för hela svaret bryts visas ett tydligt fel vid Skicka. Texten finns kvar i meddelandefältet och saknas i samtalstexten.",
+    "Efter återanslutning får användaren hela svaret på ett nytt talat uppdrag i samma samtal. Mikrofonen är på och den oskickade texten ligger kvar.",
     "Hela svaret går att läsa i textvyn. Kartans storlek och verktygens placering består. Inställningarnas rubrik får fokus och är synlig."
   ]
 }
@@ -223,14 +271,23 @@ skärmläsare ingår inte.
    starta och att mikrofonen är av.
 3. Återställ anslutningsstödet enligt förberedelsen. Kontrollera att
    texten finns kvar och att rösten inte startar automatiskt.
-4. Välj **Skicka**. Släpp ett långt modellsvar enligt den allmänna
-   förberedelsen och läs hela svaret i **Skriv till Skyttel**. Rulla till
-   sista raden. Kartans storlek och verktygens placering ska bestå.
+4. Låt textvyn vara öppen och lägg märke till kartans storlek och verktygens
+   placering vid varje bredd i steg 5. Välj **Skicka** och släpp ett långt
+   modellsvar enligt den allmänna förberedelsen. Läs hela svaret i **Skriv
+   till Skyttel**. Rulla till sista raden. Jämför med kartans storlek och
+   verktygens placering före svaret vid samma bredd.
 5. Öppna **Inställningar**. Rubriken ska få fokus och vara synlig.
    Välj **Tillbaka till kartan**. Upprepa steg 4:s läsning och steg 5 vid
    1280, 390 och 320 pixlars bredd utan att skicka instruktionen igen.
 6. Välj **Prata med Skyttel** och invänta **Lyssnar**.
-7. Stäng textvyn. Kartans verktyg ska behålla sin placering.
+7. Förbered avbrottet enligt förberedelsen, skriv **Skapa inget nytt.**
+   och välj **Skicka**. Läs felbeskedet. Kontrollera att texten finns
+   kvar i fältet och saknas i samtalstexten.
+8. Ge uppdraget **Beskriv cykeln med rösten.** enligt förberedelsen.
+   Läs hela svaret i textvyn. Kontrollera att mikrofonen fortfarande är
+   på och att **Skapa inget nytt.** finns kvar i meddelandefältet.
+9. Lägg märke till var kartans verktyg står innan du stänger textvyn.
+   Stäng textvyn och jämför placeringen.
 
 **Förväntat resultat:**
 
@@ -241,6 +298,10 @@ skärmläsare ingår inte.
   återställningen.
 - Endast ett uttryckligt nytt försök skickar texten och tömmer fältet.
   Hela svaret kan läsas. Rösten kan startas med ett uttryckligt nytt val.
+- När anslutningen bryts visas ett tydligt felbesked. **Skapa inget nytt.**
+  finns kvar i meddelandefältet och saknas i samtalstexten.
+- Det nya talade uppdraget får ett fullständigt svar. Mikrofonen förblir
+  på och **Skapa inget nytt.** ligger kvar i meddelandefältet.
 - Hela svaret läses i textvyn och kartans storlek och verktygens placering
   består. Inställningarnas rubrik får fokus och är synlig.
 

@@ -1,10 +1,10 @@
-import type { ConversationModelChoice } from '../shared/conversation-model.js';
-import { sameModelChoice, supportedConversationChoices } from '../shared/conversation-model.js';
+import { type ConversationModelChoice, sameModelChoice } from '../shared/conversation-model.js';
 import {
   type ClientAddressPolicy,
   clientAddressHeader,
   trustedPeerList,
 } from './client-address.js';
+import { modelChoiceSchema } from './conversation-model.js';
 
 export type Provider = 'google' | 'microsoft';
 
@@ -187,19 +187,10 @@ export function readConfig(environment: NodeJS.ProcessEnv = process.env): Config
 function readConversationModels(value: string | undefined): ConversationModelChoice[] | undefined {
   if (value === undefined) return undefined;
   try {
-    const entries: unknown = JSON.parse(value);
-    if (
-      !Array.isArray(entries) ||
-      !entries.every(
-        (entry) =>
-          entry &&
-          typeof entry === 'object' &&
-          Object.keys(entry).length === 2 &&
-          supportedConversationChoices.some((choice) => sameModelChoice(choice, entry)),
-      )
-    )
-      throw new Error('unsupported');
-    return entries;
+    const choices = modelChoiceSchema.array().parse(JSON.parse(value));
+    return choices.filter(
+      (choice, index) => choices.findIndex((other) => sameModelChoice(choice, other)) === index,
+    );
   } catch {
     throw new ConfigurationError('SKYTTEL_CONVERSATION_MODELS');
   }

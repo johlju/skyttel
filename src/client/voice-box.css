@@ -43,15 +43,17 @@
   white-space: nowrap;
 }
 
-/* One height at all times, and only as wide as the content needs. */
+/* Keep a compact height and let status text wrap when space is limited. */
 .voice-box {
+  --voice-action-size: 26px;
   display: inline-flex;
   align-items: center;
   gap: 10px;
   flex: none;
   box-sizing: border-box;
-  height: 36px;
-  padding: 0 12px;
+  min-height: 36px;
+  max-width: calc(100vw - 24px);
+  padding: 0 5px 0 12px;
   border: 1px solid var(--space-control);
   border-radius: 18px;
   background: var(--space-surface);
@@ -62,8 +64,13 @@
   line-height: 1;
   white-space: nowrap;
 }
-.voice-box:has(.voice-stop) {
-  padding-right: 5px;
+.voice-status-word {
+  white-space: normal;
+  line-height: 1.15;
+}
+[data-mobile="true"] .voice-box {
+  --voice-action-size: 44px;
+  gap: 5px;
 }
 .conversation-corner .voice-saved {
   width: 18px;
@@ -97,31 +104,48 @@
   stroke: currentColor;
 }
 
-.conversation-corner button.voice-stop,
-.household-map.workspace-shell .conversation-corner button.voice-stop {
+.voice-box > :is(.voice-action, .conversation-model-button),
+.household-map.workspace-shell .voice-box > :is(.voice-action, .conversation-model-button) {
   position: relative;
   flex: none;
   display: grid;
   place-items: center;
-  width: 26px;
+  width: var(--voice-action-size);
   min-width: 0;
   height: 26px;
   min-height: 0;
   padding: 0;
-  border: 1px solid var(--space-control);
-  border-radius: 50%;
-  background: var(--space-surface);
+  border: 0;
+  background: transparent;
   color: var(--space-text);
 }
-.conversation-corner .voice-stop svg {
+.voice-box > button:is(.voice-action, .conversation-model-button)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--space-control);
+  border-radius: 50%;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+.voice-box > button:is(.voice-action, .conversation-model-button):hover:enabled::before {
+  border-color: var(--space-accent);
+}
+.voice-box > :is(.voice-action, .conversation-model-button) svg {
   width: 14px;
   height: 14px;
 }
-/* On a touch device the icon looks the same and has a larger area to press. */
-[data-mobile="true"] .conversation-corner .voice-stop::after {
+.voice-box > .voice-action:disabled {
+  opacity: 0.5;
+}
+/* Extend only vertically so adjacent 44px-wide touch targets do not overlap. */
+[data-mobile="true"] .voice-box > button:is(.voice-action, .conversation-model-button)::after {
   content: "";
   position: absolute;
-  inset: -9px;
+  inset: -9px 0;
 }
 
 /* The primary-pointer/width/visible-height rule comes from the shared viewport
@@ -140,8 +164,12 @@
   bottom: auto;
   transform: translateY(-100%);
 }
+/* The corner belongs to the toolbar and sits over the focused text view. */
+.household-map.workspace-shell[data-narrow="true"].text-view-open .workspace-tools:has(.voice-box) {
+  z-index: 35;
+}
 .household-map.workspace-shell[data-narrow="true"].text-view-open:has(.voice-box) .text-view-body {
-  padding-bottom: 44px;
+  margin-bottom: calc(var(--conversation-corner-height, 36px) + 4px);
 }
 .household-map.workspace-shell[data-work-layout="minimal"][data-wide-touch="true"].text-view-open
   .conversation-corner {
@@ -168,11 +196,44 @@
 .voice-wave[data-form="dimmed"] {
   color: var(--space-line);
 }
+.voice-wave[data-form="working"] {
+  position: relative;
+}
 .voice-wave i {
   width: 3px;
   height: 4px;
   border-radius: 2px;
   background: currentColor;
+}
+.voice-wave[data-form="working"] i {
+  opacity: 0.6;
+}
+.voice-wave[data-form="working"]::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 4px;
+  border-radius: 2px;
+  background: currentColor;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .voice-wave[data-form="working"]::after {
+    animation: voice-work-pulse 2.2s ease-in-out 2;
+  }
+}
+@keyframes voice-work-pulse {
+  0% {
+    transform: translateX(-18px);
+    opacity: 0;
+  }
+  12%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(18px);
+    opacity: 0;
+  }
 }
 .voice-wave[data-form="skyttel"] i {
   animation: voice-wave 1.2s ease-in-out infinite;
@@ -205,8 +266,8 @@
   }
 }
 /*
- * Reduced motion: two fixed forms that change without a transition. Seven dots
- * when nothing is heard, and the same seven still bars whoever is heard.
+ * Reduced motion: idle dots, a dash for work, and the same still bars for
+ * either speaker.
  */
 @media (prefers-reduced-motion: reduce) {
   .voice-wave:is([data-form="user"], [data-form="skyttel"]) i {

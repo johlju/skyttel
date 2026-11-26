@@ -416,8 +416,8 @@ contents also changes the host copies. Both profiles also mount the host's
 placeholder only when the file is absent; it preserves existing credentials.
 Keep credentials out of the repository and container image.
 
-The shared `.codex/config.toml` selects `gpt-6-astra` with `high` reasoning
-for the main thread and `gpt-6.1-sol` with `high` reasoning for default
+The shared `.codex/config.toml` selects `gpt-6.2-astra` with `high` reasoning
+for the main thread and `gpt-6.2-sol` with `high` reasoning for default
 subagents. Start a new thread after changing these defaults. Explicit spawn
 settings and custom-agent configuration can override them; check the
 runtime model and effort when diagnosing a different selection.

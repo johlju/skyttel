@@ -221,14 +221,14 @@ test('TAL-11: Skyttel arbetar färdigt och talar klart när mikrofonen stängs a
 
     speak(live, 'Rätta namnet till Lo Lind.');
     await expect.poll(() => model.waiting()).toBe(1);
-    await expect(voiceBox(page)).toHaveText('Skyttel arbetar');
+    await expect(voiceBox(page)).toHaveText('Arbetar');
     await expect(voiceAnnouncement(page)).toHaveText('Skyttel arbetar');
 
     // The microphone is turned off in the middle of the work.
     await chooseConversationVoice(page);
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
     expect((await media(page)).microphoneTracks).toEqual([{ enabled: false, state: 'live' }]);
-    await expect(voiceBox(page)).toHaveText('Skyttel arbetar');
+    await expect(voiceBox(page)).toHaveText('Arbetar');
     await expect(stopIcon(page)).toBeVisible();
     // The button can turn the microphone on again: the task was said, not written.
     await expect(microphoneButton(page)).toBeEnabled();
@@ -244,7 +244,8 @@ test('TAL-11: Skyttel arbetar färdigt och talar klart när mikrofonen stängs a
     );
     await sound(page, 'remote', 0.2);
     await speakingReported;
-    await expect(voiceBox(page)).toHaveText('Skyttel arbetar');
+    await expect(voiceBox(page)).toHaveText('Skyttel talar');
+    await expect(stopIcon(page)).toBeEnabled();
     model.release([
       modelTool('propose_object', {
         version: before.draft.version,
@@ -313,7 +314,7 @@ test('TAL-12: Avbryt i röstrutan stoppar arbetet och tystar Skyttel men behåll
       }),
     );
     await expect.poll(() => model.waiting()).toBe(1);
-    await expect(voiceBox(page)).toHaveText('Skyttel arbetar');
+    await expect(voiceBox(page)).toHaveText('Arbetar');
     await expect(stopIcon(page)).toHaveAttribute('title', 'Avbryt');
     await stopIcon(page).focus();
     await page.keyboard.press('Enter');
@@ -334,34 +335,49 @@ test('TAL-12: Avbryt i röstrutan stoppar arbetet och tystar Skyttel men behåll
       .toEqual(before.draft);
     expect(answers(live)).toBe(0);
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true');
-    await expect.poll(async () => (await media(page)).silencedAudioElements).toBe(0);
+    await expect.poll(async () => (await media(page)).openPeers).toBe(1);
 
-    // Skyttel talks: retire that output stream, even if it later resumes after a pause.
+    // During an audible reply the same connection carries the correction.
     await sound(page, 'remote', 0.2);
     await expect(voiceBox(page)).toHaveText('Skyttel talar');
-    expect((await media(page)).silencedAudioElements).toBe(0);
-    const previousTracks = (await media(page)).remoteTracks.length;
+    expect((await media(page)).audioElements).toBe(1);
+    const beforeInterruption = await media(page);
     await stopIcon(page).click();
-    await expect
-      .poll(async () => (await media(page)).remoteTracks[previousTracks - 1].state)
-      .toBe('ended');
     await expect(voiceBox(page)).toHaveText('Lyssnar');
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true');
     expect((await media(page)).microphoneTracks).toEqual([{ enabled: true, state: 'live' }]);
     await sound(page, 'remote', 0);
     await page.waitForTimeout(1500);
     await expect(voiceBox(page)).toHaveText('Lyssnar');
-    // A new answer in the fresh connection is heard again.
-    expect(live.requests.at(-1)?.session?.input).toEqual(
-      expect.arrayContaining([
-        {
-          role: 'user',
-          content: [{ type: 'input_text', text: 'Rätta namnet.' }],
-          status: 'incomplete',
-        },
-      ]),
+    expect((await media(page)).peers).toBe(beforeInterruption.peers);
+    expect((await media(page)).remoteTracks).toEqual(beforeInterruption.remoteTracks);
+    // A delayed transcript of earlier speech is not the correction.
+    await page.evaluate(() =>
+      window.skyttelVoiceFixture.emit({
+        type: 'session.input_transcript.delta',
+        event_id: crypto.randomUUID(),
+        delta: 'Tidigare ord.',
+        start_ms: 0,
+        end_ms: 5,
+      }),
     );
-    expect(JSON.stringify(live.requests.at(-1)?.session?.input)).not.toContain('För sent');
+    await sound(page, 'remote', 0.2);
+    await page.waitForTimeout(350);
+    await expect(voiceBox(page)).toHaveText('Lyssnar');
+    await sound(page, 'remote', 0);
+    await page.evaluate(() =>
+      window.skyttelVoiceFixture.emit({
+        type: 'session.input_transcript.delta',
+        event_id: crypto.randomUUID(),
+        delta: 'Jag menar Lo.',
+        start_ms: window.skyttelVoiceFixture.sessionMs(),
+        end_ms: window.skyttelVoiceFixture.sessionMs() + 160,
+      }),
+    );
+    await openConversationText(page);
+    await expect(panel(page).getByRole('log')).toContainText('Rätta namnet.');
+    await expect(panel(page).getByRole('log')).toContainText('Jag menar Lo.');
+    await page.waitForTimeout(250);
     await sound(page, 'remote', 0.2);
     await expect(voiceBox(page)).toHaveText('Skyttel talar');
     expect((await (await page.request.get(path)).json()).draft).toEqual(before.draft);
@@ -425,7 +441,7 @@ for (const microphoneOn of [true, false]) {
       await listening(page);
       speak(live, interruptedText);
       await expect.poll(() => waiting).toBe(true);
-      await expect(voiceBox(page)).toHaveText('Skyttel arbetar');
+      await expect(voiceBox(page)).toHaveText('Arbetar');
       if (!microphoneOn) {
         await chooseConversationVoice(page);
         await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
@@ -519,13 +535,13 @@ test('TAL-13: ett skrivet meddelande visar aldrig röstrutan och stänger av mik
     expect(live.requests).toHaveLength(0);
     expect((await media(page)).microphoneTracks).toEqual([]);
 
-    // With the microphone on, a written message shows Skyttel arbetar with the stop icon.
+    // With the microphone on, a written message shows Arbetar with the stop icon.
     await microphone.click();
     await listening(page);
     await openConversationText(page);
     await sendMessage(page, 'Beskriv det nu.');
     await expect.poll(() => model.waiting()).toBe(2);
-    await expect(voiceBox(page)).toHaveText('Skyttel arbetar');
+    await expect(voiceBox(page)).toHaveText('Arbetar');
     await expect(microphone).toBeEnabled();
     await stopIcon(page).click();
     await expect(voiceBox(page)).toHaveText('Lyssnar');
@@ -555,7 +571,17 @@ test('TAL-14: röstrutan visar ett statusord åt gången och en vågform som fö
     await expect(bars).toHaveCount(7);
     await expect(wave).toHaveAttribute('data-form', 'still');
     expect(await heights()).toEqual(Array(7).fill(4));
-    const listeningWidth = (await bounds(box)).width;
+    const idle = box.locator('.voice-idle');
+    await expect(idle).toBeVisible();
+    await expect(stopIcon(page)).toHaveCount(0);
+    const idlePosition = await bounds(idle.locator('svg'));
+    const settings = box.getByRole('button', { name: /Modell och resonemang/ });
+    const newConversation = box.getByRole('button', { name: 'Nytt samtal' });
+    const workPulse = () =>
+      wave.evaluate((element) => {
+        const mark = getComputedStyle(element, '::after');
+        return { animation: mark.animationName, width: mark.width, height: mark.height };
+      });
     expect(await height()).toBe(36);
     const accent = await bars.first().evaluate((bar) => getComputedStyle(bar).backgroundColor);
 
@@ -584,24 +610,37 @@ test('TAL-14: röstrutan visar ett statusord åt gången och en vågform som fö
     await expect(stopIcon(page)).toBeVisible();
     expect(await height()).toBe(36);
 
-    // Skyttel arbetar goes before both: the dots are still.
+    // Speech stays visible during work. The stop action stays available.
     speak(live, 'Beskriv utkastet.');
     // Finish the utterance before expecting the delegated task to start.
     await sound(page, 'microphone', 0);
     await expect.poll(() => model.waiting()).toBe(1);
-    await sound(page, 'microphone', 0.9);
-    await expect(box).toHaveText('Skyttel arbetar');
-    await expect(wave).toHaveAttribute('data-form', 'still');
-    expect(await heights()).toEqual(Array(7).fill(4));
-    expect(await height()).toBe(36);
-    // The width follows the word, and the height does not.
-    expect((await bounds(box)).width).toBeGreaterThan(listeningWidth);
-    await sound(page, 'microphone', 0);
-    model.release([modelMessage('Utkastet har ett förslag.')]);
     await expect(box).toHaveText('Skyttel talar');
+    await sound(page, 'remote', 0);
+    await expect(box).toHaveText('Arbetar');
+    await expect(wave).toHaveAttribute('data-form', 'working');
+    expect((await workPulse()).animation).toBe('voice-work-pulse');
+    const stopGlyph = await bounds(stopIcon(page).locator('svg'));
+    expect(stopGlyph).toEqual(idlePosition);
+    for (const control of [settings, newConversation]) {
+      const glyph = await bounds(control.locator('svg'));
+      expect(glyph.width).toBe(stopGlyph.width);
+      expect(glyph.height).toBe(stopGlyph.height);
+    }
+    await sound(page, 'microphone', 0.9);
+    await expect(box).toHaveText('Du talar');
+    await expect(wave).toHaveAttribute('data-form', 'user');
+    await expect(stopIcon(page)).toBeEnabled();
+    await sound(page, 'microphone', 0);
+    await expect(box).toHaveText('Arbetar');
+    expect(await height()).toBe(36);
 
-    // Reduced motion: two fixed forms that change without a transition.
+    // Reduced motion: work has a still dash and the two speakers have fixed bars.
     await page.emulateMedia({ reducedMotion: 'reduce' });
+    expect(await workPulse()).toEqual({ animation: 'none', width: '8px', height: '4px' });
+    model.release([modelMessage('Utkastet har ett förslag.')]);
+    await sound(page, 'remote', 0.2);
+    await expect(box).toHaveText('Skyttel talar');
     await expect(bars.first()).toHaveCSS('animation-name', 'none');
     await expect(bars.first()).toHaveCSS('transition-duration', '0s');
     const still = await heights();
@@ -616,6 +655,8 @@ test('TAL-14: röstrutan visar ett statusord åt gången och en vågform som fö
     await sound(page, 'microphone', 0);
     await expect(box).toHaveText('Lyssnar');
     expect(await heights()).toEqual(Array(7).fill(4));
+    await expect(idle).toBeVisible();
+    await expect(stopIcon(page)).toHaveCount(0);
     expect(await height()).toBe(36);
   } finally {
     await app.close();
@@ -694,15 +735,14 @@ for (const [name, width, height, place] of [
         await openMap(page);
       }
 
-      // A longer status word and the stop icon make the box wider. It stays in its place.
+      // The box and the stop icon stay in the same place while the status changes.
       speak(live, 'Beskriv utkastet.');
       await expect.poll(() => model.waiting()).toBe(1);
-      await expect(voiceBox(page)).toHaveText('Skyttel arbetar');
+      await expect(voiceBox(page)).toHaveText('Arbetar');
       const working = await check();
       // At the bottom edge the protected surfaces can grow while Skyttel works.
       if (place === 'top') expect(working.y).toBe(first.y);
       expect(working.height).toBe(first.height);
-      expect(working.width).toBeGreaterThan(first.width);
       const stop = await bounds(stopIcon(page));
       expect(stop.width).toBeGreaterThanOrEqual(24);
       expect(stop.height).toBeGreaterThanOrEqual(24);

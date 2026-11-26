@@ -54,7 +54,7 @@ Google i den kontrollerade installationen.
 2. Fokusera **Modell och resonemang: GPT-6.1 Terra, Hög** och tryck Enter.
 3. Läs att GPT-Live 1 fortsätter lyssna och tala. Fokusera slidern och
    tryck Home och sedan högerpil. Läs Låg respektive Medium.
-4. Välj modellnamnet och markera **GPT-6.1 Sol**. Vänta på sparbeskedet.
+4. Välj modellnamnet och markera **GPT-6.2 Sol**. Vänta på sparbeskedet.
    Tryck Escape och kontrollera fokus på öppningsikonen och nivån Medium.
 5. Slå på mikrofonen. Öppna ikonen vid röstrutan och välj knappen **Hög**.
    Tryck Escape. Läs Sol/Hög vid båda ikonerna och kontrollera fokus.
@@ -100,7 +100,7 @@ visar när valet börjar gälla, och fokus återgår efter Escape.
 2. Installationsansvarig ändrar aktiveringen till bara Sol/hög och startar
    om enligt [aktiveringsguiden](../operations/conversation-models.md).
 3. Ladda om och börja ett nytt textsamtal. Öppna ikonen Terra, Medium.
-4. Läs varför valet inte är tillgängligt. Välj **Välj GPT-6.1 Sol, Hög**.
+4. Läs varför valet inte är tillgängligt. Välj **Välj GPT-6.2 Sol, Hög**.
    Kontrollera att fokus finns på dialogens rubrik när valknappen försvinner.
 5. Tryck Escape och kontrollera fokus vid textvyns ikon. Slå på
    mikrofonen, öppna röstrutans ikon och läs Sol/Hög. Tryck Escape och
@@ -189,7 +189,7 @@ Det andra uppdraget ligger kvar i kön och besvaras efter det första.
 
 1. Öppna **Modell och resonemang**. Läs att Terra/hög är aktuellt.
 2. Öppna modellvalet via **GPT-6.1 Terra**. Välj uttryckligen
-   **Välj GPT-6.1 Sol, Låg** och vänta på sparbeskedet.
+   **Välj GPT-6.2 Sol, Låg** och vänta på sparbeskedet.
 3. Stäng dialogen och kontrollera Sol/Låg vid ikonen. Öppna modellvalet
    igen och välj uttryckligen **Välj GPT-6.1 Terra, Hög**.
 

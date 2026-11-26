@@ -67,8 +67,8 @@ KAK-01.
 3. Öppna **Visa serverns lagringsposter**. Läs posterna för inloggning,
    resultatkontroll och installationens säkerhetsgeneration samt informationen
    om medgivet samtal och separat arbetsminne för transportkvittens. Läs
-   posten **conversation**: version 4, sju dygn efter eget meddelande eller
-   uttrycklig återupptagning, paus vid återkomst och separata sparförsök.
+   posten **conversation**: version 5, sju dygn efter senaste begäran,
+   val via samtalslistan och separata sparförsök.
 4. Ladda om sidan. Välj **Till startsidan**. Kontrollera **Vi använder
    kakor**, tryck Escape och kontrollera fokus på **Endast nödvändiga**.
 

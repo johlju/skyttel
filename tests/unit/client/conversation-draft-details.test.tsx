@@ -354,9 +354,11 @@ test('the whole draft names additions, removals and changed relationship and typ
     </>,
   );
   const table = screen.getByRole('table', { name: 'Osparade ändringar' });
+  const addedRow = within(table).getByRole('row', { name: /^Nytt konto/ });
+  const removedRow = within(table).getByRole('row', { name: /^Borttaget konto/ });
+  expect(within(addedRow).getByRole('cell', { name: /^Läggs till$/ })).toBeTruthy();
+  expect(within(removedRow).getByRole('cell', { name: /^Tas bort$/ })).toBeTruthy();
   for (const detail of [
-    'Lägg tillNytt konto',
-    'Ta bortBorttaget konto',
     'Gäller: Aktuellt → Upphört',
     'old: Tas bort (Text) → Saknas',
     'shared: Nej (Ja/nej) → shared: Ja (Ja/nej)',

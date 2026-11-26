@@ -4,19 +4,27 @@ import { availableViewport as viewport } from './available-viewport.js';
 export type WindowPosition = { x: number; y: number };
 type Size = { width: number; height: number };
 type Rectangle = WindowPosition & Size;
-const reservedSurfaces =
-  '.text-view, .voice-box, .conversation-notice, .map-selection-details:not(.object-property-window)';
-export type FloatingArea = { viewport: Rectangle; obstacles: Rectangle[] };
+export const conversationSurfaces = '.text-view, .text-view-draft, .text-view .conversation-list';
+const reservedSurfaces = `${conversationSurfaces}, .voice-box, .conversation-notice, .map-selection-details:not(.object-property-window)`;
+export type FloatingArea = { viewport: Rectangle; obstacles: Rectangle[]; textView?: Rectangle };
 
 export function measureFloatingArea(element: HTMLElement): FloatingArea {
   const workspace = element.closest('.household-map') ?? element;
-  return {
-    viewport: viewport(),
-    obstacles: [...workspace.querySelectorAll<HTMLElement>(reservedSurfaces)]
-      .map((surface) => surface.getBoundingClientRect())
-      .filter((box) => box.width > 0 && box.height > 0)
-      .map(({ x, y, width, height }) => ({ x, y, width, height })),
-  };
+  const obstacles: Rectangle[] = [];
+  let textView: Rectangle | undefined;
+  for (const surface of workspace.querySelectorAll<HTMLElement>(reservedSurfaces)) {
+    const { x, y, width, height } = surface.getBoundingClientRect();
+    if (!width || !height) continue;
+    if (surface.matches(conversationSurfaces)) {
+      const left = Math.min(textView?.x ?? x, x);
+      const top = Math.min(textView?.y ?? y, y);
+      const right = Math.max(textView ? textView.x + textView.width : x, x + width);
+      const bottom = Math.max(textView ? textView.y + textView.height : y, y + height);
+      textView = { x: left, y: top, width: right - left, height: bottom - top };
+    } else obstacles.push({ x, y, width, height });
+  }
+  if (textView) obstacles.push(textView);
+  return { viewport: viewport(), obstacles, textView };
 }
 
 /** Visible conversation and fixed reading surfaces reserve space. Map controls

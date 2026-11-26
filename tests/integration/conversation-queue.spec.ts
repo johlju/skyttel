@@ -14,7 +14,7 @@ import {
 import { readTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
-import { isVoiceAnswerRelease, liveProvider } from '../support/live-provider.js';
+import { isVoiceAnswerRelease, liveProvider, speak } from '../support/live-provider.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 import { readVoiceProposal } from '../support/voice-work-reading.js';
@@ -79,23 +79,6 @@ async function send(page: Page, text: string) {
   await field(page).fill(text);
   await region(page).getByRole('button', { name: 'Skicka', exact: true }).click();
   await expect(field(page)).toHaveValue('');
-}
-function speak(live: ReturnType<typeof liveProvider>, text: string) {
-  const id = [...live.channels.keys()].at(-1);
-  if (!id) throw new Error('Missing live session');
-  live.emit(id, {
-    type: 'session.input_transcript.delta',
-    event_id: crypto.randomUUID(),
-    delta: text,
-    start_ms: 0,
-    end_ms: 100,
-  });
-  live.emit(id, {
-    type: 'session.delegation.created',
-    event_id: crypto.randomUUID(),
-    offset_ms: 100,
-    delegation: { id: crypto.randomUUID(), type: 'delegation', target: 'client' },
-  });
 }
 
 test('KÖ-01: datorn besvarar serverns kö i ordning och Escape avbryter bara i textvyn', async ({
@@ -183,7 +166,11 @@ test('KÖ-01: datorn besvarar serverns kö i ordning och Escape avbryter bara i 
     await expect(region(page).locator('.text-view-canceled')).toBeEmpty();
     await send(page, 'Bort med kön.');
     await expect(log(page)).toContainText('Skyttel arbetar…');
-    await region(page).getByRole('button', { name: 'Nytt samtal', exact: true }).click();
+    const startNew = region(page).getByRole('button', { name: 'Nytt samtal', exact: true });
+    await expect(startNew).toBeDisabled();
+    await field(page).press('Escape');
+    await expect(startNew).toBeEnabled();
+    await startNew.click();
     await expect(log(page)).not.toContainText('Skyttel arbetar…');
     fixtures.held[4].release([modelMessage('För sent igen.')]);
     await send(page, 'Efter nytt samtal.');
@@ -296,7 +283,7 @@ test('KÖ-02: smal dator visar stopp, behåller oskickad text och tillåter Esca
     await expect.poll(() => fixtures.held.length).toBe(1);
     await expect(region(page).getByRole('button', { name: 'Skicka', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Avbryt', exact: true })).toHaveCount(1);
-    await expect(voiceBox(page)).toHaveText('Skyttel arbetar');
+    await expect(voiceBox(page)).toHaveText('Arbetar');
     await field(page).fill('Oskickad text');
     await field(page).press('Enter');
     expect(fixtures.held).toHaveLength(1);
@@ -326,6 +313,7 @@ test('KÖ-02: smal dator visar stopp, behåller oskickad text och tillåter Esca
     await expect.poll(async () => (await read()).draft).toEqual(before);
     await readVoiceProposal(page);
     fixtures.held[0].release([modelMessage('Ett sent svar.')]);
+    await region(page).getByRole('button', { name: 'Text', exact: true }).click();
     await expect(log(page)).not.toContainText('Ett sent svar.');
     await send(page, 'Avbryt med tangentbord.');
     await expect.poll(() => fixtures.held.length).toBe(2);
@@ -495,7 +483,12 @@ test('KÖ-09: nytt samtal köar kastandet och stopp bevarar andra enhetens arbet
       }),
     ]);
     await expect(log(page)).toContainText('Lo Exempel bytte namn till Lo Lind.');
-    await expect(log(other)).toHaveText('Skyttel: Nytt samtal. Utkastet är tomt.');
+    const restarted = log(other);
+    await expect(restarted.getByRole('listitem').last()).toHaveText(
+      'Skyttel: Nytt samtal. Utkastet är tomt.',
+    );
+    await expect(restarted.getByRole('listitem').first()).toContainText('Kontrollerar utkastet');
+    await expect(restarted).not.toContainText('Nytt samtal och kasta utkastet.');
     await expect(log(other)).not.toContainText('Hållet uppdrag.');
     await expect(log(other)).not.toContainText('Skyttel arbetar…');
     await expect(log(page)).not.toContainText('kunde inte genomföras');

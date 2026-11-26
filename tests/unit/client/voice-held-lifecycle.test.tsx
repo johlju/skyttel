@@ -403,6 +403,64 @@ test.each(['inputBlocked', 'contextFailed', 'saveChecking'] as const)(
   },
 );
 
+test.each(['hold', 'release'] as const)(
+  'a retained held microphone indicates listening only after voice has seen the written reply (%s)',
+  async (action) => {
+    vi.useFakeTimers();
+    const media = voiceMedia();
+    let assistant = view;
+    let finishPoll = () => {};
+    const pausedPoll = vi.fn();
+    vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+      if (url === path.replace(/\/voice$/, '')) return Response.json(assistant);
+      if (url.endsWith('/poll')) {
+        pausedPoll(JSON.parse(String(init?.body)));
+        await new Promise<void>((resolve) => {
+          finishPoll = resolve;
+        });
+      }
+      return Response.json({
+        assistant,
+        voice: {
+          id: 'voice-held',
+          phase: url.endsWith('/stop') ? 'closed' : 'listening',
+          seconds: null,
+          usageFinal: false,
+        },
+        sdp: 'synthetic-answer',
+      });
+    });
+    const options = { householdId: 'linden', onAssistant() {}, onAccessLost() {} };
+    const rendered = render(<HeldVoice {...options} assistant={assistant} />);
+    await act(async () => fireEvent.click(button()));
+    await act(async () =>
+      media.peers[0].channel.emit({ type: 'session.started', session: { id: 'held-provider' } }),
+    );
+    fireEvent.click(button());
+    expect(media.microphone.enabled).toBe(false);
+
+    assistant = { ...view, revision: 1, questionPending: true };
+    rendered.rerender(<HeldVoice {...options} assistant={assistant} />);
+    await act(async () => press());
+    expect(pausedPoll).toHaveBeenCalledWith(
+      expect.objectContaining({ revision: 1, microphoneOn: false }),
+    );
+    await act(async () => vi.advanceTimersByTimeAsync(450));
+    expect(button().getAttribute('aria-pressed')).toBe('false');
+    expect(media.microphone.enabled).toBe(false);
+    if (action === 'release') release();
+    await act(async () => finishPoll());
+    expect(button().getAttribute('aria-pressed')).toBe(String(action === 'hold'));
+    expect(media.microphone.enabled).toBe(action === 'hold');
+    if (action === 'hold') {
+      expect(screen.getByRole('group', { name: 'Röstruta' }).textContent).toContain('Lyssnar');
+      release();
+      expect(media.microphone.enabled).toBe(false);
+    }
+    expect(media.peers).toHaveLength(1);
+  },
+);
+
 test('a delayed playback permission granted after context failure cannot resume a still-held local microphone', async () => {
   const media = voiceMedia();
   const captureAssignments: boolean[] = [];

@@ -39,15 +39,7 @@ async function installation(page: Page, mac = false) {
 async function prepareFreshVoiceStart(page: Page) {
   await startConversationWithText(page, { remember: true });
   await page.reload();
-  await openConversationText(page);
-  const text = page.getByRole('region', { name: 'Skriv till Skyttel', exact: true });
-  await expect(text).toContainText('Samtalet är pausat');
-  await text.getByRole('button', { name: 'Avsluta samtalet', exact: true }).click();
-  await expect(page.getByRole('region', { name: 'Arbetsyta', exact: true })).toHaveAttribute(
-    'data-session-active',
-    'false',
-  );
-  await closeConversationText(page);
+  await expect(microphone(page)).toHaveAttribute('aria-pressed', 'false');
 }
 async function down(page: Page) {
   // Map startup adds toolbar controls and can move the microphone. Hover
@@ -250,7 +242,11 @@ test('MIKROFONTRYCK-08: nytt samtal behåller mikrofonen efter att väntande tal
     await page.waitForTimeout(350);
     await microphone(page).click();
     await expect(microphone(page)).toHaveAttribute('aria-pressed', 'true');
-    await page.getByRole('button', { name: 'Nytt samtal', exact: true }).click();
+    await closeConversationText(page);
+    await page
+      .getByRole('group', { name: 'Röstruta' })
+      .getByRole('button', { name: 'Nytt samtal', exact: true })
+      .click();
     await expect
       .poll(async () => (await page.evaluate(() => window.skyttelVoiceFixture.stats())).peers)
       .toBe(2);
@@ -261,7 +257,11 @@ test('MIKROFONTRYCK-08: nytt samtal behåller mikrofonen efter att väntande tal
     expect(state.openPeers).toBe(1);
     await microphone(page).click();
     await expect(microphone(page)).toHaveAttribute('aria-pressed', 'false');
-    await page.getByRole('button', { name: 'Nytt samtal', exact: true }).click();
+    await openConversationText(page);
+    await page
+      .getByRole('region', { name: 'Skriv till Skyttel', exact: true })
+      .getByRole('button', { name: 'Nytt samtal', exact: true })
+      .click();
     await expect
       .poll(async () => (await page.evaluate(() => window.skyttelVoiceFixture.stats())).peers)
       .toBe(3);

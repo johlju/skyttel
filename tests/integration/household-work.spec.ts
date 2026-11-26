@@ -63,10 +63,8 @@ function conversationInstallation() {
 }
 
 async function loadSecondaryHousehold(page: Page, url: string) {
-  // Restoring a same-login tab deliberately pauses its existing conversation.
-  // Finish loading the second tab before starting work in the first tab.
   const restored = page.waitForResponse((response) =>
-    new URL(response.url()).pathname.endsWith('/text-assistant/restore'),
+    new URL(response.url()).pathname.endsWith('/text-assistant'),
   );
   await page.goto(url);
   expect((await restored).status()).toBe(200);

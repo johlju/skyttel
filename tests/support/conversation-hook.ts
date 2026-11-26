@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { type ContextType, createElement, type ReactNode } from 'react';
 import { expect, vi } from 'vitest';
 import { TaskDeliveryContext } from '../../src/client/task-delivery.js';
@@ -58,7 +58,7 @@ export async function conversationCommands(
     if (response) return response;
     if (path.endsWith('/conversation-consent'))
       return Response.json({
-        saved: consent ? { textVersion: 4, savedAt: '2026-10-01T08:00:00Z' } : null,
+        saved: consent ? { textVersion: 5, savedAt: '2026-10-01T08:00:00Z' } : null,
       });
     if (path.endsWith('/text-assistant')) return Response.json({ available: true });
     if (path.endsWith('/restore')) return Response.json({ conversation: view });
@@ -80,6 +80,7 @@ export async function conversationCommands(
     },
   );
   await waitFor(() => expect(hook.result.current.available).toBe(true));
+  await act(async () => hook.result.current.openRetained?.(view.id));
   await waitFor(() => expect(hook.result.current.session?.id).toBe(view.id));
   return { ...hook, commands, onAccessLost, onMapChange };
 }

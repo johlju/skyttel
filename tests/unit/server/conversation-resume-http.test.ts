@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type APIRequestContext, request } from '@playwright/test';
+import Database from 'better-sqlite3';
 import { afterEach, expect, test } from 'vitest';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../../support/client.js';
@@ -178,7 +179,7 @@ test('another device discovers separate retained conversations and opens the sel
   };
   const original = await start();
   const chosen = await post(first, `${path}/${original.id}/model-choice`, {
-    model: 'gpt-6.1-sol',
+    model: 'gpt-6.2-sol',
     effort: 'low',
   });
   expect(chosen.status(), await chosen.text()).toBe(200);
@@ -207,6 +208,15 @@ test('another device discovers separate retained conversations and opens the sel
       })
     ).status(),
   ).toBe(200);
+  const accepted = await post(first, `${path}/${second.id}/messages`, {
+    requestId: crypto.randomUUID(),
+    revision: second.revision,
+    draftVersion: second.review.version,
+    contentVersion: second.review.contentVersion,
+    text: 'Beskriv cykeln.',
+  });
+  expect(accepted.status()).toBe(202);
+
   const activeList = await first.get(`${path}/retained`);
   expect(
     (await activeList.json()).conversations.find((item: { id: string }) => item.id === second.id),
@@ -228,7 +238,7 @@ test('another device discovers separate retained conversations and opens the sel
     id: original.id,
     paused: true,
     expiresAt: completed.expiresAt,
-    modelChoice: { model: 'gpt-6.1-sol', effort: 'low' },
+    modelChoice: { model: 'gpt-6.2-sol', effort: 'low' },
     conversation: [
       { role: 'user', text: 'Beskriv mitt garage utan att ändra något.' },
       { role: 'assistant', text: 'Jag väntar på ditt nästa uppdrag.' },
@@ -242,7 +252,7 @@ test('another device discovers separate retained conversations and opens the sel
   });
 });
 
-test('only explicit approved resume renews the retained lifetime and enables the same conversation', async () => {
+test('approved resume enables work without renewing the retained lifetime', async () => {
   let time = Date.now();
   const model = textModel(() => [modelMessage('Du kan fortsätta i samma samtal.')]);
   app = await createInstallation(undefined, { modelFetch: model.provider, now: () => time });
@@ -270,7 +280,7 @@ test('only explicit approved resume renews the retained lifetime and enables the
   expect(await resumed.json()).toMatchObject({
     id: original.id,
     paused: false,
-    expiresAt: time + 604_800_000,
+    expiresAt: original.expiresAt,
   });
   expect(model.requests).toHaveLength(0);
   const sent = await post(`${path}/${original.id}/messages`, {
@@ -513,7 +523,7 @@ test('after actual restart an older retained question can be answered while a yo
   expect(await manualSave.json()).toEqual({ error: 'assistant_questions_pending' });
 });
 
-test('a new request after reopening an active crash image waits for earlier retained work before that conversation is loaded', async () => {
+async function verifyRetainedArrivalOrder(missingCounter: boolean) {
   let release!: (value: unknown[]) => void;
   const held = new Promise<unknown[]>((resolve) => {
     release = resolve;
@@ -550,7 +560,20 @@ test('a new request after reopening an active crash image waits for earlier reta
     expect(response.status(), await response.text()).toBe(202);
     return (await response.json()) as TextAssistantView;
   };
+  const changeCounter = (file: string, sql: string) => {
+    const fixture = new Database(file);
+    try {
+      fixture.prepare(sql).run();
+    } finally {
+      fixture.close();
+    }
+  };
   try {
+    if (missingCounter)
+      changeCounter(
+        join(app.directory, 'skyttel.db'),
+        'UPDATE conversation_request_order SET nextSequence = 80',
+      );
     original = await send(first, original, 'Först garaget, utan ändringar.');
     await expect.poll(() => model.requests.length).toBe(1);
     original = await send(first, original, 'Sedan cykeln, utan ändringar.');
@@ -558,6 +581,7 @@ test('a new request after reopening an active crash image waits for earlier reta
     // Capture the exact durable image while work is active. The reopened copy
     // receives none of the graceful close's pause writes.
     await app.saveDatabase(snapshot);
+    if (missingCounter) changeCounter(snapshot, 'DELETE FROM conversation_request_order');
     await app.close();
     app = await createInstallation(undefined, {
       databasePath: snapshot,
@@ -591,7 +615,18 @@ test('a new request after reopening an active crash image waits for earlier reta
   } finally {
     release([modelMessage('Det gamla svaret får inte användas.')]);
   }
-});
+}
+
+test('a new request after reopening an active crash image waits for earlier retained work before that conversation is loaded', () =>
+  verifyRetainedArrivalOrder(false));
+
+test(
+  'recovering a missing request counter preserves the arrival order of retained work',
+  {
+    tags: ['technical'],
+  },
+  () => verifyRetainedArrivalOrder(true),
+);
 
 test.each([false, true])(
   'a spoken clarification resumes only unfinished work after actual restart without renewing its old save request: lostBatchReply=%s',

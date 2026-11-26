@@ -162,10 +162,11 @@ test('literal household preparation completes the family tools on seeded public 
       ).status(),
     ).toBe(200);
     await member.goto(ready.origin);
-    await openNewObject(member);
+    const memberForm = await openNewObject(member);
     await member.getByLabel('Namn', { exact: true }).fill('Robins notering');
     await setProperty(member, 'Beskrivning', 'Meningsfullt separat arbete');
     await member.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
+    await expect(memberForm).toBeHidden();
     const privateDraft = (await (await member.request.get(path)).json()).draft;
     expect(privateDraft.changes).toHaveLength(1);
     expect(privateDraft.changes[0].after).toMatchObject({

@@ -79,6 +79,24 @@ export function liveProvider() {
   };
 }
 
+export function speak(live: ReturnType<typeof liveProvider>, text: string, startMs = 0) {
+  const session = [...live.channels.keys()].at(-1);
+  if (!session) throw new Error('Missing live session');
+  live.emit(session, {
+    type: 'session.input_transcript.delta',
+    event_id: crypto.randomUUID(),
+    delta: text,
+    start_ms: startMs,
+    end_ms: startMs + 100,
+  });
+  live.emit(session, {
+    type: 'session.delegation.created',
+    event_id: crypto.randomUUID(),
+    offset_ms: startMs + 100,
+    delegation: { id: crypto.randomUUID(), type: 'delegation', target: 'client' },
+  });
+}
+
 /** Reconstruct the source text carried by silent answer parts or short commentary. */
 export function voiceAnswerParts(sent: readonly { event: ConnectClientEvent }[]) {
   return sent.flatMap(({ event }) => {

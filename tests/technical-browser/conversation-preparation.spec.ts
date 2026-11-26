@@ -22,6 +22,8 @@ for (const seeded of [false, true]) {
   test(`literal context preparation completes batch, questions, save, rejection and admitted revoke on ${seeded ? 'seeded' : 'empty'} public installation`, {
     tag: '@technical',
   }, async ({ page, browser }) => {
+    // These public workflows run consecutively in one installation, including launcher shutdown.
+    test.slow();
     const document = await readFile('docs/manual-tests/conversation-preparation.md', 'utf8');
     const questions = await readFile('docs/manual-tests/conversation-questions.md', 'utf8');
     const heardSavePreparation = document.split('## Ljudfragment och tid för sparbesked')[1];
@@ -401,13 +403,11 @@ for (const seeded of [false, true]) {
       command(restoreScope);
       command('assistant Sparat.');
       await expect(log).toContainText('Sparat.');
+      at = events.length;
       await page.evaluate(clientTranscript);
-      await page.evaluate(() => window.skyttelVoiceFixture.setSound('remote', true));
       await expect(page.getByRole('group', { name: 'Röstruta', exact: true })).toContainText(
         'Skyttel talar',
       );
-      at = events.length;
-      await page.evaluate(() => window.skyttelVoiceFixture.setSound('remote', false));
       const summary = await held(at, 'context-summary');
       const renewedVoice = page.waitForResponse(
         (response) => response.request().method() === 'POST' && response.url().endsWith('/voice'),
@@ -435,8 +435,8 @@ for (const seeded of [false, true]) {
       expect(await (await page.request.get(path)).json()).toEqual(savedState);
       expect(await (await page.request.get(`${path}/history`)).json()).toEqual(savedHistory);
       // Individual manual cases start afresh. Retire every actual owned voice
-      // transport, then explicitly end the retained conversation before the
-      // next text-only case. Transport stop alone preserves its conversation.
+      // transport before reloading into the next text-only case. The previous
+      // conversation remains available in the list.
       expect(voiceStarts.length).toBeGreaterThan(0);
       const retired = [];
       for (const response of voiceStarts) {
@@ -454,8 +454,6 @@ for (const seeded of [false, true]) {
         body: JSON.stringify(retired, null, 2),
         contentType: 'application/json',
       });
-      await page.getByRole('button', { name: 'Avsluta samtalet', exact: true }).click();
-      await expect(log).not.toContainText('Vad gjorde vi?');
       await page.reload();
       await openConversationText(page);
       await expect(log).not.toContainText('Vad gjorde vi?');
@@ -523,7 +521,7 @@ for (const seeded of [false, true]) {
       await page.getByRole('button', { name: 'Nytt samtal', exact: true }).click();
       // This combined proof still has an active visit consent. Resetting that
       // conversation completes directly, without another consent dialog.
-      await expect(log).toContainText('Nytt samtal. 1 osparad ändring ligger kvar i ditt utkast.');
+      await expect(log).toContainText('Här visas det du och Skyttel');
       await expect(page.getByRole('region', { name: 'Arbetsyta', exact: true })).toHaveAttribute(
         'data-session-active',
         'true',

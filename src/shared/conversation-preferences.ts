@@ -9,6 +9,8 @@ export const defaultConversationPreferences: ConversationPreferences = {
   textWidth: 400,
   draftWidth: 340,
 };
+export const conversationPanelGap = 8;
+export const conversationListWidth = 280;
 
 /** Screen limits affect presentation only; never save a clamp during a resize. */
 export function conversationWidths(
@@ -16,7 +18,7 @@ export function conversationWidths(
   screenWidth: number,
   draftOpen: boolean,
 ) {
-  const available = Math.max(560, screenWidth - 100);
+  const available = Math.max(560, screenWidth - 100 - (draftOpen ? conversationPanelGap : 0));
   const textWidth = Math.min(preferences.textWidth, available - (draftOpen ? 260 : 0));
   const draftWidth = Math.min(preferences.draftWidth, available - textWidth);
   return { textWidth, draftWidth: draftOpen ? draftWidth : preferences.draftWidth, available };

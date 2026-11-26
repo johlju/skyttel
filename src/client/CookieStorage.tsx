@@ -110,8 +110,8 @@ const serverEntries = [
   {
     name: 'conversation',
     content:
-      'Efter samtalsmedgivande version 4 bevaras samtalstext, exakta oavslutade instruktioner, väntande delar, kö, genomförandestatus och samtalets modellval på installationen. Uppgifterna hålls åtskilda per Skyttel-användare och hushåll och ingår inte i hushållets export. Åtkomst, ägare och innehåll kontrolleras före återställning. Detta är skilt från webbläsarens lagringssamtycke och ändrar inte leverantörernas lagring.',
-    time: 'Sju dygn efter ditt senaste meddelande eller uttrycklig återupptagning. Modellarbete och bakgrundskontroller förlänger inte tiden; omstart behåller den exakta utgången. Omladdning, omstart och utloggning pausar. Stopp behåller samtalet. Uttryckligt avslut, återkallelse och utgång raderar samtalet och dess sparhinder utan att spara eller kasta utkastet. Registrerade sparförsök och sparkvitton består separat. Gallring sker vid serverstart och minst varje minut; utgånget innehåll lämnas inte ut.',
+      'Efter samtalsmedgivande version 5 bevaras titel, samtalstext, exakta oavslutade instruktioner, väntande delar, kö, genomförandestatus och samtalets modellval på installationen. Uppgifterna hålls åtskilda per Skyttel-användare och hushåll och ingår inte i hushållets export. Åtkomst, ägare och innehåll kontrolleras före återställning. Detta är skilt från webbläsarens lagringssamtycke och ändrar inte leverantörernas lagring.',
+    time: 'Sju dygn efter din senaste begäran. Modellarbete och bakgrundskontroller förlänger inte tiden; omstart behåller den exakta utgången. Omladdning, omstart och utloggning pausar. Nytt samtal bevarar det tidigare samtalet. Återkallelse och utgång raderar samtalet och dess sparhinder utan att spara eller kasta utkastet. Registrerade sparförsök och sparkvitton består separat. Gallring sker vid serverstart och minst varje minut; utgånget innehåll lämnas inte ut.',
   },
   {
     name: 'assistant_connection, oauthClient, oauthConsent, oauthAccessToken, oauthRefreshToken, oauthClientAssertion och jwks',

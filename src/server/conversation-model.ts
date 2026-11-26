@@ -2,21 +2,36 @@ import type Database from 'better-sqlite3';
 import { z } from 'zod';
 import {
   type ConversationModelChoice,
+  conversationModels,
   defaultConversationModelChoice,
+  reasoningEfforts,
   sameModelChoice,
+  solModelId,
   supportedConversationChoices,
 } from '../shared/conversation-model.js';
 import { MapError } from './map-error.js';
 import type { TextModelProfile } from './text-assistant-model.js';
 
+/** Installation settings and retained choices can contain either Sol version. */
+function isSolModel(id: unknown) {
+  return typeof id === 'string' && /^gpt-6\.[12]-sol$/.test(id);
+}
+
+export function currentModelChoice(choice: ConversationModelChoice): ConversationModelChoice {
+  return isSolModel(choice.model) ? { ...choice, model: solModelId } : choice;
+}
+
 export const modelChoiceSchema = z
   .object({
-    model: z.enum(['gpt-6.1-terra', 'gpt-6.1-sol']),
-    effort: z.enum(['low', 'medium', 'high']),
+    model: z.preprocess(
+      (id) => (isSolModel(id) ? solModelId : id),
+      z.enum(conversationModels.map(({ id }) => id)),
+    ),
+    effort: z.enum(reasoningEfforts),
   })
   .strict();
 
-/** Profiles checked against the official model pages on 2026-11-03. */
+/** Profiles checked against the official model pages in November 2026. */
 export function conversationModelProfile(choice: ConversationModelChoice): TextModelProfile {
   return { provider: 'openai', ...choice, tokens: 1_050_000, maxOutputTokens: 128_000 };
 }
@@ -34,13 +49,12 @@ export function requireEnabledChoice(
 export function personalModelChoice(database: Database.Database, userId: string) {
   return {
     read(): ConversationModelChoice {
-      return (
-        (database
-          .prepare('SELECT model, effort FROM conversation_model_preferences WHERE userId = ?')
-          .get(userId) as ConversationModelChoice | undefined) ?? {
-          ...defaultConversationModelChoice,
-        }
-      );
+      const choice = database
+        .prepare<[string], ConversationModelChoice>(
+          'SELECT model, effort FROM conversation_model_preferences WHERE userId = ?',
+        )
+        .get(userId);
+      return currentModelChoice(choice ?? defaultConversationModelChoice);
     },
     write(choice: ConversationModelChoice) {
       database

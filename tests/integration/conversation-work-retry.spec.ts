@@ -160,7 +160,7 @@ test('TEXT-18: återförsök och avstående fortsätter bara återstående arbet
       .getByRole('dialog')
       .getByRole('button', { name: 'GPT-6.1 Terra', exact: true })
       .click();
-    const sol = page.getByRole('radio', { name: 'GPT-6.1 Sol', exact: true });
+    const sol = page.getByRole('radio', { name: 'GPT-6.2 Sol', exact: true });
     await sol.click();
     await expect(sol).toBeChecked();
     await page.keyboard.press('Escape');

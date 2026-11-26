@@ -186,6 +186,7 @@ test('LIVSCYKEL-03: removing from the list immediately proposes every connected 
     await page.goto(installation.origin);
     await openTable(page);
     const review = page.getByRole('region', { name: 'Utkastet', exact: true });
+    const removalRows = review.getByRole('row').filter({ hasText: 'Familjemusik' });
     const proposeTypeChange = async () => {
       await editObjectRelationship(page, 'Lo Exempel', 'Lo Exempel → Använder → Familjemusik');
       await page.getByLabel('Sambandstyp', { exact: true }).selectOption({ label: 'Betalar' });
@@ -201,13 +202,8 @@ test('LIVSCYKEL-03: removing from the list immediately proposes every connected 
     if ((await expand.getAttribute('aria-expanded')) !== 'true') await expand.click();
     await page.getByRole('button', { name: 'Ta bort Familjemusik', exact: true }).click();
     await openDraftReview(page);
-    await expect(review.getByRole('row').filter({ hasText: 'Familjemusik' })).toHaveCount(3);
-    await expect(
-      review
-        .getByRole('row')
-        .filter({ hasText: 'Familjemusik' })
-        .getByRole('cell', { name: 'Ta bort', exact: true }),
-    ).toHaveCount(3);
+    await expect(removalRows).toHaveCount(3);
+    await expect(removalRows.getByText('Tas bort', { exact: true })).toHaveCount(3);
     await expect(
       review.getByRole('button', { name: /^Visa förslaget: .+ → Använder →/ }),
     ).toHaveCount(2);
@@ -220,13 +216,8 @@ test('LIVSCYKEL-03: removing from the list immediately proposes every connected 
     await readRemovalProposals(page, await read());
     await page.reload();
     await openDraftReview(page);
-    await expect(review.getByRole('row').filter({ hasText: 'Familjemusik' })).toHaveCount(3);
-    await expect(
-      review
-        .getByRole('row')
-        .filter({ hasText: 'Familjemusik' })
-        .getByRole('cell', { name: 'Ta bort', exact: true }),
-    ).toHaveCount(3);
+    await expect(removalRows).toHaveCount(3);
+    await expect(removalRows.getByText('Tas bort', { exact: true })).toHaveCount(3);
     await readRemovalProposals(page, await read());
     const draft = await openConversationDraft(page);
     await draft.getByRole('button', { name: 'Kasta hela utkastet', exact: true }).click();

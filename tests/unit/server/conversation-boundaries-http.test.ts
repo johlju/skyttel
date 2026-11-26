@@ -231,18 +231,19 @@ test.each([
   [
     'missing selected object',
     [modelTool('show_map_item', { kind: 'object', id: 'missing' })],
+    'invalid_request',
     'assistant_object_missing',
   ],
 ] as const)(
   '%s provider command cannot mutate the household or claim a verified result',
-  async (_name, output, error) => {
+  async (_name, output, error, notice?: string) => {
     const model = textModel(() => [...output]);
     await setup(model.provider);
     await object();
     const before = await map();
     const result = await message('Läs mitt utkast.');
     expect(result).toMatchObject({ phase: 'error', error });
-    expect(result.reply).toBe(assistantFailureMessage(error));
+    expect(result.reply).toBe(assistantFailureMessage(notice ?? error));
     expect(result.receipt).toBeUndefined();
     expect(result.selection).toBeUndefined();
     expect(await map()).toEqual(before);
@@ -598,6 +599,41 @@ test('multiple direct draft mutations require an atomic batch before either can 
   });
   expect(await map()).toEqual(before);
 });
+
+test.each([
+  { save: 'save_draft', saveFirst: false },
+  { save: 'prepare_save', saveFirst: false },
+  { save: 'save_draft', saveFirst: true },
+  { save: 'prepare_save', saveFirst: true },
+])(
+  'a mixed mutation and save round is rejected before dispatch: $save, saveFirst=$saveFirst',
+  async ({ save, saveFirst }) => {
+    let typeId = '';
+    const model = textModel((request) => {
+      const { draft } = JSON.parse(
+        String(request.input.findLast((item) => item.role === 'user')?.content),
+      );
+      const versions = { version: draft.version, contentVersion: draft.contentVersion };
+      const change = modelTool('propose_object', {
+        ...versions,
+        id: 'desk',
+        baseRevision: null,
+        value: { typeId, name: 'Bordet' },
+      });
+      const saving = modelTool(save, versions);
+      return saveFirst ? [saving, change] : [change, saving];
+    });
+    await setup(model.provider);
+    await object();
+    const before = await map();
+    typeId = before.types[0].id;
+    const result = await message('Lägg till Bordet. Spara hela utkastet.');
+    expect(result.phase).toBe('error');
+    expect(await map()).toEqual(before);
+    expect(result.operations).toEqual([]);
+    expect(result.receipt).toBeUndefined();
+  },
+);
 
 test('an unlisted dependent mutation is rejected before a preceding valid direct draft mutation', async () => {
   let typeId = '';

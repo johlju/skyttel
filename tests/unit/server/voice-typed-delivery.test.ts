@@ -22,6 +22,7 @@ afterEach(async () => {
 async function arrange(
   modelFetch: typeof fetch,
   assistantDispatch?: NonNullable<Parameters<typeof createInstallation>[1]>['assistantDispatch'],
+  now?: () => number,
 ) {
   const live = liveProvider();
   app = await createInstallation(undefined, {
@@ -29,6 +30,7 @@ async function arrange(
     liveFetch: live.provider,
     liveSideband: live.attach,
     assistantDispatch,
+    now,
   });
   browser = await request.newContext();
   await signIn(browser, app.origin);
@@ -663,4 +665,35 @@ test('a failed typed completion delivers its own question before a later task qu
   await poll(true);
   expect(voiceAnswerParts(live.sent).join('')).toBe(spoken);
   expect((await (await browser.get(`${householdPath}/map/history`)).json()).history).toEqual([]);
+});
+
+test('review regression: an idle unconfirmed reply releases cross-browser ownership after its cutoff', async () => {
+  let clock = Date.now();
+  const { send, poll, path } = await arrange(
+    textModel(() => [modelMessage('Här står cykeln.')]).provider,
+    undefined,
+    () => clock,
+  );
+  await send('Var står cykeln?', 'read');
+  await expect.poll(async () => (await poll(true)).voice.response?.text).toBe('Här står cykeln.');
+  const other = await request.newContext();
+  try {
+    await signIn(other, app.origin);
+    const open = () =>
+      other.post(path.replace(/\/([^/]+)$/, '/retained/$1/open'), {
+        headers: { origin: app.origin },
+        data: { ...approvedForVisit, activate: true },
+      });
+    await poll(false, false, true);
+    clock += 16_000;
+    expect((await open()).status()).toBe(409);
+    await poll(false, false, true);
+    await poll(false);
+    clock += 14_999;
+    expect((await open()).status()).toBe(409);
+    clock++;
+    expect((await open()).status()).toBe(200);
+  } finally {
+    await other.dispose();
+  }
 });

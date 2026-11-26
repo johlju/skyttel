@@ -249,6 +249,7 @@ test.each([
       commands.push({ url, body });
       if (url.endsWith('/messages'))
         current = { ...initial, revision: 1, modelReply: 'Tidigare svar.' };
+      if (body.previousId) current = { ...initial, id: 'fresh' };
       if (url.endsWith('/new'))
         current = {
           ...initial,
@@ -262,11 +263,13 @@ test.each([
     await send('Berätta om utkastet.');
     expect(rows()).toContain('Skyttel: Tidigare svar.');
     await send(text);
-    expect(rows()).toEqual([`Skyttel: ${reply}`]);
+    expect(rows()).toEqual([
+      discard ? `Skyttel: ${reply}` : 'Här visas det du och Skyttel säger och skriver.',
+    ]);
     expect(field().value).toBe('');
     expect(
       commands.filter((request) => request.url.endsWith('/new')).map((request) => request.body),
-    ).toEqual([{ discard, ...approvedForVisit }]);
+    ).toEqual(discard ? [{ discard, ...approvedForVisit }] : []);
     expect(commands.filter((request) => request.url.endsWith('/messages'))).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: /^Visa utkastet/ }));
     const draft = screen.getByRole('region', { name: 'Utkastet' });

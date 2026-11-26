@@ -7,6 +7,8 @@ export function blockedActionMessage(reference: string) {
 /** Only server-owned wording may describe failures to the model or the person. */
 export function assistantFailureMessage(code: string): string {
   switch (code) {
+    case 'assistant_voice_restate_edit':
+      return 'Utkastet ändrades medan du talade. Säg hela uppdraget igen om du vill ändra det aktuella utkastet.';
     case 'assistant_context_capacity':
       return 'Det nödvändiga underlaget ryms inte i samtalets modellkontext. Avgränsa uppdraget innan du fortsätter. Samtalstexten, utkastet och oavslutade begäranden finns kvar.';
     case 'assistant_model_access':

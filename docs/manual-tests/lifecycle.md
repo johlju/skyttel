@@ -570,7 +570,7 @@ connected edge and preserves history”.
 
 **Förväntat resultat:**
 
-- Utkastet innehåller borttagning av Familjemusik och båda sambanden med
+- Utkastet visar **Tas bort** för Familjemusik och båda sambanden med
   läsbara objektnamn och riktningar. Den gemensamma kartan är oförändrad.
 - Borttagningen visar sambandets sparade typ **Använder**, utan **Betalar**
   eller någon typkonflikt. Hela utkastet går att spara direkt.

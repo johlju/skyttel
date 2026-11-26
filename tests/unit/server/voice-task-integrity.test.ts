@@ -177,3 +177,80 @@ test.each(['overlapping', 'late'])(
     expect(await (await browser.get(`${base}/map/history`)).json()).toEqual({ history: [] });
   },
 );
+
+test('an acknowledged audible reply lets a fresh follow-up use its early delegation', {
+  tags: ['technical'],
+  timeout: 15_000,
+}, async () => {
+  const model = textModel(() => [modelMessage('Objektet finns i ditt utkast.')]);
+  const live = liveProvider();
+  app = await createInstallation(undefined, {
+    modelFetch: model.provider,
+    liveFetch: live.provider,
+    liveSideband: live.attach,
+  });
+  browser = await request.newContext();
+  await signIn(browser, app.origin);
+  const { household } = await (await createHousehold(browser, app.origin)).json();
+  const base = `${app.origin}/api/households/${household.id}`;
+  const post = (path: string, data: object) =>
+    browser.post(path, { headers: { origin: app.origin }, data });
+  const session = await (await post(`${base}/text-assistant`, approvedForVisit)).json();
+  const started = await post(`${base}/text-assistant/${session.id}/voice`, {
+    sdp: 'synthetic-offer',
+    revision: 0,
+    draftVersion: 0,
+    contentVersion: 1,
+    confirmBrowserInput: true,
+  });
+  expect(started.status()).toBe(201);
+  const { voice } = await started.json();
+  const providerId = [...live.channels.keys()][0];
+  const poll = async (
+    revision: number,
+    confirmedInputVersion?: number,
+    playedResponseId?: string,
+  ) => {
+    const response = await post(`${base}/text-assistant/${session.id}/voice/${voice.id}/poll`, {
+      revision,
+      draftVersion: 0,
+      contentVersion: 1,
+      microphoneOn: true,
+      confirmedInputVersion,
+      playedResponseId,
+    });
+    expect(response.status()).toBe(200);
+    return response.json();
+  };
+  const speak = (id: string, delta: string, start: number, end: number) =>
+    live.emit(providerId, {
+      type: 'session.input_transcript.delta',
+      event_id: id,
+      delta,
+      start_ms: start,
+      end_ms: end,
+    });
+  const delegate = (id: string, offset: number) =>
+    live.emit(providerId, {
+      type: 'session.delegation.created',
+      offset_ms: offset,
+      delegation: { id, target: 'client' },
+    });
+  speak('first-input', 'Läs mitt utkast.', 0, 100);
+  delegate('first-work', 100);
+  expect((await poll(0)).voice.inputVersion).toBe(1);
+  await poll(0, 1);
+  const readResponse = async () => (await poll(0, 1)).voice.response;
+  await expect
+    .poll(readResponse, { timeout: 5000 })
+    .toMatchObject({ id: expect.any(String), revision: expect.any(Number) });
+  const played = await readResponse();
+  delegate('early-follow-up', 4500);
+  speak('second-input', 'Finns Lo där?', 4300, 4600);
+  expect((await poll(played.revision, 1, played.id)).voice.inputVersion).toBe(2);
+  expect(model.requests).toHaveLength(1);
+  await poll(played.revision, 2, played.id);
+  await expect.poll(() => model.requests.length, { timeout: 5000 }).toBe(2);
+  const followUp = model.requests[1].input.findLast((item) => item.role === 'user');
+  expect(JSON.parse(String(followUp?.content)).message).toBe('Finns Lo där?');
+});

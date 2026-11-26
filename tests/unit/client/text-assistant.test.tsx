@@ -82,36 +82,21 @@ function showAssistant(onMapChange = vi.fn(), onAccessLost = vi.fn()) {
   );
 }
 
-test('keyboard focus moves to a surviving control after successfully ending the conversation', async () => {
-  let release!: (response: Response) => void;
-  const ending = new Promise<Response>((resolve) => {
-    release = resolve;
-  });
+test('the conversation list can be opened and closed with the keyboard', async () => {
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
-    if (url.endsWith('/stop')) return ending;
+    if (url.endsWith('/retained')) return Response.json({ conversations: [] });
     if (url === path && init?.method !== 'POST') return Response.json({ available: true });
     return Response.json(session());
   });
   showAssistant();
   await startConversationWithText();
-  const end = screen.getByRole('button', { name: 'Avsluta samtalet' });
-  const next = screen.getByRole('button', { name: 'Nytt samtal' });
-  next.focus();
-  await userEvent.tab(); // Close text view.
-  await userEvent.tab(); // Draft toggle.
-  await userEvent.tab(); // End conversation.
-  expect(document.activeElement).toBe(end);
-  await userEvent.tab(); // Retained conversations follow the current session.
-  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Bevarade samtal' }));
-  await userEvent.tab({ shift: true });
-  expect(document.activeElement).toBe(end);
+  const list = screen.getByRole('button', { name: 'Samtal' });
+  list.focus();
   await userEvent.keyboard('{Enter}');
-  expect(screen.getByRole('button', { name: 'Avsluta samtalet' })).toBe(end);
-  await act(async () => release(Response.json({ stopped: true })));
-  await waitFor(() =>
-    expect(screen.queryByRole('button', { name: 'Avsluta samtalet' })).toBeNull(),
-  );
-  expect(document.activeElement).toBe(next);
+  expect(await screen.findByText('Inga samtal ännu.')).toBeDefined();
+  await userEvent.keyboard('{Enter}');
+  expect(list.getAttribute('aria-expanded')).toBe('false');
+  expect(document.activeElement).toBe(list);
 });
 
 test('the shared workspace keeps the map available before consent', async () => {
@@ -171,7 +156,7 @@ test('the text view shows empty conversation text, the message field and a colla
   expect(field.getAttribute('placeholder')).toBe('Berätta vad du vill göra…');
   // On a computer the message field has the focus when the text view opens.
   expect(document.activeElement).toBe(field);
-  expect(textView.getByRole('button', { name: 'Avsluta samtalet' })).toBeDefined();
+  expect(textView.getByRole('button', { name: 'Samtal' })).toBeDefined();
   const draftButton = textView.getByRole('button', { name: /^Visa utkastet/ });
   expect(draftButton.getAttribute('aria-expanded')).toBe('false');
   await userEvent.click(draftButton);
@@ -289,6 +274,11 @@ test('recovery retains the pending operation until its durable receipt replaces 
   const requests: { url: string; body: unknown }[] = [];
   let recoveries = 0;
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    if (url === path && init?.method === 'POST' && JSON.parse(String(init.body)).previousId) {
+      requests.push({ url, body: JSON.parse(String(init.body)) });
+      current = { ...session(), id: 'fresh' };
+      return Response.json(current);
+    }
     if (url === path) return Response.json(init?.method === 'POST' ? current : { available: true });
     if (url.endsWith('/stop')) return Response.json({ stopped: true });
     if (init?.method === 'POST') requests.push({ url, body: JSON.parse(String(init.body)) });
@@ -358,7 +348,7 @@ test('recovery retains the pending operation until its durable receipt replaces 
   await userEvent.click(screen.getByRole('button', { name: 'Nytt samtal' }));
   await waitFor(() =>
     expect(screen.getByRole('log', { name: 'Samtalstext' }).textContent).toBe(
-      'Skyttel: Nytt samtal. Utkastet är tomt.',
+      'Här visas det du och Skyttel säger och skriver.',
     ),
   );
   expect(queryConsentBox()).toBeNull();
@@ -367,8 +357,8 @@ test('recovery retains the pending operation until its durable receipt replaces 
   );
   expect(screen.queryByText('Visa kvittot')).toBeNull();
   expect(requests.at(-1)).toEqual({
-    url: `${path}/session/new`,
-    body: { discard: false, ...approvedForVisit },
+    url: path,
+    body: { previousId: 'session', ...approvedForVisit },
   });
 });
 
@@ -414,6 +404,8 @@ test('a working task can be cancelled and an expired session clears private text
   const lost = vi.fn();
   const cancelled = vi.fn();
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    if (url === path && init?.method === 'POST' && JSON.parse(String(init.body)).previousId)
+      return Response.json({ error: 'not_found' }, { status: 404 });
     if (url === path) return Response.json(init?.method === 'POST' ? current : { available: true });
     if (url.endsWith('/cancel')) {
       cancelled(JSON.parse(String(init?.body)));
@@ -538,7 +530,12 @@ test.each(['Escape', 'Nytt samtal'])(
     await waitFor(() => expect(polled).toHaveBeenCalledOnce());
     if (action === 'Escape')
       await userEvent.type(screen.getByLabelText('Meddelande till Skyttel'), '{Escape}');
-    else await userEvent.click(screen.getByRole('button', { name: action }));
+    else {
+      expect((screen.getByRole('button', { name: action }) as HTMLButtonElement).disabled).toBe(
+        true,
+      );
+      await userEvent.type(screen.getByLabelText('Meddelande till Skyttel'), '{Escape}');
+    }
     await act(async () =>
       release(
         Response.json({
@@ -556,7 +553,7 @@ test.each(['Escape', 'Nytt samtal'])(
     expect(screen.getByRole('status').textContent).toContain('Nya förslag är osparade');
     expect(screen.getByRole('log', { name: 'Samtalstext' }).textContent).toBe(
       action === 'Nytt samtal'
-        ? 'Skyttel: Nytt samtal. Utkastet är tomt.'
+        ? 'Här visas det du och Skyttel säger och skriver.'
         : 'Här visas det du och Skyttel säger och skriver.',
     );
   },
@@ -857,11 +854,11 @@ test('the draft table exposes every change, free properties, type edits and rela
   expect(compact.textContent).toContain('Namn: Använder → Delad användning');
   expect(review.getAllByRole('row')).toHaveLength(14);
   const removed = within(review.getByRole('row', { name: /Dubblett/ }));
-  expect(removed.getByText('Ta bort')).toBeDefined();
+  expect(removed.getByText('Tas bort')).toBeDefined();
   const added = within(
     review.getByRole('rowheader', { name: 'Oklar cykel' }).closest('tr') as HTMLElement,
   );
-  expect(added.getByText('Lägg till')).toBeDefined();
+  expect(added.getByText('Läggs till')).toBeDefined();
   expect(compact.textContent).toContain('alex → använder → none-bike');
   expect(compact.textContent).toContain('alex → använder → Oklar cykel');
   expect(compact.textContent).toContain('alex → använder → unresolved-bike');

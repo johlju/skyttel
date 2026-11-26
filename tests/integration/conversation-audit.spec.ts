@@ -270,7 +270,7 @@ test.describe('valt mobilt samtalsflöde', () => {
         offset_ms: 100,
         delegation: { id: 'audit-task', type: 'delegation', target: 'client' },
       });
-      await expect(voiceBox(page)).toHaveText('Skyttel arbetar');
+      await expect(voiceBox(page)).toHaveText('Arbetar');
       await expect(voiceBox(page).getByRole('button', { name: 'Avbryt' })).toBeVisible();
       await expect(view(page)).toHaveCount(0);
       const voice = await voiceBox(page).boundingBox();
@@ -301,7 +301,7 @@ test.describe('valt mobilt samtalsflöde', () => {
       await expect(field).not.toBeFocused();
       await field.fill('Beskriv den senaste ändringen.');
       await view(page).getByRole('button', { name: 'Skicka', exact: true }).click();
-      await expect(voiceBox(page)).toHaveText('Skyttel arbetar');
+      await expect(voiceBox(page)).toHaveText('Arbetar');
       // Resize exercises the real visible-viewport layout; it is not an iOS keyboard.
       await page.setViewportSize({ width: 390, height: 508 });
       await expect(view(page)).toHaveAttribute('data-short', 'true');
@@ -322,6 +322,19 @@ test.describe('valt mobilt samtalsflöde', () => {
       ).toBeLessThanOrEqual(1);
       await expect(view(page).getByRole('log')).toContainText('Lo-förslaget ligger kvar');
       await expect(view(page).getByRole('button', { name: 'Avbryt', exact: true })).toBeVisible();
+      await expect(voiceBox(page)).toHaveText('Arbetar');
+      await expect
+        .poll(() =>
+          voiceBox(page).evaluate((element) => {
+            const { x, y, width, height } = element.getBoundingClientRect();
+            return element.contains(document.elementFromPoint(x + width / 2, y + height / 2));
+          }),
+        )
+        .toBe(true);
+      const transcript = await view(page).locator('.text-view-body').boundingBox();
+      const corner = await voiceBox(page).boundingBox();
+      if (!transcript || !corner) throw new Error('Voice and conversation text must be visible');
+      expect(transcript.y + transcript.height).toBeLessThanOrEqual(corner.y);
       await expect(voiceBox(page).getByRole('button', { name: 'Avbryt' })).toHaveCount(0);
       await capture(page, 'selected-text-keyboard-equivalent');
       await page.setViewportSize({ width: 844, height: 190 });

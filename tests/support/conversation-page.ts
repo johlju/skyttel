@@ -50,6 +50,19 @@ export const closeConversationText = (page: Page) => steps(page).closeConversati
 export const chooseConversationText = (page: Page) => steps(page).chooseConversationText();
 export const chooseConversationVoice = (page: Page) => steps(page).chooseConversationVoice();
 
+export async function selectConversation(page: Page, title: string | RegExp) {
+  const view = page.getByRole('region', { name: 'Skriv till Skyttel', exact: true });
+  if (!(await view.isVisible())) await openConversationText(page);
+  const toggle = view.getByRole('button', { name: 'Samtal', exact: true });
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+  const row = view
+    .getByRole('region', { name: 'Samtal', exact: true })
+    .getByRole('button', { name: title, exact: true });
+  await expect(row).toBeEnabled();
+  await row.focus();
+  await row.press('Enter');
+}
+
 /** Opens the current whole draft beside the conversation text. */
 export async function openConversationDraft(page: Page) {
   await openConversationText(page);

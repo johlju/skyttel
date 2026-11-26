@@ -426,10 +426,12 @@ MIKROFONTRYCK-08.
 
 1. Håll mikrofonen medan starten fångar den förberedda första tonen. Släpp och
    låt tidigare fångat ljud överföras enligt förberedelsen.
-2. Slå på mikrofonen med kort tryck och välj Nytt samtal. Den nya anslutningen
+2. Slå på mikrofonen med kort tryck och stäng textvyn. Välj plusknappen
+   **Nytt samtal** vid röstrutan. Den nya anslutningen
    ska behålla mikrofonen på. Startoperatören kontrollerar fortsatt
    ljudöverföring.
-3. Slå av mikrofonen och välj Nytt samtal igen. Mikrofonen ska förbli av utan ny
+3. Slå av mikrofonen, öppna textvyn och välj **Nytt samtal** igen.
+   Mikrofonen ska förbli av utan ny
    tillståndsfråga.
 
 **Förväntat resultat:**

@@ -42,9 +42,13 @@ codex_curl() {
   curl "${codex_curl_options[@]}" "$@"
 }
 
-codex_curl \
-  --output "${codex_release_json}" \
-  https://api.github.com/repos/openai/codex/releases/latest
+if [[ -r /run/secrets/codex_release ]]; then
+  cp /run/secrets/codex_release "${codex_release_json}"
+else
+  codex_curl \
+    --output "${codex_release_json}" \
+    https://api.github.com/repos/openai/codex/releases/latest
+fi
 
 if ! codex_release_tag="$(
   jq -er \

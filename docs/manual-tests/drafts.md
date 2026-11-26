@@ -1557,7 +1557,8 @@ UTKAST-90.
 **Steg:**
 
 1. Öppna **Utkast** i verktygsfältet vid 1440 × 1000 pixlar.
-2. Läs tabellens Symbol, Namn, Typ och Vad som ändras.
+2. Läs tabellens Namn, Typ och Vad som ändras. Symbolen står före
+   ändringstexten.
 3. Öppna **Alex blå cykel** med tangentbord. Läs sparade och föreslagna
    värden, hela beskrivningen, Ramnummer och ekonomiska uppgifter.
 4. Prova Tab, Skift+Tab, krysset och Escape. Öppna därefter ett samband,
@@ -1894,7 +1895,7 @@ UTKAST-32.
   "outcomes": [
     "Alla fyra rader visar en uttrycklig statusändring i båda riktningarna.",
     "Det utgångna objektet och dess samband visar dessutom Gäller: Upphört → Aktuellt. Det andra paret visar Gäller: Aktuellt → Upphört.",
-    "Den fullständiga läsningen visar samma betydelser som sammanfattningen. De fyra kolumnerna är kvar. Läsningen ändrar inga förslag eller sparade uppgifter och Escape återför fokus till den använda läsknappen."
+    "Den fullständiga läsningen visar samma betydelser som sammanfattningen. Tabellen visar Namn, Typ och Vad som ändras. Läsningen ändrar inga förslag eller sparade uppgifter och Escape återför fokus till den använda läsknappen."
   ]
 }
 ```
@@ -1913,8 +1914,8 @@ UTKAST-32.
 - Det utgångna objektet och dess samband visar dessutom
   Gäller: Upphört → Aktuellt. Det andra paret visar Gäller: Aktuellt → Upphört.
 - Den fullständiga läsningen visar samma betydelser som sammanfattningen.
-  De fyra kolumnerna är kvar. Läsningen ändrar inga förslag eller sparade
-  uppgifter och Escape återför fokus till den använda läsknappen.
+  Tabellen visar Namn, Typ och Vad som ändras. Läsningen ändrar inga förslag
+  eller sparade uppgifter och Escape återför fokus till den använda läsknappen.
 
 ### UTKAST-33: läs långa objektnamn i objekt- och sambandskonflikter
 
@@ -5497,7 +5498,8 @@ UTKAST-92.
 **Steg:**
 
 1. Öppna **Utkast** i verktygsfältet vid 390 × 844 pixlar.
-2. Läs tabellens Symbol, Namn, Typ och Vad som ändras.
+2. Läs tabellens Namn, Typ och Vad som ändras. Symbolen står före
+   ändringstexten.
 3. Öppna **Alex blå cykel** med tangentbord. Läs sparade och föreslagna
    värden, hela beskrivningen, Ramnummer och ekonomiska uppgifter.
 4. Prova Tab, Skift+Tab, krysset och Escape. Öppna därefter ett samband,

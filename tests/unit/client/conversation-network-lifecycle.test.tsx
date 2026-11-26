@@ -289,7 +289,6 @@ test('late availability, consent, restore and online responses from a departed h
     '/api/households/linden/conversation-consent',
     path,
     path,
-    `${path}/restore`,
   ]);
   rerender({ householdId: 'eken' });
   await tick(0);
@@ -301,7 +300,7 @@ test('late availability, consent, restore and online responses from a departed h
             ? { available: true, conversation: { ...initial, paused: true } }
             : url === path
               ? { available: true }
-              : { saved: { textVersion: 4, savedAt: '2026-10-01T08:00:00.000Z' } },
+              : { saved: { textVersion: 5, savedAt: '2026-10-01T08:00:00.000Z' } },
         ),
       );
   });

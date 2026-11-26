@@ -4,6 +4,7 @@ import {
   closeConversationText,
   microphoneButton,
   openConversationText,
+  selectConversation,
   startConversationWithText,
   turnMicrophoneOn,
   voiceBox,
@@ -99,8 +100,7 @@ for (const size of [
         );
         expect((await bounds(view(page))).width).toBe(narrow ? size.width : 400);
         expect((await bounds(view(page))).bottom).toBe(size.height);
-        if (!narrow)
-          expect((await bounds(page.locator('.map-space'))).right).toBe(size.width - 400);
+        expect((await bounds(page.locator('.map-space'))).right).toBe(size.width);
         if (size.mobile || narrow) await expect(field(page)).not.toBeFocused();
         else await expect(field(page)).toBeFocused();
         const draft = view(page).getByRole('button', { name: 'Visa utkastet (1)', exact: true });
@@ -108,7 +108,6 @@ for (const size of [
           await expect(draft).toHaveText(/Utkast\s+1/, { useInnerText: true });
           const controls = [
             view(page).getByRole('meter', { name: 'Kontext' }),
-            draft,
             view(page).getByRole('button', { name: 'Nytt samtal', exact: true }),
             view(page).getByRole('button', { name: 'Stäng textvyn', exact: true }),
           ];
@@ -152,19 +151,9 @@ for (const size of [
         await view(page).getByRole('button', { name: 'Dölj utkastet (1)', exact: true }).click();
         await page.reload();
         await openConversationText(page);
-        const lifetime = view(page).getByRole('status', { name: 'Samtalets livslängd' });
-        await expect(lifetime).toContainText('Samtalet är pausat. Löper ut');
-        const deadline = await bounds(lifetime.locator('time'));
-        const restoredBody = await bounds(view(page).locator('.text-view-body'));
-        expect(deadline.y).toBeGreaterThanOrEqual(restoredBody.y);
-        expect(deadline.bottom).toBeLessThanOrEqual(restoredBody.bottom);
-        const end = view(page).getByRole('button', { name: 'Avsluta samtalet', exact: true });
-        await end.scrollIntoViewIfNeeded();
-        await end.click();
-        await expect(
-          view(page).getByRole('button', { name: 'Nytt samtal', exact: true }),
-        ).toBeFocused();
         await expect(view(page).getByRole('log')).not.toContainText('Ett synligt provsvar.');
+        await selectConversation(page, 'Ett vanligt uppdrag.');
+        await expect(view(page).getByRole('log')).toContainText('Ett synligt provsvar.');
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
           true,
         );

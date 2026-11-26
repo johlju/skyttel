@@ -57,7 +57,8 @@ kartans symboler”.
   },
   "reference": "Dator; hela serverstödda utkastet och det angivna personliga valet/felutfallet.",
   "outcomes": [
-    "Läsa osparade ändringar i en tabell utan att ändra eller spara dem."
+    "Läsa osparade ändringar i en tabell utan att ändra eller spara dem.",
+    "Hela raden får samma bakgrund vid hovring över namnet eller statusen. Ett klick på statusen öppnar förslaget. När dialogen stängs försvinner radens markering och fokus återgår till namnet."
   ]
 }
 ```
@@ -74,11 +75,12 @@ kartans symboler”.
    objekt, **Sista fyra: 1111 (Text) → Sista fyra: 2222 (Text)**,
    gammal/ny inloggningsadress,
    **Lo Rättad → Betalar → Kortet**, Provtyp och Förvaras.
-3. Läs kolumnerna Symbol, Namn, Typ och Vad som ändras. Penna, kryss och
-   plus har textalternativen Ändra, Ta bort och Lägg till. Namn och typer
-   går att läsa utan bokstavskolumner. Inget sparas genom läsningen.
+3. Läs kolumnerna Namn, Typ och Vad som ändras. För pekaren över
+   **Tas bort** och över namnet på Kims rad. Klicka på **Tas bort**, läs
+   förslaget och tryck Escape utan att flytta pekaren. Flytta sedan
+   pekaren från raden och tillbaka.
 4. Dölj utkastet, stäng och öppna textvyn och kontrollera att det fortfarande
-   är hopfällt. Öppna det och välj **Nytt samtal**. Läs det hopfällda läget.
+   är hopfällt. Öppna det och välj **Nytt samtal**. Kontrollera att utkastet syns.
 5. Öppna samma baslinjesparande i Rapporter igen. Välj **Visa ändringarna**
    om uppgifterna är hopfällda. Läs fortfarande
    **Sista fyra: 1111 (Text)**. Det föreslagna 2222 hör till utkastet, inte kvittot.
@@ -88,16 +90,19 @@ kartans symboler”.
 - Knappen står ovanför samtalstexten, anger åtta osparade ändringar och
   visar en pil åt öppningsriktningen. Den heter **Dölj utkastet** när
   tabellen visas. Tangentbord och skärmläsare når knappen och dess läge.
-- Tabellen har kolumnerna Symbol, Namn, Typ och Vad som ändras, en rad
-  per ändring. Penna, kryss och plus motsvarar kartans symboler och har
-  textalternativen Ändra, Ta bort och Lägg till. Rättelsen visar
+- Tabellen har tre kolumner och en rad per ändring. Penna, kryss och plus
+  motsvarar kartans symboler och står före texten i **Vad som ändras**.
+  Rättelsen visar
   **Namn: Lo Exempel → Lo Rättad**. Sambandets ändring visar den gamla
   och nya e-postadressen utan att upprepa hela sambandets namn.
+- Hovring över namnet och statusen ger samma bakgrund på hela raden.
+  Klicket på statusen öppnar Kims förslag. Escape tar bort radens markering
+  och återför fokus till namnet. Hovring över raden färgar den igen.
 - På dator börjar utkastet vid panelens överkant med rubriken **Utkast**,
   till vänster om samtalsrubriken och samtalstexten. Namn och typer går
   att läsa utan att enskilda ord bryts till bokstavskolumner.
   Inget sparas genom att läsa tabellen.
-- Efter **Nytt samtal** är utkastet hopfällt enligt grundvalet; samma
+- Efter **Nytt samtal** är utkastet fortfarande öppet på bred skärm. Samma
   osparade ändringar ligger kvar.
 
 ### SAMTALSUTKAST-02: valet följer användaren mellan hushåll och enheter
@@ -139,7 +144,7 @@ enheter”.
    **Nytt samtal**. Öppna **Visa förslaget: Lo Exempel**, läs Person och
    kontrollera att ingen egenskap Beskrivning finns. Stäng dialogen.
    Välj **Spara hela utkastet** i utkastet. Vänta tills sparandet är klart,
-   återgå till textvyn och välj **Nytt samtal**. Öppna det tomma utkastet.
+   återgå till textvyn och välj **Nytt samtal**. Läs det tomma utkastet.
 3. Logga in som Alex i den andra webbläsarprofilen. Öppna den utskrivna
    adressen följd av `/households/draft-other-household`. Öppna samma
    inställning. Avmarkera den där, ladda om Alex första sida och läs valet.
@@ -157,7 +162,7 @@ enheter”.
   föreslår den första ändringen.** Valet sparas direkt med **Valet är sparat**.
 - Ett befintligt utkast är utfällt vid start och efter **Nytt samtal**.
   **Dölj utkastet** ändrar bara det pågående samtalet, inte det sparade valet.
-  Ett tomt utkast börjar hopfällt; när det öppnas står **Utkastet är tomt.**
+  Vid bytet efter sparandet förblir panelen öppen och visar **Utkastet är tomt.**
 - Alex val följer mellan båda hushållen, båda webbläsarprofilerna och efter
   serverns omstart. Robin har fortfarande det omarkerade grundvalet.
 
@@ -196,19 +201,17 @@ testfallet “SAMTALSUTKAST-03: första förslaget öppnar utkastet på mobil en
 1. Markera utkastvalet i Inställningar, återgå och starta med text.
 2. Skriv **Lägg till Lo.** Operatören levererar det första förslaget enligt
    [förberedelsen](text-conversation-preparation.md#första-förslaget).
-3. Läs **Lo Exempel** i utkastet och svaret **Lo ligger i utkastet.** i
-   samtalet. Öppna **Visa förslaget: Lo Exempel**, läs **Person** och
-   kontrollera att ingen egenskap Beskrivning finns. Stäng dialogen.
-4. Läs placeringen och fortsätt med samma samtal. Bred emulerad pekare
-   har sitt eget fall nedan.
+3. Läs **Lo Exempel** i utkastet. Öppna **Visa förslaget: Lo Exempel**,
+   läs **Person** och kontrollera att ingen egenskap Beskrivning finns.
+   Stäng dialogen.
+4. Välj **Text** med tangentbordet och läs **Lo ligger i utkastet.** i samtalet.
 
 **Förväntat resultat:**
 
 - Det tomma utkastet börjar hopfällt trots det markerade valet. Det första
   förslaget öppnar tabellen och ökar antalet på knappen till ett.
-- Utkastet står mellan knappen och samtalstexten på mobil enhet och smal
-  skärm, på denna smala datorreferens. Tabellen och samtalstexten går att läsa
-  med tangentbord och skärmläsare. Sidan kräver ingen vågrät rullning.
+- **Utkast** och **Text** visar var sin vy. När **Text** är vald syns
+  svaret i samma samtal. Sidan kräver ingen vågrät rullning.
 
 ### SAMTALSUTKAST-05: utkastvalet fungerar utan tillgängligt samtal
 
@@ -300,7 +303,7 @@ SAMTALSUTKAST-06.
   },
   "reference": "820 × 1180, emulerad bred pekare; mobilens utkastplacering trots sidofält.",
   "outcomes": [
-    "Första förslaget öppnar utkastet mellan knappen och samtalstexten utan sidöverflöde."
+    "Första förslaget öppnar utkastet. Text visar svaret i samma samtal utan sidöverflöde."
   ]
 }
 ```
@@ -310,8 +313,8 @@ SAMTALSUTKAST-06.
 **Steg:**
 
 1. Utför SAMTALSUTKAST-03:s steg 1–4 **en gång** med denna konfiguration.
-   Under steg 4 läses utkastet mellan knappen och samtalstexten, även när
-   textvyn är ett sidofält. Ingen horisontell sidrullning behövs.
+   Växla från **Utkast** till **Text** även när textvyn är ett sidofält.
+   Ingen vågrät rullning behövs.
 
 **Förväntat resultat:**
 

@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import { currentModelChoice } from './conversation-model.js';
 import { type ConversationState, discardConversationDraftParts } from './conversation-state.js';
 import { MapError } from './map-error.js';
 import { pendingParts } from './pending-parts.js';
@@ -74,6 +75,27 @@ export function conversationBatchPending(
   );
 }
 
+/** Restore a missing allocation row above every retained request with a known order. */
+export function initializeConversationRequestOrder(database: Database.Database) {
+  database
+    .prepare(`WITH valid_conversations AS (
+      SELECT state FROM conversation WHERE json_valid(state)
+    )
+    INSERT INTO conversation_request_order (id, nextSequence)
+    SELECT 1, COALESCE((
+      SELECT MAX(sequence) FROM (
+        SELECT json_extract(state, '$.activeMessage.sequence') AS sequence FROM valid_conversations
+        UNION ALL
+        SELECT json_extract(state, message.fullkey || '.sequence') AS sequence
+        FROM valid_conversations, json_each(state, '$.queue') AS message
+        UNION ALL
+        SELECT json_extract(state, '$.failedWork.message.sequence') AS sequence FROM valid_conversations
+      ) WHERE typeof(sequence) = 'integer' AND sequence BETWEEN 0 AND 9007199254740991
+    ), -1) + 1
+    WHERE NOT EXISTS (SELECT 1 FROM conversation_request_order WHERE id = 1)`)
+    .run();
+}
+
 /** Domain snapshots contain no process resources or provider-owned continuation. */
 export function conversationStorage(database: Database.Database, now: () => number) {
   clocks.set(database, now);
@@ -87,6 +109,10 @@ export function conversationStorage(database: Database.Database, now: () => numb
         )
         .get(),
     );
+  const reserveOrder = ordered
+    ? database.prepare<[], { sequence: number }>(`UPDATE conversation_request_order
+      SET nextSequence = nextSequence + 1 WHERE id = 1 RETURNING nextSequence - 1 AS sequence`)
+    : undefined;
   const erase = (id: string) =>
     enabled && database.prepare('DELETE FROM conversation WHERE id = ?').run(id);
   function sweep() {
@@ -96,12 +122,17 @@ export function conversationStorage(database: Database.Database, now: () => numb
   const timer = setInterval(sweep, 60_000).unref();
   const storage = {
     reserveMessageSequence() {
-      if (!ordered) return;
-      const next = database
-        .prepare(`UPDATE conversation_request_order SET nextSequence = nextSequence + 1
-        WHERE id = 1 RETURNING nextSequence - 1 AS sequence`)
-        .get() as { sequence: number } | undefined;
-      if (!next) throw new MapError('assistant_unavailable', 503);
+      if (!reserveOrder) return;
+      const next =
+        reserveOrder.get() ??
+        database
+          .transaction(() => {
+            initializeConversationRequestOrder(database);
+            return reserveOrder.get();
+          })
+          .immediate();
+      if (!next || !Number.isSafeInteger(next.sequence))
+        throw new MapError('assistant_unavailable', 503);
       return next.sequence;
     },
     erase,
@@ -169,6 +200,9 @@ export function conversationStorage(database: Database.Database, now: () => numb
           throw new Error('invalid_conversation');
         return {
           ...stored,
+          modelChoice: currentModelChoice(stored.modelChoice),
+          pendingSummaryChoice:
+            stored.pendingSummaryChoice && currentModelChoice(stored.pendingSummaryChoice),
           accepted: new Map(stored.accepted),
           pendingPartsLedger: {
             ...stored.pendingPartsLedger,
@@ -191,6 +225,15 @@ export function conversationStorage(database: Database.Database, now: () => numb
         const state = storage.read(actorId, householdId, row.browserBindingId, row.id);
         return state ? [state] : [];
       });
+    },
+    updateTitle(id: string, firstRequest: string, title: string) {
+      return (
+        enabled &&
+        database
+          .prepare(`UPDATE conversation SET state = json_set(state, '$.title', ?)
+        WHERE id = ? AND expiresAt > ? AND json_extract(state, '$.firstRequest') = ?`)
+          .run(title, id, now(), firstRequest).changes === 1
+      );
     },
     move(actorId: string, householdId: string, id: string, browserBindingId: string) {
       if (enabled)
@@ -258,17 +301,19 @@ export function conversationStorage(database: Database.Database, now: () => numb
         return state.unfinishedRequests.some((request) => {
           if (messages.some((message) => message.id === request.id)) return false;
           const accepted = state.accepted.find(([id]) => id === request.id)?.[1];
+          if (accepted?.status === 'canceled' && !state.pendingBatch && !state.pendingSave)
+            return false;
           const parts = state.pendingPartsLedger.parts.filter(
             (part) => part.messageId === request.id || part.evidence?.messageId === request.id,
           );
-          // A verified completed task may await a question's answer without
-          // owning the draft executor. Its pending parts still block saving.
+          // A terminal reply or refusal has released the executor. Failed work
+          // with an explicit retry, unknown outcomes and ready edits still hold it.
+          const phase = accepted?.result?.view.phase;
           return !(
-            !request.paused &&
             accepted?.status === 'completed' &&
-            accepted.result?.view.phase === 'ready' &&
-            !accepted.result.view.error &&
-            parts.some((part) => part.status === 'waiting') &&
+            (phase === 'ready' || phase === 'error') &&
+            !state.pendingBatch &&
+            !state.pendingSave &&
             !parts.some((part) => part.status === 'ready')
           );
         });

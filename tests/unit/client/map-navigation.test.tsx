@@ -3,6 +3,7 @@ import { type ComponentProps, useState } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { MapNavigation } from '../../../src/client/MapNavigation.js';
 import { SpatialMap } from '../../../src/client/SpatialMap.js';
+import * as spatialScene from '../../../src/client/spatial-scene.js';
 import type { MapState } from '../../../src/shared/map.js';
 import { defaultViewSettings, type Position } from '../../../src/shared/personal-view.js';
 
@@ -271,4 +272,77 @@ test('the map reads automatic and saved scene positions without saving or reduci
     { id: 'lo', x: -10000, y: 1.23456789, z: -0.001, version: 3 },
   ]);
   expect(move).not.toHaveBeenCalled();
+});
+
+test('text-view panning waits for selected points and runs once per width increase', () => {
+  const panIntoView = vi.fn();
+  const createScene = spatialScene.spatialScene;
+  const sceneFactory = vi
+    .spyOn(spatialScene, 'spatialScene')
+    .mockImplementation((canvas, _onProject, ...callbacks) => ({
+      ...createScene(canvas, () => {}, ...callbacks),
+      panIntoView,
+    }));
+  const state: MapState = {
+    userId: 'alex',
+    contentVersion: 1,
+    types: [],
+    relationshipTypes: [],
+    objects: [
+      { id: 'lo', name: 'Lo Exempel', typeId: 'person', householdId: 'home', revision: 1 },
+      { id: 'kim', name: 'Kim Exempel', typeId: 'person', householdId: 'home', revision: 1 },
+    ],
+    relationships: [],
+    draft: { version: 0, changes: [] },
+  };
+  const viewport = { x: 0, y: 0, width: 1000, height: 600 };
+  const map = (width = 0) => (
+    <SpatialMap
+      state={state}
+      active
+      objects={new Map(state.objects.map((object) => [object.id, object]))}
+      relationships={new Map()}
+      selection={{ kind: 'object', id: 'lo' }}
+      selectedIds={['lo', 'kim']}
+      disabled={false}
+      onSelect={() => {}}
+      onSelectRelationship={() => {}}
+      onFocus={() => {}}
+      onClear={() => {}}
+      onReset={() => {}}
+      onRemove={() => {}}
+      floatingArea={{
+        viewport,
+        obstacles: [],
+        textView: width ? { x: viewport.width - width, y: 0, width, height: 600 } : undefined,
+      }}
+    />
+  );
+  try {
+    const view = render(map());
+    const canvas = view.container.querySelector('canvas') as HTMLCanvasElement;
+    Object.defineProperties(canvas, {
+      clientWidth: { value: viewport.width },
+      clientHeight: { value: viewport.height },
+    });
+    canvas.getBoundingClientRect = () => new DOMRect(0, 0, viewport.width, viewport.height);
+    const project = sceneFactory.mock.calls[0][1];
+    const lo = { id: 'lo', x: 850, y: 300, depth: 30, scale: 1, visible: true };
+    const kim = { ...lo, id: 'kim', x: 650 };
+
+    view.rerender(map(200));
+    act(() => project([lo]));
+    expect(panIntoView).not.toHaveBeenCalled();
+    act(() => project([lo, kim]));
+    expect(panIntoView).toHaveBeenCalledTimes(1);
+
+    act(() => project([{ ...lo, x: 870 }, kim]));
+    expect(panIntoView).toHaveBeenCalledTimes(1);
+    view.rerender(map(100));
+    expect(panIntoView).toHaveBeenCalledTimes(1);
+    view.rerender(map(200));
+    expect(panIntoView).toHaveBeenCalledTimes(2);
+  } finally {
+    sceneFactory.mockRestore();
+  }
 });

@@ -27,7 +27,17 @@ async function build() {
   await new Promise((resolve, reject) => {
     const child = spawn(
       docker,
-      ['build', '--tag', image, '--file', '.devcontainer/Dockerfile', '.'],
+      [
+        'build',
+        ...(process.env.SKYTTEL_CODEX_RELEASE_METADATA
+          ? ['--secret', `id=codex_release,src=${process.env.SKYTTEL_CODEX_RELEASE_METADATA}`]
+          : []),
+        '--tag',
+        image,
+        '--file',
+        '.devcontainer/Dockerfile',
+        '.',
+      ],
       {
         cwd: root,
         stdio: 'inherit',

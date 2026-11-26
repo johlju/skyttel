@@ -374,7 +374,7 @@ test('a new selected model reconstructs fresh draft context without stale read r
         return [modelTool('read_my_draft', {})];
       return [modelMessage('Förslaget heter Min stol.')];
     }
-    expect(request.model).toBe('gpt-6.1-sol');
+    expect(request.model).toBe('gpt-6.2-sol');
     expect(payloads.filter((payload) => payload.draft)).toHaveLength(1);
     expect(current.draft.changes[0].after.name).toBe('Manuellt nytt namn');
     expect(request.input.some((item) => item.type === 'function_call_output')).toBe(false);
@@ -394,7 +394,7 @@ test('a new selected model reconstructs fresh draft context without stale read r
   });
   expect(edited.status(), await edited.text()).toBe(200);
   const selected = await post(`${base}/text-assistant/${session.id}/model-choice`, {
-    model: 'gpt-6.1-sol',
+    model: 'gpt-6.2-sol',
     effort: 'high',
   });
   expect(selected.status()).toBe(200);
@@ -1174,7 +1174,7 @@ test('necessary exact instructions exceeding the selected profile pause without 
   const session = await setup({
     modelProfile: {
       provider: 'openai',
-      model: 'gpt-6.1-sol',
+      model: 'gpt-6.2-sol',
       effort: 'high',
       tokens: 512,
       maxOutputTokens: 128,
@@ -1530,7 +1530,7 @@ test.each([
           return [modelMessage('Läsningen är klar.')];
         }
         if (current.message === 'Kontrollera det senaste verifierade sparandet.') {
-          expect(request.model).toBe('gpt-6.1-sol');
+          expect(request.model).toBe('gpt-6.2-sol');
           expect(JSON.stringify(request.input)).toContain(verifiedReceipt?.savedAt);
           expect(current.saveOperations).toContainEqual(
             expect.objectContaining({
@@ -1754,7 +1754,7 @@ test.each([
       expect(
         (
           await post(`${base}/text-assistant/${session.id}/model-choice`, {
-            model: 'gpt-6.1-sol',
+            model: 'gpt-6.2-sol',
             effort: 'high',
           })
         ).status(),

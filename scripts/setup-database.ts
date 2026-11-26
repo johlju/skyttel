@@ -1,4 +1,5 @@
 import { ConfigurationError, readConfig } from '../src/server/config.js';
+import { initializeConversationRequestOrder } from '../src/server/conversation-storage.js';
 import { DatabaseInitializationError, openDatabase } from '../src/server/database.js';
 import { prepareInstallationAuthority } from '../src/server/installation-authority.js';
 import { seedDemo } from './seeds/demo.js';
@@ -23,16 +24,19 @@ try {
     .transaction(() => {
       // Deferral allows any table order, including installation's restrictive FK.
       // Keep the file and migration history so open server connections stay valid.
+      // Keep the request counter monotonic across those connections too.
       connection.pragma('defer_foreign_keys = ON');
       const tables = connection
         .prepare<[], { name: string }>(
           `SELECT name FROM sqlite_schema
-         WHERE type = 'table' AND name != 'schema_migration' AND name NOT GLOB 'sqlite_*'`,
+         WHERE type = 'table' AND name NOT IN ('schema_migration', 'conversation_request_order')
+         AND name NOT GLOB 'sqlite_*'`,
         )
         .all();
       for (const { name } of tables) {
         connection.exec(`DELETE FROM "${name.replaceAll('"', '""')}"`);
       }
+      initializeConversationRequestOrder(connection);
       prepareInstallationAuthority(connection, config.authorityFence);
       return seedDemo(connection, config);
     })

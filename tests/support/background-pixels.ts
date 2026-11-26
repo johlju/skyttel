@@ -19,7 +19,7 @@ export async function captureBackground(page: Page, path: string) {
     ].map((line) => line.getBoundingClientRect());
     const cards = [
       ...document.querySelectorAll(
-        'nav, input, [role="region"]:not([aria-label="Rymdkarta"]), .map-navigation, .spatial-label-card, .spatial-node, .spatial-name, .spatial-axis',
+        'nav, input, [role="region"]:not([aria-label="Rymdkarta"]), .map-navigation, .text-view, .text-view-draft, .conversation-list, .spatial-label-card, .spatial-node, .spatial-name, .spatial-axis',
       ),
     ].map((card) => ({
       bounds: card.getBoundingClientRect(),

@@ -46,6 +46,7 @@ export async function createInstallation(
     legacyAuthCallbacks?: boolean;
     databasePath?: string;
     modelFetch?: typeof fetch;
+    titleFetch?: typeof fetch;
     providerApiKey?: string;
     modelUsage?: TextModelUsage;
     liveFetch?: typeof fetch;
@@ -137,7 +138,10 @@ export async function createInstallation(
       fetch: clientAddressBoundary(config.clientAddress, (request) => handle(request)),
       hostname: config.host,
       port: config.port,
-      ...(tls ? { createServer: createHttpsServer, serverOptions: tls } : {}),
+      // Browser workflows reuse HTTP connections across long interactions. Keep idle sockets
+      // until this installation closes them, so a resumed read or write cannot race idle expiry.
+      serverOptions: { ...tls, keepAliveTimeout: 0 },
+      ...(tls ? { createServer: createHttpsServer } : {}),
     });
     server.on('connection', (socket) => {
       sockets.add(socket);
@@ -215,11 +219,37 @@ export async function createInstallation(
         };
       };
     }
+    const { modelFetch } = databaseOptions;
     const app = createApp({
       config,
       database,
       auth,
-      modelFetch: databaseOptions.modelFetch,
+      modelFetch:
+        modelFetch &&
+        (async (input, init) => {
+          // Title generation has its own provider turn, independent of scripted dialogue.
+          if (
+            !databaseOptions.providerApiKey &&
+            JSON.parse(String(init?.body)).instructions?.startsWith('SKYTTEL_TITLE')
+          ) {
+            if (databaseOptions.titleFetch) return databaseOptions.titleFetch(input, init);
+            return Response.json({
+              id: 'synthetic-title',
+              service_tier: 'default',
+              usage: {
+                input_tokens: 8,
+                input_tokens_details: { cached_tokens: 0, cache_write_tokens: 0 },
+                output_tokens: 2,
+                output_tokens_details: { reasoning_tokens: 0 },
+                total_tokens: 10,
+              },
+              status: 'completed',
+              output: [],
+              model: JSON.parse(String(init?.body)).model,
+            });
+          }
+          return modelFetch(input, init);
+        }),
       modelUsage: databaseOptions.modelUsage,
       liveFetch: databaseOptions.liveFetch,
       liveSideband: databaseOptions.liveSideband,

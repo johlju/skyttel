@@ -453,7 +453,7 @@ test('literal instruction text, mixed edits, clarification and a later save pres
     (input) => {
       if (input.instructions.startsWith('SKYTTEL_TURN_ACTIONS')) {
         const operations = JSON.parse(String(input.input[0].content)).untrusted.operations;
-        if (operations[0].name === 'prepare_save')
+        if (operations[0].name === 'save_draft')
           return [modelMessage('{"decision":"allow","complete":true}')];
         expect(
           JSON.parse(String(input.input[0].content)).untrusted.operations[0].arguments.value
@@ -673,7 +673,9 @@ test('a later violation stops the turn while retaining its earlier confirmed dra
   const ended = await send(started, 'Lägg till Requested, inget annat.');
   expect(ended.error).toBe('assistant_action_out_of_scope');
   expect(ended.review.changes.map((change) => change.id)).toEqual(['Requested']);
-  expect(ended.result?.changes).toEqual([{ subject: 'Requested', action: 'lades till' }]);
+  expect(ended.result?.changes).toEqual([
+    { subject: 'Requested', action: 'lades till', objectId: 'Requested' },
+  ]);
   expect(ended.requiredNotice).toContain(ended.securityReference);
   expect(model.requests).toHaveLength(2);
 });
@@ -779,7 +781,7 @@ test('the automatic save fallback cannot expand a literal-name edit into saving'
       const { operations } = JSON.parse(String(input.input[0].content)).untrusted;
       return [
         modelMessage(
-          operations.some((operation: { name: string }) => operation.name === 'prepare_save')
+          operations.some((operation: { name: string }) => operation.name === 'save_draft')
             ? '{"decision":"deny","operation":0}'
             : '{"decision":"allow","complete":true,"fulfillsRequest":true}',
         ),

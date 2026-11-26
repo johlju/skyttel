@@ -175,6 +175,8 @@ test('YTA-03: narrow screens keep tools, help and text work reachable without gr
         page.getByRole('region', { name: 'Skriv till Skyttel', exact: true }),
       ).toBeVisible();
       const conversation = page.getByRole('region', { name: 'Skriv till Skyttel', exact: true });
+      const text = conversation.getByRole('button', { name: 'Text', exact: true });
+      await text.click();
       await conversation
         .getByLabel('Meddelande till Skyttel', { exact: true })
         .fill('Jag vill skriva här.');
@@ -219,6 +221,7 @@ test('YTA-03: narrow screens keep tools, help and text work reachable without gr
       const retainedDraft = await openDraftReview(page);
       await expect(retainedDraft).toContainText('Utkastet är tomt.');
       expect(await (await page.request.get(path)).json()).toEqual(retained);
+      await text.click();
       await expect(conversation.getByLabel('Meddelande till Skyttel', { exact: true })).toHaveValue(
         unsent,
       );

@@ -6,17 +6,18 @@ import './voice-box.css';
 
 // The status words, highest first: when several apply, the first one is shown.
 const statuses = [
-  { id: 'working', word: 'Skyttel arbetar', wave: 'still', stop: true },
-  { id: 'speaking', word: 'Skyttel talar', wave: 'skyttel', stop: true },
-  { id: 'saved', word: 'Sparat', wave: 'still', stop: false },
-  { id: 'starting', word: 'Rösten startar', wave: 'dimmed', stop: false },
-  { id: 'user', word: 'Du talar', wave: 'user', stop: false },
-  { id: 'waiting', word: 'Väntar på ditt svar', wave: 'still', stop: false },
-  { id: 'listening', word: 'Lyssnar', wave: 'still', stop: false },
+  { id: 'speaking', word: 'Skyttel talar', wave: 'skyttel' },
+  { id: 'user', word: 'Du talar', wave: 'user' },
+  { id: 'working', word: 'Arbetar', wave: 'working' },
+  { id: 'saved', word: 'Sparat', wave: 'still' },
+  { id: 'starting', word: 'Rösten startar', wave: 'dimmed' },
+  { id: 'waiting', word: 'Väntar på ditt svar', wave: 'still' },
+  { id: 'listening', word: 'Lyssnar', wave: 'still' },
 ] as const;
 
 export type VoiceBoxStatus = Omit<(typeof statuses)[number], 'wave'> & {
-  wave: 'still' | 'dimmed' | 'user' | 'skyttel';
+  wave: (typeof statuses)[number]['wave'];
+  stop: boolean;
 };
 
 type VoiceBoxState = Pick<
@@ -24,24 +25,35 @@ type VoiceBoxState = Pick<
   'microphone' | 'starting' | 'speaking' | 'userSpeaking' | 'working' | 'waitingForAnswer' | 'saved'
 >;
 
+function voiceBoxHasWork(voice: VoiceBoxState, conversationWorking: boolean) {
+  // A written message counts while the microphone is on.
+  return voice.working || (voice.microphone === 'on' && conversationWorking);
+}
+
 /**
  * What the voice box shows, or null when the box is not shown. The box belongs
  * to the voice: a conversation with text alone never shows it.
  */
 export function voiceBoxStatus(voice: VoiceBoxState, working: boolean): VoiceBoxStatus | null {
   const on = voice.microphone === 'on';
+  const hasWork = voiceBoxHasWork(voice, working);
   const applies = {
-    // A written message counts while the microphone is on.
-    working: voice.working || (on && working),
     speaking: voice.speaking,
+    // Outside work, save and startup take priority over the user's speech.
+    user: voice.userSpeaking && (hasWork || (!voice.saved && !voice.starting)),
+    working: hasWork,
     saved: voice.saved,
     starting: voice.starting,
-    user: voice.userSpeaking,
     waiting: voice.waitingForAnswer,
     listening: on,
   };
-  const status = statuses.find((status) => applies[status.id]) ?? null;
-  return status?.id === 'waiting' && !on ? { ...status, wave: 'dimmed' } : status;
+  const status = statuses.find((status) => applies[status.id]);
+  if (!status) return null;
+  return {
+    ...status,
+    wave: status.id === 'waiting' && !on ? 'dimmed' : status.wave,
+    stop: hasWork || voice.speaking,
+  };
 }
 
 // How much each of the seven bars takes of the sound level, highest in the middle.
@@ -50,7 +62,7 @@ const reducedMotion = '(prefers-reduced-motion: reduce)';
 
 /**
  * Seven bars. While the user talks they follow the microphone's sound level.
- * The other forms, and both fixed forms at reduced motion, are in the styles.
+ * The other forms and the reduced-motion forms are in the styles.
  */
 function Waveform({ form, level }: { form: VoiceBoxStatus['wave']; level: () => number }) {
   const wave = useRef<HTMLSpanElement>(null);
@@ -117,6 +129,7 @@ export function VoiceStatusAnnouncements({
   const announcedSave = useRef('');
   const toldWork = useRef(false);
   const working = voice.working || conversation.working;
+  const workVisible = voiceBoxHasWork(voice, conversation.working);
   const microphoneButtonNow = useRef(microphoneButton);
   microphoneButtonNow.current = microphoneButton;
   useEffect(() => {
@@ -129,7 +142,7 @@ export function VoiceStatusAnnouncements({
     const saysState = Boolean(button) && document.activeElement === button;
     let text = '';
     if (on && !previous.on) text = saysState ? '' : 'Lyssnar';
-    else if (working && !toldWork.current && (shown === 'working' || textViewOpen)) {
+    else if (working && !toldWork.current && (workVisible || textViewOpen)) {
       toldWork.current = true;
       text = 'Skyttel arbetar';
     } else if (shown === 'saved' && announcedSave.current !== voice.savedId) {
@@ -140,7 +153,16 @@ export function VoiceStatusAnnouncements({
       text = saysState || microphoneOffExplained ? '' : 'Mikrofonen är av';
     }
     if (text) setAnnouncement(({ count }) => ({ count: count + 1, text }));
-  }, [on, shown, voice.savedId, working, textViewOpen, microphoneOffExplained, announceSaved]);
+  }, [
+    on,
+    shown,
+    voice.savedId,
+    working,
+    workVisible,
+    textViewOpen,
+    microphoneOffExplained,
+    announceSaved,
+  ]);
   return (
     <>
       <p className="voice-announcement" aria-live="polite" aria-atomic="true">
@@ -164,7 +186,7 @@ export function VoiceBox({
   announce = true,
 }: {
   conversation: Pick<Conversation, 'voice' | 'working' | 'cancel'> &
-    Partial<Pick<Conversation, 'session' | 'configureModel'>>;
+    Partial<Pick<Conversation, 'session' | 'configureModel' | 'switchBlocked' | 'newConversation'>>;
   microphoneButton?: () => HTMLElement | null;
   focusAfterStop?: () => HTMLElement | null;
   notice?: ReactNode;
@@ -178,7 +200,7 @@ export function VoiceBox({
   microphoneButtonNow.current = microphoneButton;
   const focusAfterStopNow = useRef(focusAfterStop);
   focusAfterStopNow.current = focusAfterStop;
-  // The stop icon goes away while it may have the focus, which must not be lost.
+  // The stop button may have focus when it changes to the idle symbol.
   const stopFocused = useRef(false);
   const stopShown = Boolean(status?.stop && !hideStop);
   useLayoutEffect(() => {
@@ -220,7 +242,7 @@ export function VoiceBox({
               />
             </svg>
           )}
-          <span>{status.word}</span>
+          <span className="voice-status-word">{status.word}</span>
           <ConversationModel
             conversation={{
               session: conversation.session ?? null,
@@ -228,10 +250,24 @@ export function VoiceBox({
             }}
           />
           <ContextSymbol percentage={conversation.session?.contextPercentage ?? 0} />
-          {status.stop && !hideStop && (
+          {conversation.newConversation && voice.state === 'listening' && (
             <button
               type="button"
-              className="voice-stop"
+              className="voice-action"
+              aria-label="Nytt samtal"
+              title="Nytt samtal"
+              disabled={conversation.switchBlocked}
+              onClick={() => void conversation.newConversation?.()}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 4v16M4 12h16" fill="none" stroke="currentColor" strokeWidth="2.5" />
+              </svg>
+            </button>
+          )}
+          {stopShown && (
+            <button
+              type="button"
+              className="voice-action voice-stop"
               aria-label="Avbryt"
               title="Avbryt"
               onFocus={() => {
@@ -246,9 +282,16 @@ export function VoiceBox({
               }}
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" />
+                <rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor" />
               </svg>
             </button>
+          )}
+          {!status.stop && (
+            <span className="voice-action voice-idle" aria-hidden="true">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="2" />
+              </svg>
+            </span>
           )}
         </div>
       )}

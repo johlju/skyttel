@@ -8,7 +8,9 @@ import {
   utilityButton,
 } from '../support/client.js';
 import {
+  giveConversationConsent,
   microphoneButton,
+  openConversationText,
   startConversationWithText,
   turnMicrophoneOn,
   voiceBox,
@@ -213,7 +215,7 @@ for (const failCheck of [false, true])
       const receipt = operations[0].receipt;
       expect((await (await page.request.get(`${path}/history`)).json()).history).toEqual([receipt]);
       await expectOnlyHistoryReceipt(page, attempt.operationId);
-      await startConversationWithText(page);
+      await openConversationText(page);
       await expect(page.getByRole('log', { name: 'Samtalstext' })).toContainText(saved);
       await expect(
         page
@@ -221,6 +223,7 @@ for (const failCheck of [false, true])
           .getByRole('listitem')
           .filter({ hasText: saved }),
       ).toHaveCount(1);
+      expect(starts).toEqual([]);
       const replay = await page.request.post(`${path}/save`, {
         headers: { origin: app.origin },
         data: attempt,
@@ -455,7 +458,7 @@ test('SPARKONTROLL-05: ett avvisat väntande försök förklaras som osparat och
           (await (await page.request.get(`${path}/operations`)).json()).operations[0]?.status,
       )
       .toBe('rejected');
-    await startConversationWithText(page);
+    await openConversationText(page);
     await expect(page.getByRole('log', { name: 'Samtalstext' })).toContainText(
       'Kontrollen visar att utkastet inte sparades. Dina osparade ändringar ligger kvar.',
     );
@@ -638,19 +641,25 @@ for (const lostRevocationReply of [false, true])
       expect((await (await page.request.get(path)).json()).draft.changes).toHaveLength(0);
       expect(model.requests).toHaveLength(2);
       if (lostRevocationReply) await expectOnlyHistoryReceipt(page, original.operationId);
-      await startConversationWithText(page);
-      await expect(page.getByLabel('Meddelande till Skyttel')).toHaveValue(
-        'Text som inte har skickats.',
-      );
+      await openConversationText(page);
       if (lostRevocationReply) {
         await expect(page.getByRole('log', { name: 'Samtalstext' })).toContainText(saved);
         await expect(
           page.getByRole('log').getByRole('listitem').filter({ hasText: saved }),
         ).toHaveCount(1);
-      } else
-        await expect(page.getByRole('log', { name: 'Samtalstext' })).toHaveText(
-          'Här visas det du och Skyttel säger och skriver.',
-        );
+      }
+      await page.getByRole('button', { name: 'Nytt samtal', exact: true }).click();
+      await giveConversationConsent(page);
+      await expect(page.getByRole('region', { name: 'Arbetsyta', exact: true })).toHaveAttribute(
+        'data-session-active',
+        'true',
+      );
+      await expect(page.getByLabel('Meddelande till Skyttel')).toHaveValue(
+        'Text som inte har skickats.',
+      );
+      await expect(page.getByRole('log', { name: 'Samtalstext' })).toHaveText(
+        'Här visas det du och Skyttel säger och skriver.',
+      );
       expect((await (await page.request.get(`${path}/operations`)).json()).operations).toEqual(
         operations,
       );

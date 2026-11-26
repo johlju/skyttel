@@ -262,6 +262,19 @@ test('canceling a toolbar conversation returns to its chosen entry and preserves
   expect((await home.read()).draft.changes).toEqual([]);
 });
 
+test('after reload the microphone starts a fresh conversation without opening text', async () => {
+  const home = await household();
+  await home.open();
+  await startConversationWithText({ remember: true });
+  cleanup();
+  await home.open();
+  expect(home.media.getUserMedia).not.toHaveBeenCalled();
+  await userEvent.click(home.microphone());
+  await screen.findByRole('group', { name: 'Röstruta' });
+  await waitFor(() => expect(home.media.getUserMedia).toHaveBeenCalled());
+  expect(screen.queryByRole('region', { name: 'Skriv till Skyttel' })).toBeNull();
+});
+
 test('voice survives closing text and visiting Settings with its microphone choice and unsent work unchanged', async () => {
   const home = await household();
   await home.open();
@@ -539,8 +552,8 @@ test('a new conversation clears the dialogue but keeps the draft, unsent input a
       'En vanlig fråga',
     ),
   );
-  expect(screen.getByRole('log', { name: 'Samtalstext' }).textContent).toContain(
-    '1 osparad ändring',
+  expect(screen.getByRole('log', { name: 'Samtalstext' }).textContent).toBe(
+    'Här visas det du och Skyttel säger och skriver.',
   );
   expect(home.media.microphone.enabled).toBe(false);
   expect(home.media.getUserMedia).toHaveBeenCalledTimes(1);
@@ -682,11 +695,19 @@ test('a necessary question is retained across microphone OFF and text closure wi
       end_ms: 200,
     }),
   );
-  home.media.signals.set(home.media.peers[0].remote, 20);
+  const remote = home.media.peers[0].remote;
+  const sampled = vi.spyOn(home.media.signals, 'get');
+  home.media.signals.set(remote, 20);
   await waitFor(() =>
     expect(screen.getByRole('group', { name: 'Röstruta' }).textContent).toContain('Skyttel talar'),
   );
-  home.media.signals.set(home.media.peers[0].remote, 0);
+  // Render the full 200 ms question across successive 100 ms meter samples.
+  await waitFor(() =>
+    expect(sampled.mock.calls.filter(([track]) => track === remote).length).toBeGreaterThanOrEqual(
+      4,
+    ),
+  );
+  home.media.signals.set(remote, 0);
   await waitFor(() =>
     expect(screen.getByRole('group', { name: 'Röstruta' }).textContent).toContain(
       'Väntar på ditt svar',
@@ -798,7 +819,7 @@ test('stopping a pending task from Settings restores Settings focus and cannot d
   await userEvent.type(screen.getByLabelText('Meddelande till Skyttel'), 'Ny oskickad text');
   await home.settings();
   const box = screen.getByRole('group', { name: 'Röstruta' });
-  expect(box.textContent).toContain('Skyttel arbetar');
+  expect(box.textContent).toContain('Arbetar');
   await userEvent.click(within(box).getByRole('button', { name: 'Avbryt' }));
   await waitFor(() =>
     expect(document.activeElement).toBe(screen.getByRole('link', { name: 'Tillbaka till kartan' })),

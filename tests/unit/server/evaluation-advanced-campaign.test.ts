@@ -61,6 +61,7 @@ test.each(['interpretation', 'checking', 'work', 'judging', 'summary'] as const)
       let uncertain = 0;
       let laterDispatches = 0;
       const model = textModel((body) => {
+        if (body.instructions.startsWith('SKYTTEL_TITLE')) return [modelMessage('Planeringen')];
         if (category === 'summary') {
           const message = JSON.parse(
             String(body.input.findLast((item) => item.role === 'user')?.content),
@@ -90,7 +91,7 @@ test.each(['interpretation', 'checking', 'work', 'judging', 'summary'] as const)
           !isControl &&
           ((category === 'interpretation' && body.instructions.startsWith('SKYTTEL_TURN_SCOPE')) ||
             (category === 'checking' && body.instructions.startsWith('SKYTTEL_TURN_ACTIONS')) ||
-            (category === 'work' && !isJudge && !body.instructions.startsWith('SKYTTEL_TURN_')) ||
+            (category === 'work' && !isJudge && !body.instructions.startsWith('SKYTTEL_')) ||
             (category === 'judging' && isJudge) ||
             (category === 'summary' && body.instructions.startsWith('Sammanfatta avslutad')));
         if (target) {

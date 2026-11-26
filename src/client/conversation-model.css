@@ -1,27 +1,3 @@
-.text-view-model {
-  flex: none;
-  padding: 0 12px 4px 24px;
-}
-
-/* Short keyboards leave room for one header row and the same message field. */
-.household-map.workspace-shell
-  .text-view[data-short="true"]:has(.conversation-model-button)
-  .text-view-header {
-  grid-template-columns: minmax(46px, 1fr) auto auto 44px 44px;
-}
-.household-map.workspace-shell
-  .text-view[data-short="true"]:has(.conversation-model-button)
-  .text-view-close {
-  grid-column: 5;
-}
-.text-view[data-short="true"] .text-view-model {
-  position: absolute;
-  top: -44px;
-  right: 48px;
-  z-index: 3;
-  padding: 0;
-}
-
 .conversation-model-button {
   display: inline-flex;
   align-items: center;

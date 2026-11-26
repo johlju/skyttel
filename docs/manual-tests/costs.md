@@ -25,7 +25,7 @@ fallen anger formulär, samtal, profil eller administration.
 3. KOST-01 och KOST-02 börjar med Google-inloggning som Alex. Skapa
    **Kostnadsprov**, välj **Skriv till Skyttel**, **Nytt samtal** och
    **Godkänn och starta** i medgivanderutan. Öppna **Modell och resonemang**,
-   välj modellnamnet **GPT-6.1 Terra** och välj **GPT-6.1 Sol**. Vänta på
+   välj modellnamnet **GPT-6.1 Terra** och välj **GPT-6.2 Sol**. Vänta på
    **Valet är sparat** och stäng dialogen med Escape. Behåll nivån **Hög**.
    Kostnadsprovet använder Sols prisunderlag. KOST-03 och KOST-04 börjar
    utan hushåll.
@@ -83,23 +83,23 @@ Följ startguidens återställning mellan fall och `quit` efter provningen.
    mikrofonen med **Prata med Skyttel**. Vänta tills röstrutan har försvunnit
    och röstanslutningen har stängts, några sekunder senare.
 3. Öppna **Månadskostnad**. Kontrollera aktuell månad i UTC, Render **72,50 SEK
-   (7,25 USD)**, Live **0,75 SEK (0,075 USD)** och Sol **4,34 SEK (0,434
+   (7,25 USD)**, Live **0,75 SEK (0,075 USD)** och Sol **6,51 SEK (0,651
    USD)**. Öppna **Visa mätvärden för Live** och **Visa mätvärden för textmodell**.
-   Live visar 90 rapporterade sekunder. Sol visar sammanlagt 200 000
-   indatatoken med cache och resonemang separat.
-4. Kräv delsumman **77,59 SEK (7,759 USD)** före de tre raderna. Öppna **Visa
+   Live visar 90 rapporterade sekunder. Sol visar sammanlagt 300 000
+   indatatoken för titel, tolkning och svar. Cache och resonemang visas separat.
+4. Kräv delsumman **79,76 SEK (7,976 USD)** före de tre raderna. Öppna **Visa
    driftantagandet**. Läs att Render avser hel månad, tidigare förbrukning är
    okänd och cirka 200 kronor är ett riktmärke utan automatisk spärr.
 5. Öppna modellpriserna under **Prisunderlag**. Kontrollera datum, enheter,
    tabell, källor och uttryckligt antagande om 10 SEK per USD. Startkrediten för
    Live ska inte läggas på en gång till.
 6. Öppna **Ändra månadens antaganden**, ändra **SEK per USD** till 11 och välj
-   **Spara månadens antaganden**. Kräv **85,35 SEK (7,759 USD)**.
+   **Spara månadens antaganden**. Kräv **87,74 SEK (7,976 USD)**.
 7. Välj föregående månad. Dess förval är fortfarande 10 SEK per USD och tidigare
    förbrukning är okänd. Återgå till aktuell månad; den har 11.
 8. Be operatören starta om samma installation och invänta bekräftelse. Ladda om
    webbläsaren och öppna mätvärdena igen. Kontrollera samma uppdelning, ändrade
-   valutantagande och delsumman **85,35 SEK (7,759 USD)**.
+   valutantagande och delsumman **87,74 SEK (7,976 USD)**.
 
 **Förväntat resultat:**
 
@@ -507,7 +507,7 @@ launcher for each case. Never reuse a real installation for these controls.
 To generate Sol usage, choose **Skriv till Skyttel**, then **Nytt samtal**,
 select **Godkänn och starta** in the consent box, open **Modell och
 resonemang**, choose the model name **GPT-6.1 Terra**, and select
-**GPT-6.1 Sol**. Wait for **Valet är sparat**, close with Escape, and send
+**GPT-6.2 Sol**. Wait for **Valet är sparat**, close with Escape, and send
 **Prova kostnadsunderlaget.** The fixed response is
 **Det kontrollerade kostnadsprovet är klart.** No map change is proposed.
 
@@ -528,11 +528,12 @@ The known Sol example is 100,000 input tokens: 20,000 cache reads,
 10,000 cache writes and 70,000 ordinary input. Its 5,000 output tokens
 already include 2,000 reasoning tokens. At the recorded Standard rates,
 this is `0.14 + 0.002 + 0.025 + 0.05 = 0.217 USD`.
-The scope interpreter and worker each produce this fixture, for a total
-of `0.434 USD`. A final 90-second Live session costs an estimated `0.075 USD`.
+The title request, scope interpreter and worker each produce this fixture,
+for a total of `0.651 USD`. A final 90-second Live session costs an estimated
+`0.075 USD`.
 Together with the default full-month Render assumption of `7.25 USD`,
-the estimated subtotal is `7.759 USD`, or `77.59 SEK` at the explicit
-assumption of 10 SEK/USD. Changing that assumption to 11 gives `85.35 SEK`
+the estimated subtotal is `7.976 USD`, or `79.76 SEK` at the explicit
+assumption of 10 SEK/USD. Changing that assumption to 11 gives `87.74 SEK`
 after presentation rounding. A fresh installation still shows incomplete
 month coverage; the known example does not establish earlier usage.
 

@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { conversationListWidth } from '../shared/conversation-preferences.js';
 import type { MapDraft } from '../shared/map.js';
 import { ConversationDraft, draftCount } from './ConversationDraft.js';
 import './voice.css';
@@ -68,6 +69,7 @@ export function ConversationWorkspace({
   const visibleDraft = draft && (!review || draft.version >= review.version) ? draft : review;
   const count = draftCount(visibleDraft);
   const [draftOpen, setDraftOpen] = useState(false);
+  const [listWidth, setListWidth] = useState(conversationListWidth);
   useLayoutEffect(() => {
     if (draftOpenRequest) {
       manuallyToggled.current = true;
@@ -84,17 +86,16 @@ export function ConversationWorkspace({
   const previousConversation = useRef('');
   useEffect(() => {
     if (previousConversation.current !== conversationKey) {
-      const keepManualReview =
-        manuallyToggled.current && !previousConversation.current && Boolean(session);
+      const keepOpen = draftOpen && Boolean(session);
       previousConversation.current = conversationKey;
-      if (!keepManualReview) manuallyToggled.current = false;
+      manuallyToggled.current = keepOpen;
       initialChoice.current = null;
-      if (!keepManualReview) setDraftOpen(false);
+      if (!keepOpen) setDraftOpen(false);
     }
     if (!session || !preferencesKnown) return;
     initialChoice.current ??= showDraftOnStart;
     if (!manuallyToggled.current && initialChoice.current && count > 0) setDraftOpen(true);
-  }, [session, conversationKey, preferencesKnown, showDraftOnStart, count]);
+  }, [session, conversationKey, preferencesKnown, showDraftOnStart, count, draftOpen]);
   const activity = { working: conversation.working, needsAnswer };
   const resultFeedback = conversationFeedback(conversation);
   const feedback = (
@@ -117,6 +118,8 @@ export function ConversationWorkspace({
           conversation={conversation}
           onStartConversation={onStartConversation}
           widthPreferences={widthPreferences}
+          listWidth={listWidth}
+          onListWidthChange={setListWidth}
           hidden={!workVisible || textViewHidden}
           focusRequest={textFocusRequest}
           openingFocus={textOpeningFocus}

@@ -1346,8 +1346,8 @@ test.each(['healthy', 'disabled', 'failing'])(
           )
         ).json()
       ).terra,
-      // Three scope interpretations, three worker calls and two edit/save comparisons.
-    ).toMatchObject({ attempts: 8 });
+      // One title, three scope interpretations, three worker calls and two edit/save comparisons.
+    ).toMatchObject({ attempts: 9 });
     await client.post(`${path}/text-assistant/${session.id}/voice/${voice.id}/stop`, {
       headers: { origin: app.origin },
       data: {},
@@ -1397,20 +1397,97 @@ test.each(['healthy', 'disabled', 'failing'])(
   25000,
 );
 
-test('a rejected delegated backend request records its known failure without inventing backend work', async () => {
+test.each([
+  ['an application refusal', 'assistant_unavailable', 'assistant_unavailable'],
+  ['an unrecognized error', 'excluded-transport-detail', 'backend_failed'],
+  ['a mismatched status', 'assistant_draft_changed', 'backend_failed'],
+])(
+  '%s from the backend ends the voice delegation without inventing backend work',
+  async (_, code, error) => {
+    const live = liveProvider();
+    const model = textModel(() => [modelMessage('Ska inte anropas.')]);
+    const { path, session } = await setup({
+      modelFetch: model.provider,
+      liveFetch: live.provider,
+      liveSideband: live.attach,
+      assistantDispatch: async (incoming, dispatch) => {
+        if (incoming.method === 'POST' && new URL(incoming.url).pathname.endsWith('/messages'))
+          return Response.json({ error: code }, { status: 503 });
+        return dispatch(incoming);
+      },
+    });
+    const connected = await client.post(`${path}/text-assistant/${session.id}/voice`, {
+      headers: { origin: app.origin },
+      data: {
+        sdp: 'synthetic-offer',
+        revision: session.revision,
+        draftVersion: session.review.version,
+        contentVersion: session.review.contentVersion,
+      },
+    });
+    expect(connected.status(), await connected.text()).toBe(201);
+    const providerId = [...live.channels.keys()][0];
+    live.emit(providerId, {
+      type: 'session.input_transcript.delta',
+      event_id: 'rejected-input',
+      delta: 'Läs Lina.',
+      start_ms: 0,
+      end_ms: 1,
+    });
+    live.emit(providerId, {
+      type: 'session.delegation.created',
+      delegation: { id: 'rejected-delegation', target: 'client' },
+      offset_ms: 1,
+    });
+    await expect
+      .poll(
+        () => {
+          const delegated = endpoint.received.find(
+            (item) => item.method === 'POST' && item.body.name === 'Skyttel voice delegation',
+          )?.body;
+          return endpoint.received.find((item) => item.path === `/runs/${delegated?.id}`)?.body;
+        },
+        { timeout: 8000 },
+      )
+      .toMatchObject({
+        error: 'observed_failed',
+        outputs: { error },
+        extra: { metadata: { status: 'failed' } },
+      });
+    if (error === 'assistant_unavailable') {
+      await expect
+        .poll(() =>
+          live.sent.some(
+            ({ event }) =>
+              event.type === 'session.commentary.append' &&
+              event.delegation_id === 'rejected-delegation' &&
+              event.content.includes('Skyttel kunde inte starta uppdraget.'),
+          ),
+        )
+        .toBe(true);
+    }
+    expect(model.requests).toEqual([]);
+    expect(endpoint.received.some((item) => item.body.name === 'Skyttel backend task')).toBe(false);
+    expect(JSON.stringify(endpoint.received)).not.toContain('excluded-transport-detail');
+    const delegated = endpoint.received.find(
+      (item) => item.method === 'POST' && item.body.name === 'Skyttel voice delegation',
+    )!.body;
+    expect(endpoint.received.filter((item) => item.path === `/runs/${delegated.id}`)).toHaveLength(
+      1,
+    );
+  },
+);
+
+test('a spoken request on a stale draft reports the refusal without canceling the conversation', async () => {
   const live = liveProvider();
   const model = textModel(() => [modelMessage('Ska inte anropas.')]);
   const { path, session } = await setup({
     modelFetch: model.provider,
     liveFetch: live.provider,
     liveSideband: live.attach,
-    assistantDispatch: async (incoming, dispatch) => {
-      if (incoming.method === 'POST' && new URL(incoming.url).pathname.endsWith('/messages'))
-        return Response.json({ error: 'excluded-transport-detail' }, { status: 503 });
-      return dispatch(incoming);
-    },
   });
-  const connected = await client.post(`${path}/text-assistant/${session.id}/voice`, {
+  const conversation = `${path}/text-assistant/${session.id}`;
+  const connected = await client.post(`${conversation}/voice`, {
     headers: { origin: app.origin },
     data: {
       sdp: 'synthetic-offer',
@@ -1420,17 +1497,29 @@ test('a rejected delegated backend request records its known failure without inv
     },
   });
   expect(connected.status(), await connected.text()).toBe(201);
+  const map = await (await client.get(`${path}/map`)).json();
+  const newerDraft = await client.post(`${path}/map/draft`, {
+    headers: { origin: app.origin },
+    data: {
+      version: map.draft.version,
+      contentVersion: map.contentVersion,
+      id: 'newer-bike',
+      baseRevision: null,
+      value: { typeId: map.types[0].id, name: 'Ny cykel' },
+    },
+  });
+  expect(newerDraft.status(), await newerDraft.text()).toBe(200);
   const providerId = [...live.channels.keys()][0];
   live.emit(providerId, {
     type: 'session.input_transcript.delta',
-    event_id: 'rejected-input',
+    event_id: 'stale-input',
     delta: 'Läs Lina.',
     start_ms: 0,
     end_ms: 1,
   });
   live.emit(providerId, {
     type: 'session.delegation.created',
-    delegation: { id: 'rejected-delegation', target: 'client' },
+    delegation: { id: 'stale-delegation', target: 'client' },
     offset_ms: 1,
   });
   await expect
@@ -1445,17 +1534,26 @@ test('a rejected delegated backend request records its known failure without inv
     )
     .toMatchObject({
       error: 'observed_failed',
-      outputs: { error: 'backend_failed' },
+      outputs: { error: 'assistant_draft_changed' },
       extra: { metadata: { status: 'failed' } },
     });
+  await expect
+    .poll(() =>
+      live.sent.some(
+        ({ event }) =>
+          event.type === 'session.commentary.append' &&
+          event.delegation_id === 'stale-delegation' &&
+          event.content.includes('Utkastet eller kartan har ändrats.'),
+      ),
+    )
+    .toBe(true);
+  const current = await (await client.get(conversation)).json();
+  expect(current.revision).toBe(session.revision);
+  expect(current.canceled).toBeFalsy();
+  expect(current.review.changes).toMatchObject([{ id: 'newer-bike', after: { name: 'Ny cykel' } }]);
   expect(model.requests).toEqual([]);
   expect(endpoint.received.some((item) => item.body.name === 'Skyttel backend task')).toBe(false);
-  expect(JSON.stringify(endpoint.received)).not.toContain('excluded-transport-detail');
-  const delegated = endpoint.received.find(
-    (item) => item.method === 'POST' && item.body.name === 'Skyttel voice delegation',
-  )!.body;
-  expect(endpoint.received.filter((item) => item.path === `/runs/${delegated.id}`)).toHaveLength(1);
-});
+}, 15000);
 
 test('stopping a voice execution records cancellation on its own delegation despite a late model result', async () => {
   const live = liveProvider();
@@ -1990,7 +2088,7 @@ test('voice startup and exact transcripts reach a separate trace without transpo
         owner: 'voice',
         conversation_id: session.id,
         voice_session_id: voice.id,
-        consent_text_version: 4,
+        consent_text_version: 5,
         status: 'incomplete',
       },
     },
@@ -2138,7 +2236,7 @@ test('complete text evidence preserves the exact model exchange and all actions 
   ).not.toMatch(
     /Lina|Eken|excluded-provider|excluded-raw-audio|synthetic-model-key|synthetic-trace-secret/,
   );
-  expect(costs).toHaveLength(6);
+  expect(costs).toHaveLength(8);
   expect(JSON.stringify(costs)).not.toMatch(/instructions|Lina|Eken|arguments|excluded-provider/);
 });
 
@@ -2377,8 +2475,8 @@ test.each(['healthy', 'disabled', 'failing'])(
         )
       ).json(),
     ).toMatchObject({
-      // Three scope interpretations, three worker calls and two edit/save comparisons.
-      terra: { attempts: 8, usage: { input: { known: 960 }, output: { known: 240 } } },
+      // One title, three scope interpretations, three worker calls and two edit/save comparisons.
+      terra: { attempts: 9, usage: { input: { known: 968 }, output: { known: 242 } } },
     });
     if (delivery === 'healthy') {
       await expect
@@ -2600,10 +2698,10 @@ test('an authenticated task reaches ingestion through the real SDK with one back
     ).json(),
   ).toMatchObject({
     terra: {
-      attempts: 3,
+      attempts: 4,
       usage: {
-        input: { known: 360 },
-        output: { known: 90 },
+        input: { known: 368 },
+        output: { known: 92 },
       },
     },
   });
@@ -2641,10 +2739,10 @@ test('disabled sending survives restart while the same task outcome and costs re
     ).json(),
   ).toMatchObject({
     terra: {
-      attempts: 3,
+      attempts: 4,
       usage: {
-        input: { known: 360 },
-        output: { known: 90 },
+        input: { known: 368 },
+        output: { known: 92 },
       },
     },
   });
@@ -2698,10 +2796,10 @@ test('temporary ingestion failure gets at most two retries per event without cha
       )
     ).json();
     expect(costs.terra).toMatchObject({
-      attempts: 3,
+      attempts: 4,
       usage: {
-        input: { known: 360 },
-        output: { known: 90 },
+        input: { known: 368 },
+        output: { known: 92 },
       },
     });
     const health = await (await client.get(`${app.origin}/api/operator/tracing`)).json();

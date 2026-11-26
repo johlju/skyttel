@@ -226,8 +226,8 @@ separat. Utför arbetsflödet en gång.
 
 **Steg:**
 
-1. Skicka **Beskriv kartan.** och låt anropet vänta. Läs **Skyttel arbetar** och
-   arbetsraden sist i samtalstexten.
+1. Skicka **Beskriv kartan.** och låt anropet vänta. Läs **Arbetar** i
+   röstrutan och arbetsraden sist i samtalstexten.
 2. Låt förberedelsen sätta kontexten till 85 procent. Besök **Inställningar**,
    välj **Tillbaka till kartan** och låt kontexten bli 88 procent.
 3. Slå av mikrofonen under arbetet. Låt **Kartan är redo.** komma och läs
@@ -376,8 +376,8 @@ separat. Utför arbetsflödet en gång.
 
 1. Välj emulerad minskad rörelse före första handlingen. Läs stilla former vid
    egen och inkommande aktivitet enligt förberedelsen.
-2. Skicka **Beskriv kartan.** och håll anropet. Läs **Skyttel arbetar**,
-   öppna/stäng textvyn och granska stilla former utan övergång.
+2. Slå av mikrofonen. Skicka **Beskriv kartan.** och håll anropet.
+   Öppna och stäng textvyn. Granska den stilla arbetsmarkeringen på textknappen.
 3. Låt **Kartan är redo.** komma. Skicka **Ett nytt försök.** och låt
    förberedelsen ge ett fel. Läs stilla notis och kontroller.
 4. Återställ normal rörelse, slå på mikrofonen och låt inkommande aktivitet börja.
@@ -386,9 +386,8 @@ separat. Utför arbetsflödet en gång.
 
 **Förväntat resultat:**
 
-- Vågformen har sju fasta punkter i tystnad och samma sju stilla staplar när
-  någon hörs. Ljudnivån ändrar inte formen. Statusord och färg skiljer vem som
-  hörs; informationen förmedlas inte bara med färg.
+- Vågformen har sju fasta punkter i vila och samma sju stilla staplar när
+  någon hörs. Ljudnivån ändrar inte formen. Statusordet anger vem som hörs.
 - Arbetsmarkeringen roterar inte. Notis, röstruta, textvy och mikrofonkontroll
   visas och försvinner omedelbart utan övergång.
 - Systemets ändring till normal rörelse återställer den rörliga fjärrvågformen.

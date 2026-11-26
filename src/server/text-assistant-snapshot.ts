@@ -1,8 +1,15 @@
 import type { TextAssistantView } from '../shared/text-assistant.js';
+import { currentModelChoice } from './conversation-model.js';
 
 type RecoveryView = Pick<
   TextAssistantView,
-  'paused' | 'expiresAt' | 'conversation' | 'queuedRequests' | 'unfinishedRequests' | 'workFailure'
+  | 'paused'
+  | 'expiresAt'
+  | 'conversation'
+  | 'queuedRequests'
+  | 'unfinishedRequests'
+  | 'workFailure'
+  | 'workSteps'
 >;
 
 /** Task status is always current; completed turns retain only a reply-prefix index. */
@@ -24,6 +31,7 @@ export function captureAssistantResult(
     queuedRequests: _queuedRequests,
     unfinishedRequests: _unfinishedRequests,
     workFailure: _workFailure,
+    workSteps: _workSteps,
     ...view
   } = current;
   return {
@@ -39,12 +47,15 @@ export function restoreAssistantResult(
 ): TextAssistantView {
   return {
     ...snapshot.view,
+    modelChoice: snapshot.view.modelChoice && currentModelChoice(snapshot.view.modelChoice),
+    enabledModelChoices: snapshot.view.enabledModelChoices?.map(currentModelChoice),
     paused: current.paused,
     expiresAt: current.expiresAt,
     conversation: current.conversation,
     queuedRequests: current.queuedRequests,
     unfinishedRequests: current.unfinishedRequests,
     workFailure: current.workFailure,
+    workSteps: current.workSteps,
     phase: current.paused ? current.phase : snapshot.view.phase,
     tasks: current.tasks,
     completedReplies:

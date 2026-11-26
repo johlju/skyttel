@@ -9,10 +9,8 @@ import { expect, test } from '../support/test.js';
 async function openAnotherTab(page: Page, origin: string) {
   const other = await page.context().newPage();
   try {
-    // Loading another same-login page deliberately pauses a restored conversation.
-    // Complete that preparation before the first tab starts its active conversation.
     const restored = other.waitForResponse((response) =>
-      new URL(response.url()).pathname.endsWith('/text-assistant/restore'),
+      new URL(response.url()).pathname.endsWith('/text-assistant'),
     );
     await other.goto(origin);
     expect((await restored).status()).toBe(200);

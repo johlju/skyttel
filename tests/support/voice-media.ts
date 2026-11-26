@@ -1,9 +1,12 @@
 import { vi } from 'vitest';
 
+type Playout = { jitterBufferEmittedCount: number; concealedSamples: number };
+
 /** Browser media boundaries; the real transport and held-input code stay in the test. */
-export function voiceMedia() {
+export function voiceMedia(playout?: () => Playout | Promise<Playout>) {
   class Track extends EventTarget {
     enabled = true;
+    muted = false;
     stopped = false;
     stop() {
       this.stopped = true;
@@ -34,9 +37,9 @@ export function voiceMedia() {
       close: vi.fn(),
     };
     onprocessorerror = () => {};
-    constructor() {
+    constructor(_context: unknown, name: string) {
       super();
-      Processor.all.push(this);
+      if (name === 'skyttel-held-input') Processor.all.push(this);
     }
   }
   const microphone = new Track();
@@ -47,6 +50,9 @@ export function voiceMedia() {
   const addModule = vi.fn().mockResolvedValue(undefined);
   const context = {
     state: 'running',
+    get currentTime() {
+      return performance.now() / 1000;
+    },
     audioWorklet: { addModule },
     createMediaStreamSource: (stream: Stream) => {
       const source = new Node(stream);
@@ -126,7 +132,27 @@ export function voiceMedia() {
     async setRemoteDescription() {
       this.connectionState = 'connected';
       this.dispatchEvent(new Event('connectionstatechange'));
-      this.dispatchEvent(Object.assign(new Event('track'), { track: this.remote }));
+      this.dispatchEvent(
+        Object.assign(new Event('track'), {
+          track: this.remote,
+          receiver: playout && {
+            getStats: async () =>
+              new Map<string, object>([
+                [
+                  'audio',
+                  {
+                    id: 'audio',
+                    type: 'inbound-rtp',
+                    kind: 'audio',
+                    codecId: 'opus',
+                    ...(await playout()),
+                  },
+                ],
+                ['opus', { type: 'codec', clockRate: 48000 }],
+              ]),
+          },
+        }),
+      );
       this.channel.readyState = 'open';
       this.channel.dispatchEvent(new Event('open'));
     }

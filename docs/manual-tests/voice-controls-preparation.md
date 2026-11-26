@@ -12,9 +12,8 @@ inte
 
 Starta en ny installation. Skapa Tryckprov, välj **Skriv till Skyttel** och
 **Nytt samtal**, markera **Fråga inte igen för det här hushållet** och välj
-**Godkänn och starta**. Ladda om sidan. Öppna textvyn och kontrollera att
-det återställda samtalet är pausat. Välj **Avsluta samtalet** och stäng
-textvyn så att nästa mikrofontryck startar ett nytt samtal. Utkastet
+**Godkänn och starta**. Ladda om sidan. Öppna den tomma textvyn och stäng
+den igen. Nästa mikrofontryck startar röstläget. Utkastet
 behålls. Öppna Console och kör hela blocket:
 
 <!-- markdownlint-disable MD013 -->
@@ -139,9 +138,9 @@ await fetch('VOICE-ADRESS/VOICE-ID/stop', {
 ```
 
 Kräv status 200 och `voice.phase: 'closed'` innan omladdning så att just
-provets transport har verifierad städning. Omladdningen återställer samtalet
-pausat. Öppna textvyn, läs dess pausade status, välj **Avsluta samtalet** och
-stäng textvyn före nästa fristående startprov. Installera därefter blocken på
+provets transport har verifierad städning. Efter omladdning börjar nästa
+fristående startprov med tomt samtal och avstängd mikrofon. Installera
+därefter blocken på
 nytt. Avsluta launchern med `quit` och kontrollera borttagen katalog enligt
 röstguiden.
 
@@ -349,12 +348,11 @@ förberedelse. Läs det verkliga held-anropets värden varje gång. Alla uppgift
    kontrollen. Kör `restart` i terminalen.
 4. Ta bort nätblockeringen och ladda om webbläsaren. Skyttel kontrollerar och
    slutför själv det registrerade försöket, innan något nytt samtal startas
-   eller något medgivande ges. Öppna **Skriv till Skyttel**. Kräv det pausade
-   samtalet med utgångstid och förklaringen
-**Kontrollen visar att hela utkastet
-   sparades. Ändringarna finns i hushållets karta.**
-   i samtalstexten. Välj därefter **Nytt samtal**, godkänn medgivandet om det
-   behövs och slå på mikrofonen för resten av fallet.
+   eller något medgivande ges. Öppna **Skriv till Skyttel** och välj samtalet
+   **Markera Lo Exempel.** i **Samtal**. Läs **Kontrollen
+   visar att hela utkastet sparades. Ändringarna finns i hushållets karta.**
+   Välj **Avstå från det oavslutade arbetet**, godkänn vid behov och läs
+   bekräftelsen. Välj **Nytt samtal** och slå på mikrofonen.
 5. Kontrollera ett genomfört kvitto med samma operation-ID och Lo i kartan. Kör
    `drop` efter sparandet; kontrollera att det genomförda kvittot finns kvar
    även om ett ljudsvar inte hördes. Vänta på avstängd röst, ladda om och välj
@@ -364,14 +362,27 @@ förberedelse. Läs det verkliga held-anropets värden varje gång. Alla uppgift
    kvitto igen.
 6. Välj **Tillbaka till arbetet** och slå på mikrofonen igen. Kör `usage 12`,
    `usage 15` och `finalize off`. Anteckna adressen och svarets `voice.id` för
-   det senaste POST-anropet till `/voice` i nätverkspanelen. Öppna textvyn och
-   välj **Nytt samtal**. Den gamla röstanslutningen stängs, och en ny behåller
-   mikrofonens läge. Kopiera det gamla startanropet som `fetch` från
-   nätverkspanelen. Ändra adressen till `GAMLA-ADRESSEN/GAMLA-ID/stop` och
-   kroppen till `"{}"`; behåll anropets rubriker. Kör det i konsolen och läs
-   JSON-svaret. Det bekräftar den redan stängda anslutningen och ska visa
-   `voice.phase:"closed"`, `voice.seconds:15` och `voice.usageFinal:false`.
-   Återställ `finalize on`. Öppna **Din profil → Inloggningssätt**, öppna
+   det senaste POST-anropet till `/voice` i nätverkspanelen. Kontrollera
+   `voice.seconds:15` och `voice.usageFinal:false` i svaret från nästa
+   statuskontroll. Öppna textvyn och välj **Nytt samtal**. Kontrollera det nya
+   samtalets och röstanslutningens ID i nätverkspanelen. Mikrofonen behåller
+   sitt läge och `window.skyttelVoiceFixture.stats().openPeers` visar 1.
+   Återställ `finalize on` och ladda om sidan.
+7. Lägg Mira i utkastet och öppna ett nytt textsamtal enligt testfallet.
+   Installera konsolblocket för
+   [samtals- och kontrollsvar](save-preparation.md#samtals--och-kontrollsvar).
+   Kör `skyttelSaveDelivery.arm('reply', 'drop-after')` och
+   `skyttelSaveDelivery.block('session-recover', true)`. Skicka
+   sparbegäran i textvyn. Släpp terminalens hållna anrop med
+   `tool REQUEST save_draft {"version":VERSION,"contentVersion":CONTENT,"operationId":"mira"}`.
+   Ersätt REQUEST, VERSION och CONTENT med värdena från `held`. Släpp vid
+   behov nästa modellsvar med `reply REQUEST Klart.`. Kontrollera
+   att konsolen visar `application-completed reply 200` när webbläsaren
+   tappar svaret som innehåller kvittot för Mira.
+8. Kör `skyttelSaveDelivery.block('session-recover', false)` och använd
+   kontrollknappen i samtalsnotisen. Kör sedan `skyttelSaveDelivery.clear()`.
+   Kontrollera Mira i kartvyn och slå på mikrofonen enligt testfallet.
+   Öppna **Din profil → Inloggningssätt**, öppna
    **Välj inställning** om menyn är hopfälld och välj **Logga ut**. Alla
    mikrofonspår och röstanslutningar ska vara stängda.
 
@@ -438,17 +449,27 @@ förberedelse. Läs det verkliga held-anropets värden varje gång. Alla uppgift
 
    ```javascript
    for (const [role, delta, start_ms, end_ms] of [
-     ['input', 'Kim betalar', 0, 1000],
-     ['output', 'Jag lyssnar.', 1100, 1300],
-     ['input', ' för musiken.', 1500, 1900],
-     ['output', ' Berätta mer.', 2000, 2600],
-     ['input', 'Rätta till Lo.', 5000, 6000],
+     ['input', 'Kim be', 0, 100],
+     ['output', 'Jag lyss', 100, 200],
+     ['input', 'talar för musiken.', 300, 400],
+     ['output', 'nar. Berätta mer.', 400, 500],
+     ['input', 'Rätta till Lo.', 5000, 5100],
    ]) {
      window.skyttelVoiceFixture.emit({
        type: `session.${role}_transcript.delta`,
        event_id: crypto.randomUUID(), delta, start_ms, end_ms,
      });
    }
+   ```
+
+   Skicka samma fragment till servern i startguidens terminal:
+
+   ```text
+   user-at 0 Kim be
+   assistant Jag lyss
+   user-at 300 talar för musiken.
+   assistant nar. Berätta mer.
+   user-at 5000 Rätta till Lo.
    ```
 
 2. Läs samtalstexten. Din sammanhållna rad **Kim betalar för musiken.** står i
@@ -467,30 +488,71 @@ förberedelse. Läs det verkliga held-anropets värden varje gång. Alla uppgift
 4. Mikrofonspåret ska fortfarande ha `enabled: false` och `state: 'live'`. Välj
    **Prata med Skyttel** igen och kontrollera `enabled: true`, samma antal
    anslutningar och kvarvarande dialog.
-5. Kör `user Kontrollera utkastet.` och `delegate` i terminalen. Låt
+5. Kör `user-at 7500 Kontrollera utkastet.` och `delegate` i terminalen. Låt
    modellanropet vara hållet och kontrollera att raden **Skyttel arbetar…** står
    sist i samtalstexten. Släpp sedan det hållna anropet med
    `reply REQUEST Vem använder musiken?`, där `REQUEST` är dess ID.
-6. Kräv frågan i dialogen och avslutad arbetsindikering. Stäng rösten: tidigare
-   dialog finns kvar. Välj **Nytt samtal**: samtalstexten töms och Skyttel
-   säger hur många osparade ändringar som finns, medan Lo-förslaget finns kvar i
-   utkastet.
+6. Vänta tills frågan visas och arbetsraden försvinner. Slå av mikrofonen,
+   kör `restart` i terminalen och vänta på `restarted` innan sidan laddas om.
 
 ### Tidslinje TAL-06
 
-1. Skriv **Osänd rättelse** i samtalets textfält utan att skicka. Kör
-   `user Rätta Lo.` och `delegate` i startguiden. Håll modellanropet.
-2. Stäng textvyn och panelerna med deras kryss. Kräv **Skyttel arbetar** i
-   röstrutan och välj dess **Avbryt**.
-3. Släpp det gamla anropet med ett `propose_object` som försöker byta
+1. Skriv **Osänd rättelse** i samtalets textfält utan att skicka. Lägg in
+   det första textfragmentet i webbläsaren från konsolen:
+
+   ```javascript
+   window.skyttelVoiceFixture.emit({
+     type: 'session.input_transcript.delta',
+     event_id: crypto.randomUUID(),
+     delta: 'Rätta Lo.',
+     start_ms: 0,
+     end_ms: 100,
+   });
+   ```
+
+   Kör `user Rätta Lo.` och `delegate` i startguiden. Släpp modellanropet
+   med `tool REQUEST read_map {"query":"Lo"}`. Håll det följande modellanropet.
+2. Stäng textvyn och öppna Karta. Läs **Arbetar** i röstrutan.
+   Förbered ljudförloppet i Chromium med konsolen. Varje ton motsvarar ett ord.
+   Mätningen läser inkommande ljud och ljudet som webbläsaren skickar till
+   högtalaren.
+
+   ```javascript
+   const f = window.skyttelVoiceFixture;
+   const lasLjud = await f.observeSpeaker();
+   f.setSound('remote', true);
+   const knapp = document.querySelector('.voice-stop');
+   const rattelse = f.armCorrection(knapp);
+   ```
+
+3. Kontrollera att `lasLjud().speaker[440]` ökar. Välj **Avbryt**. Läs
+   `await rattelse` i konsolen. Kör `user-at TID Jag menar Lo Exempel.` i
+   startguiden med fragmentets `start_ms` som TID och kör sedan `delegate`.
+   Kontrollera att `f.sentAudio()` innehåller mikrofontonen runt 600 Hz.
+   `stats()` ska visa samma öppna anslutning och påslagna mikrofonspår.
+   I `sessions` finns en stoppinstruktion för samma röstsession.
+4. Släpp det gamla anropet med ett `propose_object` som försöker byta
    Lo-förslagets namn till **För sent**. Använd det hållna anropets version,
-   innehållsversion och hela tidigare objektvärde enligt TAL-01:s verktygssteg.
-4. Öppna textvyn med **Skriv till Skyttel**. Kräv
-   **Avbrutet. Föreslagna ändringar ligger kvar i utkastet.** och oförändrat
-   utkast. Stäng av mikrofonen med **Prata med Skyttel**. **Osänd rättelse**
-   ska finnas kvar.
-5. Välj **Nytt samtal**. Samtalstexten töms, **Osänd rättelse** och
-   Lo-förslaget finns kvar.
+   innehållsversion och tidigare objektvärde enligt TAL-01:s verktygssteg.
+   Besvara rättelsens anrop med `reply REQUEST Lo Exempel finns i ditt utkast.`
+   Öppna textvyn och kontrollera avbrottsbeskedet och hela rättelsen.
+5. Kör följande efter att svaret är klart. Den första tonen föreställer
+   ytterligare ett gammalt ord som kommer efter den kvalificerande pausen.
+   Den andra är första ordet i det nya svaret.
+
+   ```javascript
+   f.remoteTone(1600, 0.04, 0.1);
+   f.remoteTone(1200, 0.2, 0.15);
+   ```
+
+6. Läs `lasLjud()` efter tonerna. För 640 Hz finns högst sex perioder i
+   `speaker` efter trycket, för 800 Hz inga alls. För både mellanbeskedets
+   första ord (1000 Hz) och svarets första ord (1200 Hz) ska antalen i
+   `incoming` och `speaker` skilja högst två perioder. Även 1600 Hz passerar
+   eftersom båda svaren delar samma omärkta ljudspår.
+7. Slå av mikrofonen. **Osänd rättelse** ska finnas kvar. Välj **Nytt samtal**.
+   Samtalstexten töms, medan **Osänd rättelse** och Lo-förslaget finns kvar.
+   Avsluta provinstallationen enligt den allmänna förberedelsen.
 
 ### Tidslinje TAL-07
 
@@ -611,15 +673,28 @@ Resurskontrollen vid UI-steg 2 och 4 använder
 2. Gå med Tab till **Avbryt** i röstrutan och tryck Enter.
 3. Släpp det gamla anropet med ett `propose_object` som byter namnet till
    **För sent**.
-4. Kör `setSound('remote', true)`. Välj **Avbryt** och kör `stats()`.
-5. Kör `setSound('remote', false)`, vänta mer än en sekund och kontrollera att
-   de gamla inkommande spåren fortfarande är avslutade. Kör sedan
-   `setSound('remote', true)` för ett nytt svar i den nya anslutningen.
+4. Kör `setSound('remote', true)`. Förbered fragmenten i konsolen:
 
-Tidslinjens steg 1–2 hör till UI-steg 1, steg 3 till UI-steg 2,
-steg 4 till UI-steg 3 och steg 5 till UI-steg 4. Efter avbrottet ska
-`stats()` visa avslutade gamla inkommande spår men samma levande mikrofonspår;
-`sessions` ska sakna kommentarspaket för det avbrutna uppdraget.
+   ```javascript
+   const f = window.skyttelVoiceFixture;
+   const fragment = (role, delta, start, end) => f.emit({
+     type: 'session.' + role + '_transcript.delta',
+     event_id: crypto.randomUUID(), delta, start_ms: start, end_ms: end
+   });
+   ```
+
+   Välj **Avbryt** medan Skyttel talar.
+   Kör `setSound('remote', false)`. Vänta mer än en sekund. Jämför `stats()`
+   före och efter detta avbrott: samma mikrofon och inkommande spår lever,
+   antalet anslutningar är oförändrat och röstrutan visar **Lyssnar**.
+5. Kör `fragment('input', 'Tidigare ord.', 0, 5)` och
+   `f.setSound('remote', true)`. Röstrutan ska fortsätta visa **Lyssnar**.
+   Kör `f.setSound('remote', false)` och skicka den faktiska rättelsen med
+   `fragment('input', 'Jag menar Lo.', f.sessionMs(), f.sessionMs() + 160)`.
+
+6. Öppna textvyn och läs både **Rätta namnet.** och **Jag menar Lo.**
+   Kör `setSound('remote', true)` för nästa svar och läs **Skyttel talar**.
+   I terminalens `sessions` ska det avbrutna uppdraget sakna svarspaket.
 
 ### Tidslinje TAL-13
 
@@ -636,18 +711,20 @@ steg 4 till UI-steg 3 och steg 5 till UI-steg 4. Efter avbrottet ska
    `setSound('microphone', true, 0.9)`.
 2. Kör `setSound('remote', true)` med mikrofonljudet kvar.
 3. Kör `user Beskriv utkastet.` och `delegate`. Stoppa mikrofonljudet med
-   `setSound('microphone', false)` och vänta tills anropet är hållet.
-   Återuppta mikrofonljudet med `setSound('microphone', true, 0.9)` och
-   kontrollera **Skyttel arbetar**. Stoppa mikrofonljudet igen med
-   `setSound('microphone', false)` och släpp anropet med
-   `reply REQUEST Utkastet har ett förslag.`.
+   `setSound('microphone', false)` och vänta tills anropet är hållet. Läs
+   **Skyttel talar**. Kör `setSound('remote', false)` och läs **Arbetar**.
+   Återuppta mikrofonljudet med `setSound('microphone', true, 0.9)`. Läs
+   **Du talar** och se att **Avbryt** finns kvar. Stoppa mikrofonljudet igen
+   med `setSound('microphone', false)` och läs **Arbetar**.
 4. Slå på minskad rörelse i operativsystemet eller i webbläsarens
-   utvecklarverktyg. Återuppta mikrofonljudet med
+   utvecklarverktyg och se det stilla strecket. Släpp anropet med
+   `reply REQUEST Utkastet har ett förslag.` och kör `setSound('remote', true)`.
+   Återuppta mikrofonljudet med
    `setSound('microphone', true, 0.9)`. Stoppa sedan Skyttels ljud,
    sänk mikrofonljudet till 0.08 och stoppa till sist mikrofonljudet.
 
 Separat måttunderlag för föregående TAL-14: automationen mäter röstrutans höjd
-till exakt 36 px vid Lyssnar, Du talar, Skyttel talar, Skyttel arbetar och
+till exakt 36 px vid Lyssnar, Du talar, Skyttel talar, Arbetar och
 minskad rörelse. Vid teknisk inspektion, välj `.voice-box` i Elements och
 läs dess beräknade höjd vid samma stadier. Det vanliga UI-flödet kontrollerar
 läsbarhet och nåbara kontroller.
@@ -950,7 +1027,7 @@ efter fallet och avsluta med `quit`.
    ingen andra uppläsning av brickans namn.
 3. Slå på mikrofonen. I terminalen: `user Beskriv kartan.` och `delegate`.
    Kontrollera den aktiva anslutningen med `sessions`.
-4. Slå av mikrofonen medan modellen hålls. Röstrutan säger **Skyttel arbetar**,
+4. Slå av mikrofonen medan modellen hålls. Röstrutan visar **Arbetar**,
    men textknappen har ingen arbetsmarkering för det talade uppdraget.
 5. Släpp modellen med `reply REQUEST Det talade svaret.`. Öppna textvyn och läs
    även den raden. Kontrollera att inget ytterligare modelluppdrag skapats.
@@ -1050,8 +1127,80 @@ efter fallet och avsluta med `quit`.
    förberedelsen. Öppna textvyn först efter att svaret har kommit.
 4. På verklig utrustning: upprepa uppdraget med mikrofonen på, stäng textvyn och
    lyssna på svaret. Öppna den igen och jämför vad som hördes.
-5. Välj **Nytt samtal** med mikrofonen på. Kontrollera dess besked i
-   samtalstexten och kommentarerna.
+5. Vänta tills uppläsningen har avslutats och välj **Nytt samtal**.
+   Läs den tomma samtalstexten och kontrollera att mikrofonen är på.
+6. Kör `response-required off`. Med textvyn stängd, kör
+   `user Föreslå Alex blå cykel av typen Fordon.` och `delegate`.
+   Släpp det hållna anropet med
+   `tool REQUEST read_type_catalog {}`. Läs ID för **Fordon** i
+   `lastToolResult.types`. Kör `hold-check on` och föreslå cykeln med
+   kommandot nedan. Byt ut `TYPE`, `VERSION` och `CONTENT` mot typens ID
+   och det hållna utkastets båda versioner. Använd det nya anrops-ID:t för
+   varje `REQUEST` och ändringskontrollens eget ID för `CHECK`.
+
+   <!-- markdownlint-disable MD013 -->
+   ```text
+   tool REQUEST submit_changes {"version":VERSION,"contentVersion":CONTENT,"completion":"draft","operations":[{"name":"propose_object","arguments":{"id":"bike","baseRevision":null,"value":{"name":"Alex blå cykel","typeId":"TYPE"}}}]}
+   ```
+   <!-- markdownlint-enable MD013 -->
+
+   Släpp ändringskontrollen och kör sedan `hold-check off`.
+
+   ```text
+   reply CHECK {"decision":"allow","complete":true,"fulfillsRequest":true}
+   ```
+
+7. Öppna utkastet. När Alex har skickat sitt val av cykel i text med
+   mikrofonen av, ställ båda frågorna med följande kommando.
+
+   <!-- markdownlint-disable MD013 -->
+   ```text
+   tool REQUEST ask_questions {"questions":["Vilken färg har låset?","Vilket märke har cykeln?"]}
+   ```
+   <!-- markdownlint-enable MD013 -->
+
+8. Med mikrofonen på och textvyn stängd, kör
+   `user Vilken cykel väljer jag till utflykten?` och `delegate`.
+   Läs valet av cykel i den tidigare skrivna repliken i `held.input`.
+   Släpp med `reply REQUEST Till utflykten väljer du Alex blå cykel.`
+   och kontrollera överlämningen med `sessions`. Skicka svaret som
+   transportfragment med ljudaktivitet som i steg 3. Öppna textvyn och
+   stäng av ljudaktiviteten.
+9. Kör `user Den har ett grönt lås.` och `delegate`. Läs låsfrågans
+   `id` och `revision` i `pendingParts` samt svarets `messageId`.
+   Ersätt `PART`, `REV` och `MSG` och kör följande kommando.
+
+   <!-- markdownlint-disable MD013 -->
+   ```text
+   tool REQUEST ask_questions {"questions":[],"updates":[{"id":"PART","revision":REV,"action":"clarify","messageId":"MSG","evidence":"Den har ett grönt lås."}],"continueResponse":true}
+   ```
+   <!-- markdownlint-enable MD013 -->
+
+10. Använd låsfrågans nya revision från `lastToolResult.pendingParts`.
+    Kör `hold-check on`, byt ut versioner och typ som i steg 6 och släpp
+    ändringskontrollen på samma sätt efter verktygsanropet.
+
+    <!-- markdownlint-disable MD013 -->
+    ```text
+    tool REQUEST submit_changes {"version":VERSION,"contentVersion":CONTENT,"completion":"draft","resolves":[{"id":"PART","revision":REV}],"operations":[{"name":"propose_object","arguments":{"id":"bike","baseRevision":null,"value":{"name":"Alex blå cykel","typeId":"TYPE","properties":[{"id":"lock-color","label":"Låsfärg","kind":"text","value":"Grönt"}]}}}]}
+    ```
+    <!-- markdownlint-enable MD013 -->
+
+11. När ändringen av låsfärgen syns, kör
+    `window.skyttelVoiceFixture.fail()` i webbläsarkonsolen. Låt mikrofonen
+    vara av. När Alex frågar i text vad som ändrades, läs låsfärgen i
+    `draft.changes` och den återstående frågan i `pendingParts`.
+    Kör `reply REQUEST` följt av **Alex blå cykel har nu låsfärgen grönt.
+    Kvar: Vilket märke har cykeln?** på samma rad.
+12. När Alex skriver **Strunta i märket.**, använd märkesfrågans ID och
+    revision samt det nya meddelandets ID. Kontrollera att knappen för att
+    spara aktiveras och att sparandet syns först efter Alex uttryckliga val.
+
+    <!-- markdownlint-disable MD013 -->
+    ```text
+    tool REQUEST ask_questions {"questions":[],"updates":[{"id":"PART","revision":REV,"action":"withdraw","messageId":"MSG","evidence":"Strunta i märket."}]}
+    ```
+    <!-- markdownlint-enable MD013 -->
 
 ### Tidslinje RÖSTTEXT-02
 
@@ -1061,21 +1210,55 @@ efter fallet och avsluta med `quit`.
    mikrofonen igen. Kontrollera kommentarerna en gång till.
 3. Skicka **Stäng av innan svaret är klart.**. Stäng av mikrofonen medan svaret
    hålls. Släpp **Även detta svar finns bara i text.**.
-4. Skriv **Nytt samtal** med mikrofonen av och läs beskedet.
+4. Skriv **Nytt samtal** med mikrofonen av. Kontrollera att samtalstexten
+   är tom och att mikrofonen är av.
 
 ### Tidslinje RÖSTTEXT-03
 
 1. Skicka **Första frågan.** och **Andra frågan.** utan att släppa svar. Släpp
    första svaret med **Första svaret med åäö.**, upprepat 30 gånger i samma
-   svar. Släpp sedan **Andra svaret.** och läs `sessions`. Sammanfoga
-   delarna för varje svar enligt [TAL-04](#tidslinje-tal-04). Kontrollera
-   två fullständiga svar i ordning och ett uppspelningsbesked per svar.
+   svar. Släpp **Andra svaret.** innan något ljud har spelats. Läs `sessions`
+   och kontrollera att bara det första svaret har ett uppspelningsbesked.
+   Skicka det första svaret som utgående textfragment och slå på inkommande
+   ljud enligt [TAL-04](#tidslinje-tal-04). Kontrollera att det andra svaret
+   fortfarande väntar. Slå av ljudet och kontrollera att nästa
+   uppspelningsbesked gäller **Andra svaret.**.
+   Sammanfoga delarna enligt TAL-04 och kontrollera båda svarens fulla text.
 2. Skicka **Ett talat tillägg.** som transportfragment och slå på och av
    ljudaktiviteten. Läs raden i samtalstexten.
 3. Stäng av mikrofonen. Skicka **Min egen text ska inte läsas.** och släpp
    **Bara Skyttels nya text läses.**. Stäng och öppna textvyn.
 4. På verklig utrustning: använd skärmläsare och upprepa flödet. Lyssna på både
    Skyttels röst och skärmläsaren när varje rad tillkommer.
+
+### Tidslinje RÖSTTEXT-07
+
+1. Skicka **Det gamla svaret.** som utgående textfragment och börja en
+   inkommande ton på 440 Hz. Kontrollera att tonen når högtalaren.
+2. Direkt efter att Alex väljer **Avbryt**, kör följande i webbläsarkonsolen.
+   Det gamla inkommande textfragmentet har en sluttid före avbrottet.
+   Tonen på 800 Hz kommer 400 ms senare. Kontrollera med `observeSpeaker()`
+   enligt [TAL-06](#tidslinje-tal-06) att tonen kommer in och att
+   högtalaren förblir tyst.
+
+   ```javascript
+   window.skyttelVoiceFixture.setSound('remote', false);
+   window.skyttelVoiceFixture.emit({
+     type: 'session.input_transcript.delta',
+     event_id: crypto.randomUUID(),
+     delta: 'Tidigare ord.',
+     start_ms: 0,
+     end_ms: 5,
+   });
+   window.skyttelVoiceFixture.remoteTone(800, 0.4, 0.15);
+   ```
+
+3. Besvara Alex skrivna förtydligande med **Jag förstår att du menar
+   cykeln.** Vänta på nästa fullständiga uppspelningsbesked enligt
+   [TAL-04](#tidslinje-tal-04) och skicka en ton på 1200 Hz i 200 ms.
+   Hela tonen ska nå högtalaren. Kontrollera att samma röstanslutning och
+   mikrofon används. Det automatiska provet håller även svaret på
+   meddelandets begäran tills tonen har spelats upp.
 
 ### Tidslinje RÖSTTEXT-04
 
@@ -1087,6 +1270,20 @@ efter fallet och avsluta med `quit`.
    den. Kontrollera röstrutan och det tomma utkastet genom **Visa utkastet** i
    textvyn. Öppna **Rapporter → Ändringshistorik** och kontrollera att inget
    sparande tillkommer. Välj **Tillbaka till arbetet**.
+3. Låt textvyn vara öppen. Använd operatörens kommandon i steg 6 i
+   [RÖSTTEXT-01](#tidslinje-rösttext-01) för att föreslå cykeln med
+   rösten och släppa ändringskontrollen. När Alex frågar om fordonet, kör
+   `tool REQUEST read_my_draft {}` och läs cykelns namn i verktygssvaret.
+   Släpp svaret med
+   `reply REQUEST I utkastet finns Alex blå cykel.`
+4. Håll svaret på den första skrivna sparbegäran medan Alex trycker på
+   **Escape** i meddelandefältet. Vänta tills textvyn visar **Avbrutet**.
+   Släpp det hållna svaret med `reply REQUEST Sparat.` Besvara sedan Alex
+   förtydligande med
+   `reply REQUEST Jag förstår vilken cykel du menar.`
+5. Besvara den nya sparbegäran enbart med
+   `reply REQUEST Jag har granskat förslaget.` Låt serverns ordinarie
+   kontroll av hela utkastet slutföras.
 
 ## Väntande kontroll NOT-10
 

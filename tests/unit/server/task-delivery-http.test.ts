@@ -4,7 +4,11 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
-import { liveProvider, voiceAnswerParts } from '../../support/live-provider.js';
+import {
+  isVoiceAnswerRelease,
+  liveProvider,
+  voiceAnswerParts,
+} from '../../support/live-provider.js';
 import { advanceActiveLogin } from '../../support/session-time.js';
 import { modelMessage, modelTool, readOnlyScope, textModel } from '../../support/text-model.js';
 
@@ -26,8 +30,8 @@ afterEach(async () => {
   await app?.close();
   vi.useRealTimers();
 });
-async function connect(path: string) {
-  const cookies = (await browser.storageState()).cookies
+async function connect(path: string, client = browser) {
+  const cookies = (await client.storageState()).cookies
     .map((cookie) => `${cookie.name}=${cookie.value}`)
     .join('; ');
   const socket = new WebSocket(path.replace('http', 'ws'), {
@@ -39,6 +43,23 @@ async function connect(path: string) {
   socket.on('error', () => messages.push({ type: 'rejected' }));
   await expect.poll(() => messages[0]?.type, { timeout: 1500 }).toBe('connected');
   return { socket, messages, id: messages[0].id };
+}
+
+async function connectAnotherConversation(endpoint: string) {
+  const client = await request.newContext();
+  try {
+    await signIn(client, app.origin);
+    const base = endpoint.replace(/\/[^/]+$/, '');
+    const started = await client.post(base, {
+      headers: { origin: app.origin },
+      data: approvedForVisit,
+    });
+    expect(started.status(), await started.text()).toBe(201);
+    const { id } = await started.json();
+    return await connect(`${base}/${id}/delivery`, client);
+  } finally {
+    await client.dispose();
+  }
 }
 
 async function rejectedConnection(path: string, cookies?: string, origin = app.origin) {
@@ -229,7 +250,7 @@ test.each(['text', 'voice'] as const)(
     expect(later.tasks[1].delivery.text).toContain('Andra svaret.');
     expect(later.conversation).toEqual([
       ...first.conversation,
-      { role: 'assistant', text: 'Andra svaret.' },
+      { role: 'assistant', text: 'Andra svaret.', requestId: 'second' },
     ]);
   },
 );
@@ -950,6 +971,184 @@ test('free Live can deliver whole text before expiry but its outstanding receipt
     .toBe(true);
   expect(fixture.channel.messages.some((item) => item.state === 'received')).toBe(false);
 });
+
+test.each(['before', 'after'] as const)(
+  'a spoken proposal when answers reconnect %s admission starts',
+  async (reconnected) => {
+    const live = liveProvider();
+    let typeId = '';
+    let completeTyped = () => {};
+    const model = textModel((body) => {
+      const turn = JSON.parse(String(body.input.findLast((item) => item.role === 'user')?.content));
+      if (turn.message === 'Beskriv utkastet i text.') {
+        return new Promise<unknown[]>((resolve) => {
+          completeTyped = () => resolve([modelMessage('Det tidigare förslaget finns kvar.')]);
+        });
+      }
+      return [
+        modelTool('submit_changes', {
+          version: 1,
+          contentVersion: 1,
+          completion: 'draft',
+          operations: [
+            {
+              name: 'propose_object',
+              arguments: {
+                id: 'new-voice-proposal',
+                baseRevision: null,
+                value: { typeId, name: 'Musiktjänst' },
+              },
+            },
+          ],
+        }),
+      ];
+    });
+    const admissions: number[] = [];
+    const {
+      endpoint,
+      channel,
+      advance,
+      post: sendText,
+    } = await arrange(model, 60_000, {
+      liveFetch: live.provider,
+      liveSideband: live.attach,
+      async assistantDispatch(request, dispatch) {
+        const response = await dispatch(request);
+        if (request.method === 'POST' && new URL(request.url).pathname.endsWith('/messages'))
+          admissions.push(response.status);
+        return response;
+      },
+    });
+    const post = (path: string, data: object) =>
+      browser.post(path, { headers: { origin: app.origin }, data });
+    const mapPath = endpoint.replace(/text-assistant\/[^/]+$/, 'map');
+    const readMap = async () => (await browser.get(mapPath)).json();
+    typeId = (await readMap()).types[0].id;
+    const prior = await post(`${mapPath}/draft`, {
+      version: 0,
+      id: 'previous-proposal',
+      baseRevision: null,
+      value: { typeId, name: 'Tidigare förslag', properties: [] },
+    });
+    expect(prior.status(), await prior.text()).toBe(200);
+    const otherSocket = await connectAnotherConversation(endpoint);
+    const view = { revision: 0, draftVersion: 1, contentVersion: 1 };
+    const start = await post(`${endpoint}/voice`, {
+      ...view,
+      sdp: 'synthetic-offer',
+      deliveryConnectionId: channel.id,
+    });
+    expect(start.status(), await start.text()).toBe(201);
+    const { voice } = await start.json();
+    const closed = new Promise((resolve) => channel.socket.on('close', resolve));
+    channel.socket.close();
+    await closed;
+    const replacement = await connect(`${endpoint}/delivery`);
+    expect(replacement.id).not.toBe(channel.id);
+    const pollWithConnection = async (deliveryConnectionId: unknown, revision = 0) => {
+      const polled = await post(`${endpoint}/voice/${voice.id}/poll`, {
+        ...view,
+        revision,
+        microphoneOn: true,
+        deliveryConnectionId,
+      });
+      expect(polled.status(), await polled.text()).toBe(200);
+      return polled.json();
+    };
+    if (reconnected === 'before') {
+      await pollWithConnection(replacement.id);
+      await pollWithConnection(otherSocket.id);
+    }
+    const id = [...live.channels.keys()][0];
+    function speak(at: number) {
+      live.emit(id, {
+        type: 'session.input_transcript.delta',
+        event_id: `spoken-turn-${at}`,
+        delta: 'Lägg till Musiktjänst i mitt utkast.',
+        start_ms: at - 10,
+        end_ms: at,
+      });
+      live.emit(id, {
+        type: 'session.delegation.created',
+        delegation: { id: `spoken-work-${at}`, target: 'client' },
+        offset_ms: at,
+      });
+      advance(2000);
+    }
+    speak(20);
+    if (reconnected === 'after') {
+      await expect.poll(() => admissions).toEqual([409]);
+      expect(model.requests).toHaveLength(0);
+      const typed = await sendText('later-written-work', {
+        text: 'Beskriv utkastet i text.',
+        draftVersion: 1,
+        deliveryConnectionId: replacement.id,
+      });
+      expect(typed.status(), await typed.text()).toBe(202);
+      const { revision } = await typed.json();
+      try {
+        await expect.poll(() => model.requests.length).toBe(1);
+        // Another conversation's socket is never accepted as a replacement.
+        await pollWithConnection(otherSocket.id, revision);
+        await pollWithConnection(replacement.id, revision);
+        await expect
+          .poll(async () => {
+            const status = await pollWithConnection(replacement.id, revision);
+            return { admissions: [...admissions], refusal: status.voice.refusal };
+          })
+          .toMatchObject({
+            admissions: [409],
+            refusal: { text: expect.stringContaining('Uppdraget startade inte.') },
+          });
+      } finally {
+        completeTyped();
+      }
+      await expect
+        .poll(
+          async () =>
+            (await (await browser.get(`${endpoint}/messages/later-written-work`)).json())
+              .taskStatus,
+        )
+        .toBe('completed');
+      expect(admissions).toEqual([409]);
+      expect((await readMap()).draft.version).toBe(1);
+      const latest = await (await browser.get(endpoint)).json();
+      await pollWithConnection(replacement.id, latest.revision);
+      speak(40);
+    }
+    await expect
+      .poll(() =>
+        replacement.messages.find((item) => item.audio && item.state === 'awaiting-receipt'),
+      )
+      .toMatchObject({ audio: true, text: expect.stringContaining('Utkastet är uppdaterat.') });
+    await expect.poll(() => voiceAnswerParts(live.sent).join('')).toContain('Musiktjänst');
+    const acceptedDelegation = reconnected === 'after' ? 'spoken-work-40' : 'spoken-work-20';
+    await expect
+      .poll(() =>
+        live.sent.some(
+          ({ event }) =>
+            event.type === 'session.instructions.append' &&
+            event.delegation_id === acceptedDelegation &&
+            isVoiceAnswerRelease(event, true),
+        ),
+      )
+      .toBe(true);
+    expect(voiceAnswerParts(live.sent).join('')).not.toContain('uppdraget kunde inte slutföras');
+    expect(model.requests).toHaveLength(reconnected === 'after' ? 2 : 1);
+    expect(otherSocket.messages).toHaveLength(1);
+    expect(await readMap()).toMatchObject({
+      objects: [],
+      draft: {
+        version: 2,
+        changes: [
+          { id: 'previous-proposal', after: { name: 'Tidigare förslag' } },
+          { id: 'new-voice-proposal', after: { name: 'Musiktjänst' } },
+        ],
+      },
+    });
+    expect(admissions).toEqual(reconnected === 'after' ? [409, 202] : [202]);
+  },
+);
 
 test('the exact Live expiry timer fails an already completed voice delivery without ACK or HTTP traffic', async () => {
   let expired = false;

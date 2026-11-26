@@ -14,20 +14,45 @@ workflow gate tests run one file at a time. This reduces resource contention
 at the cost of longer test runs.
 
 Dependency preparation, builds and verification commands share an
-operating-system lock across the user's worktrees. A second command exits
-with status 75 and identifies the
-active command; rerun it after that command finishes. The lock is released
+operating-system lock across the user's worktrees. By default a competing
+command identifies the owner and exits with status 75. To wait for up to
+five minutes, run `SKYTTEL_TEST_LOCK_WAIT_SECONDS=300 npm run typecheck`.
+The same variable works with other verification and preparation commands.
+The runner reports the owner once, starts the command when it acquires the
+lock, and exits with status 75 if the wait expires. The lock is released
 when the process exits, including after interruption. Use the npm scripts
 instead of launching test runners directly. These commands require Python 3
 on Linux or macOS; Python is included in the devcontainer.
 
-Before execution, verification checks the checkout's dependency setup.
-Exit status 78 and `Skyttel dependency setup failed` identify an environment
-failure: follow the diagnostic and rerun the selected command after preparing
-that checkout. The expensive child command has not started. Verification
-never repairs dependencies automatically. Test assertions and coverage failures
-keep their child exit status; interrupted or incomplete runs are not passes,
-and partial coverage is not evidence of a coverage regression.
+Before execution, verification checks the checkout's dependency setup. The
+workflow gates and manual mapping also check that pinned headless Chromium
+launches from the configured Playwright cache. Exit status 78 identifies a
+setup failure. Follow the diagnostic, then rerun the command. Test assertions
+and coverage failures keep their child exit status. Treat interrupted runs as
+incomplete and compare coverage only after a complete run.
+
+Use compact output for a human-readable local run with a retained log:
+
+```sh
+SKYTTEL_TEST_COMPACT_OUTPUT=1 npm run test:unit -- \
+  tests/unit/server/text-assistant.test.ts -t 'selecting a map item hidden' --bail=1
+```
+
+The runner prints a unique log path under `logs/tests/`. The file contains the
+child command's combined output. The terminal shows the test runner output
+with structured security events omitted.
+
+## Check staged files before committing
+
+Enable the repository's pre-commit hook once per clone with
+`git config --local core.hooksPath .githooks`. If you use a custom hooks
+directory, call `.githooks/pre-commit` from its existing pre-commit hook.
+Run `git hook run pre-commit` to check your index before committing.
+
+The hook runs the checkout's Biome against the staged files and staged
+configuration. For a partially staged file, fix the reported lines and stage
+the intended changes again. The hook leaves the index and working files as
+they are.
 
 ## Model evaluation history
 
@@ -103,6 +128,31 @@ stay in ignored local artifacts; the issue carries shareable results.
 For a single provider integration regression, use the real-model or real-voice
 suites below. Use `$evaluate-models` for catalog qualification and model
 comparison. Both workflows require explicit authorization for billable calls.
+
+### Measure map assignment and follow-up latency
+
+Choose and record the candidate commit before comparing it with the fixed
+baseline. Prepare each revision using the
+[worktree guide](devcontainer.md#prepare-an-additional-worktree).
+[Configure assistant access](devcontainer.md#optional-assistant-access)
+and [start the application](devcontainer.md#run-the-application).
+Use the same browser, installation settings, and model access for both
+runs. Obtain explicit approval for billable model calls before measuring.
+
+```sh
+baseline=713f4074a976d7865c0a7a6a3404c877faa487ce
+git worktree add --detach ../skyttel-baseline "$baseline"
+```
+
+1. Use a fresh household for each repetition. Keep the starting data, model,
+   reasoning effort, assignment and follow-up prompts identical on both
+   revisions.
+2. Start a network recording in the browser's developer tools before sending
+   the assignment. For each of the two messages, measure from the start of
+   its POST to the end of the first status response containing its completed
+   result.
+3. Record the commit, model, reasoning effort and elapsed milliseconds for
+   each message separately. Record a missing or incorrect result as a failure.
 
 ## CI font profile
 
@@ -703,15 +753,16 @@ optional debugging tools; integration tests create their own fixtures.
 
 ## Complete the development checks
 
-After focused tests pass, run the development checks:
+When the change requires full verification, use the completed CI jobs for the
+exact commit or run the development checks locally:
 
 ```sh
 npm run check
 ```
 
 This runs typechecking, Biome, documentation checks, workflow gate tests,
-manual-case mapping, the build and unit-test coverage. Run Playwright
-integration tests separately:
+manual-case mapping, the build, unit-test coverage and technical browser tests.
+Run Playwright integration tests separately:
 
 ```sh
 npm run test:integration

@@ -203,6 +203,10 @@ for (const mode of ['voice', 'text'] as const) {
       ? 'ARBETE-08: familjeabonnemanget går från inloggning och samtal till gemensamt kvitto och privat fortsatt arbete'
       : 'ARBETE-09: samma familjearbete fungerar med text och listor utan grafik eller ljud';
   test(title, async ({ page, browser }) => {
+    test.slow(
+      mode === 'voice',
+      'The two-household-member journey also waits for voice delivery and peer teardown across a server restart.',
+    );
     let step = 0;
     let subscriptionType: ObjectType | undefined;
     let personType: ObjectType | undefined;
@@ -654,6 +658,7 @@ for (const mode of ['voice', 'text'] as const) {
         });
       }
       await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
+      await closeTextView(page);
       await readTableObject(page, 'Familjens Molnmusik');
       await expect(
         subscription.getByRole('heading', {

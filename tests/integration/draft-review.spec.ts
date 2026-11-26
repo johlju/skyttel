@@ -62,12 +62,7 @@ test('UTKAST-32: lifecycle-only object and relationship proposals distinguish ef
     await page.goto(`${installation.origin}/households/${household.id}`);
     await page.getByRole('button', { name: 'Utkast', exact: true }).click();
     const draft = page.getByRole('region', { name: 'Utkastet', exact: true });
-    await expect(draft.getByRole('columnheader')).toHaveText([
-      'Symbol',
-      'Namn',
-      'Typ',
-      'Vad som ändras',
-    ]);
+    await expect(draft.getByRole('columnheader')).toHaveText(['Namn', 'Typ', 'Vad som ändras']);
     await expect(draft.getByRole('rowheader')).toHaveCount(4);
     for (const [name, expired] of [
       ['Utgånget provobjekt', true],
@@ -83,9 +78,17 @@ test('UTKAST-32: lifecycle-only object and relationship proposals distinguish ef
         })
         .getByRole('cell')
         .last();
-      await expect(summary).toHaveText(
-        `Gäller: ${expired ? 'Upphört → Aktuellt' : 'Aktuellt → Upphört'}Status: ${expired ? 'Manuellt upphört → Gäller fortfarande' : 'Gäller fortfarande → Manuellt upphört'}`,
-      );
+      await expect(
+        summary.getByText(`Gäller: ${expired ? 'Upphört → Aktuellt' : 'Aktuellt → Upphört'}`, {
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        summary.getByText(
+          `Status: ${expired ? 'Manuellt upphört → Gäller fortfarande' : 'Gäller fortfarande → Manuellt upphört'}`,
+          { exact: true },
+        ),
+      ).toBeVisible();
       await opener.click();
       const modal = page.getByRole('dialog', { name, exact: true });
       for (const [title, applies, mode] of [
@@ -143,12 +146,7 @@ for (const mobile of [false, true])
       await tools.getByRole('button', { name: 'Utkast', exact: true }).click();
       const draft = page.getByRole('region', { name: 'Utkastet', exact: true });
       await expect(draft).toBeVisible();
-      await expect(draft.getByRole('columnheader')).toHaveText([
-        'Symbol',
-        'Namn',
-        'Typ',
-        'Vad som ändras',
-      ]);
+      await expect(draft.getByRole('columnheader')).toHaveText(['Namn', 'Typ', 'Vad som ändras']);
       await expect(consentBox(page)).not.toBeVisible();
       const button = draft.getByRole('button', {
         name: 'Visa förslaget: Alex blå cykel',

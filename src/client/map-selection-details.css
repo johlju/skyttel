@@ -99,9 +99,6 @@
 .household-map.workspace-shell[data-narrow="false"].text-view-open .map-selection-details {
   right: calc(24px + var(--text-view-space));
 }
-.household-map.workspace-shell[data-narrow="false"].text-view-open.map-details-open .map-space {
-  right: calc(424px + var(--text-view-space));
-}
 /* Reuse the existing short-window reading layout: the actual selection and
    its summary stay together while full details scroll independently. */
 @media (max-width: 700px) {

@@ -1,4 +1,9 @@
+import { join } from 'node:path';
 import { type APIRequestContext, request } from '@playwright/test';
+import Database from 'better-sqlite3';
+import { Tiktoken } from 'js-tiktoken/lite';
+import ranks from 'js-tiktoken/ranks/o200k_base';
+import type { LiveCreateParams } from 'openai/resources/live/live';
 import { afterEach, expect, test, vi } from 'vitest';
 import type { MapState } from '../../../src/shared/map.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
@@ -8,9 +13,16 @@ import { createInstallation } from '../../support/installation.js';
 import {
   isVoiceAnswerRelease,
   liveProvider,
+  speak,
   voiceAnswerParts,
 } from '../../support/live-provider.js';
-import { lastToolResult, modelMessage, modelTool, textModel } from '../../support/text-model.js';
+import {
+  lastToolResult,
+  modelMessage,
+  modelTool,
+  readOnlyScope,
+  textModel,
+} from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
 vi.setConfig({ expect: { poll: { timeout: 5000 } } });
@@ -26,11 +38,13 @@ const readMap = async (): Promise<MapState> => (await client.get(`${path}/map`))
 async function setup(
   provider = textModel(() => [modelMessage('Ett svar.')]).provider,
   assistantDispatch?: NonNullable<Parameters<typeof createInstallation>[1]>['assistantDispatch'],
+  inspectLiveRequest?: (request: LiveCreateParams) => Response | undefined,
 ) {
   live = liveProvider();
   app = await createInstallation(undefined, {
     modelFetch: provider,
-    liveFetch: live.provider,
+    liveFetch: async (input, init) =>
+      inspectLiveRequest?.(JSON.parse(String(init?.body))) ?? live.provider(input, init),
     liveSideband: live.attach,
     assistantDispatch,
   });
@@ -85,6 +99,345 @@ async function poll(microphoneOn = true) {
 afterEach(async () => {
   await client?.dispose();
   await app?.close();
+});
+
+test('a voice request refused during save recovery leaves queued work intact', {
+  tags: ['technical'],
+  timeout: 15_000,
+}, async () => {
+  let releaseSave!: () => void;
+  const heldSave = new Promise<void>((resolve) => {
+    releaseSave = resolve;
+  });
+  let releaseVoiceAdmission!: () => void;
+  const heldVoiceAdmission = new Promise<void>((resolve) => {
+    releaseVoiceAdmission = resolve;
+  });
+  let reachedSave = false;
+  let reachedVoiceAdmission = false;
+  let refused: { status: number; body: unknown } | undefined;
+  let cancellation = false;
+  const model = textModel(() => [modelMessage('Kontrollerar utkastet.')]);
+  await setup(model.provider, async (incoming, dispatch) => {
+    const pathname = new URL(incoming.url).pathname;
+    if (incoming.method === 'POST' && pathname === '/mcp') {
+      const rpc = await incoming.clone().json();
+      if (rpc?.params?.name === 'save_draft') {
+        reachedSave = true;
+        await heldSave;
+        throw new TypeError('Synthetic save response lost');
+      }
+    }
+    if (incoming.method === 'POST' && pathname.endsWith('/messages')) {
+      reachedVoiceAdmission = true;
+      await heldVoiceAdmission;
+      const result = await dispatch(incoming);
+      refused = { status: result.status, body: await result.clone().json() };
+      return result;
+    }
+    if (incoming.method === 'POST' && pathname.endsWith('/cancel')) cancellation = true;
+    return dispatch(incoming);
+  });
+  const conversation = `text-assistant/${session.id}`;
+  const readConversation = async (): Promise<TextAssistantView> =>
+    (await client.get(`${path}/${conversation}`)).json();
+  const send = async (requestId: string, text: string) => {
+    const view = await readConversation();
+    return post(`${conversation}/messages`, {
+      requestId,
+      text,
+      revision: view.revision,
+      draftVersion: view.review.version,
+      contentVersion: view.review.contentVersion,
+    });
+  };
+  await start();
+  try {
+    expect((await send('save', 'Spara hela utkastet.')).status()).toBe(202);
+    await expect.poll(() => reachedSave).toBe(true);
+    expect((await send('queued', 'Berätta vad som finns på kartan.')).status()).toBe(202);
+    speak(live, 'Vad är kvar att göra?');
+    await expect.poll(() => reachedVoiceAdmission).toBe(true);
+    releaseSave();
+    await expect.poll(async () => (await readConversation()).phase).toBe('recovery');
+    releaseVoiceAdmission();
+    await expect
+      .poll(() => refused)
+      .toEqual({
+        status: 409,
+        body: { error: 'operation_pending' },
+      });
+    await expect.poll(() => voiceAnswerParts(live.sent).join('')).toMatch(/spar/iu);
+    const queued = await (await client.get(`${path}/${conversation}/messages/queued`)).json();
+    expect(queued.taskStatus).toBe('queued');
+    expect(cancellation).toBe(false);
+    expect((await poll()).voice.refusal?.text).toContain(
+      'Det tidigare sparförsöket behöver kontrolleras',
+    );
+    expect(model.requests).toHaveLength(1);
+    expect((await readMap()).objects).toEqual([]);
+  } finally {
+    releaseSave();
+    releaseVoiceAdmission();
+  }
+});
+
+test('oversized waiting work keeps its exact parts available to a new voice connection', {
+  tags: ['technical'],
+  timeout: 15_000,
+}, async () => {
+  const answer = 'Den första inventeringen gäller hallen.';
+  const firstQuestion = 'I vilket rum gäller inventering 1?';
+  const model = textModel((body) => {
+    const turn = JSON.parse(String(body.input.findLast((item) => item.role === 'user')?.content));
+    if (turn.message === answer) {
+      const part = turn.pendingParts.find(
+        ({ question }: { question: string }) => question === firstQuestion,
+      );
+      expect(turn.answerTo).toContainEqual({ id: part.id, revision: part.revision });
+      return [
+        modelTool('ask_questions', {
+          questions: [],
+          updates: [
+            {
+              id: part.id,
+              revision: part.revision,
+              messageId: turn.messageId,
+              action: 'clarify',
+              evidence: answer,
+              answer: 'Hallen.',
+            },
+          ],
+        }),
+      ];
+    }
+    const sequence = Number(turn.message.split(' ')[1]);
+    return [
+      modelTool('ask_questions', {
+        questions: [
+          {
+            kind: 'information',
+            request: `Beskriv inventering ${sequence}.`,
+            question: `I vilket rum gäller inventering ${sequence}?`,
+            dependsOnDraft: false,
+          },
+        ],
+      }),
+    ];
+  });
+  await setup(model.provider);
+  const conversation = `text-assistant/${session.id}`;
+  const read = async (): Promise<TextAssistantView> =>
+    (await client.get(`${path}/${conversation}`)).json();
+  for (let sequence = 1; sequence <= 5; sequence++) {
+    const requestId = `inventory-${sequence}`;
+    const text = `Inventering ${sequence} har dessa syntetiska artikelnummer: ${'Å#7$çµ,4 '.repeat(390)}`;
+    const sent = await post(`${conversation}/messages`, {
+      ...startBody(),
+      text,
+      requestId,
+    });
+    expect(sent.status(), await sent.text()).toBe(202);
+    await expect
+      .poll(
+        async () =>
+          (await (await client.get(`${path}/${conversation}/messages/${requestId}`)).json())
+            .taskStatus,
+      )
+      .toBe('completed');
+    session = await read();
+  }
+  const outstanding = session.pendingParts?.filter(({ status }) => status === 'waiting') ?? [];
+  expect(outstanding).toHaveLength(5);
+  await start();
+  expect(JSON.stringify(live.requests.at(-1)?.session.input)).toContain(
+    'Delegera frågor om pågående uppdrag',
+  );
+  live.emit(providerId, {
+    type: 'session.input_transcript.delta',
+    event_id: 'answer-first-question',
+    delta: answer,
+    start_ms: 0,
+    end_ms: 100,
+  });
+  await expect
+    .poll(
+      async () =>
+        (await read()).pendingParts?.find(({ question }) => question === firstQuestion)?.status,
+    )
+    .toBe('completed');
+  expect((await read()).pendingParts?.filter(({ status }) => status === 'waiting')).toEqual(
+    outstanding.slice(1),
+  );
+});
+
+test.each(['large receipt', 'many fragments'])(
+  'voice reconnects with recent conversation and verified save references after %s',
+  { tags: ['technical'], timeout: 12_000 },
+  async (condition) => {
+    // Enforce the visible provider limits. The real Live renderer's
+    // framing may add tokens beyond this offline count of its text.
+    const encoder = new Tiktoken(ranks);
+    await setup(undefined, undefined, ({ session }) => {
+      if (
+        (session.input?.length ?? 0) > 128 ||
+        (session.input ?? []).reduce(
+          (tokens, item) => tokens + encoder.encode(item.content[0].text).length,
+          0,
+        ) > 8192
+      )
+        return Response.json({ error: { message: 'Initial history too large.' } }, { status: 400 });
+    });
+    const map = await readMap();
+    const archivedMarker = 'Arkivfält 73.';
+    const description = `${archivedMarker} ${condition === 'large receipt' ? 'Påhittad data, fält 42. '.repeat(410) : 'Kort beskrivning.'}`;
+    expect(
+      (
+        await post('map/draft', {
+          version: map.draft.version,
+          id: 'archived-music-service',
+          baseRevision: null,
+          value: {
+            typeId: map.types[0].id,
+            name: 'Exempeltjänsten',
+            properties: Array.from({ length: 4 }, (_, index) => ({
+              id: `notes-${index}`,
+              label: `Anteckning ${index}`,
+              kind: 'text',
+              value: description,
+            })),
+          },
+        })
+      ).status(),
+    ).toBe(200);
+    const proposal = await readMap();
+    expect(
+      (
+        await post('map/save', {
+          version: proposal.draft.version,
+          operationId: 'previous-map-save',
+        })
+      ).status(),
+    ).toBe(200);
+    session = await (await client.get(`${path}/text-assistant/${session.id}`)).json();
+    const operations = session.operations;
+    expect(operations).toMatchObject([{ operationId: 'previous-map-save', status: 'succeeded' }]);
+    await start();
+    for (let index = 0; index < (condition === 'many fragments' ? 140 : 0); index++)
+      live.emit(providerId, {
+        type: `session.${index % 2 === 0 ? 'input' : 'output'}_transcript.delta`,
+        event_id: `fragment-${index}`,
+        delta: index % 2 === 0 ? ' Fråga.' : ' Svar.',
+        start_ms: index * 100,
+        end_ms: index * 100 + 100,
+      });
+    const latest = 'Vilken musik vill du kunna spela i huset?';
+    live.emit(providerId, {
+      type: 'session.input_transcript.delta',
+      event_id: 'retained-last-question',
+      delta: latest,
+      start_ms: 15_000,
+      end_ms: 15_100,
+    });
+    expect((await post(`${voicePath}/stop`)).status()).toBe(200);
+    session = await (await client.get(`${path}/text-assistant/${session.id}`)).json();
+    await start();
+    const seeded = JSON.stringify(live.requests.at(-1)?.session.input);
+    expect(seeded).toContain(latest);
+    expect(seeded).toContain('previous-map-save');
+    expect(seeded).not.toContain(archivedMarker);
+    if (condition === 'many fragments')
+      expect(seeded).toContain('Delegera frågor om äldre uppgifter');
+    speak(live, 'Vad finns i kartan?');
+    await expect.poll(() => voiceAnswerParts(live.sent).join('')).toContain('Ett svar.');
+    expect((await poll()).assistant.operations).toEqual(operations);
+  },
+);
+
+test('a spoken proposal reaches a retained draft when the request counter is missing', {
+  tags: ['technical'],
+  timeout: 15_000,
+}, async () => {
+  let typeId: string;
+  let delegatedStatus: number | undefined;
+  const model = textModel((body) => {
+    const turn = JSON.parse(String(body.input.findLast((item) => item.role === 'user')?.content));
+    if (turn.message === 'Vilka saker föreslog vi i utkastet?')
+      return [modelMessage('Cykeln och lampan finns i utkastet.')];
+    return [
+      modelTool('submit_changes', {
+        version: turn.draft.version,
+        contentVersion: turn.draft.contentVersion,
+        completion: 'draft',
+        operations: [
+          {
+            name: 'propose_object',
+            arguments: {
+              id: 'spoken-bike',
+              baseRevision: null,
+              value: { typeId, name: 'Blå cykel' },
+            },
+          },
+        ],
+      }),
+    ];
+  });
+  await setup(model.provider, async (incoming, dispatch) => {
+    const result = await dispatch(incoming);
+    if (incoming.method === 'POST' && new URL(incoming.url).pathname.endsWith('/messages'))
+      delegatedStatus = result.status;
+    return result;
+  });
+  const before = await readMap();
+  typeId = before.types[0].id;
+  await start();
+  // Reproduce the database left by the development reset in an isolated fixture.
+  const fixture = new Database(join(app.directory, 'skyttel.db'));
+  try {
+    fixture.prepare('DELETE FROM conversation_request_order').run();
+  } finally {
+    fixture.close();
+  }
+  live.emit(providerId, {
+    type: 'session.input_transcript.delta',
+    event_id: 'proposal-fragment',
+    delta: 'Lägg till en blå cykel i utkastet.',
+    start_ms: 0,
+    end_ms: 1000,
+  });
+  live.emit(providerId, {
+    type: 'session.delegation.created',
+    offset_ms: 1000,
+    delegation: { id: 'proposal-task', target: 'client' },
+  });
+  await expect.poll(() => delegatedStatus).toBe(202);
+  await expect.poll(() => voiceAnswerParts(live.sent).join('')).toContain('Blå cykel');
+  const after = await readMap();
+  expect(after.draft.changes).toMatchObject([
+    { id: 'independent', after: { name: 'Privat lampa' } },
+    { id: 'spoken-bike', after: { name: 'Blå cykel' } },
+  ]);
+  expect(after.objects).toEqual(before.objects);
+
+  const endpoint = `text-assistant/${session.id}`;
+  const view: TextAssistantView = await (await client.get(`${path}/${endpoint}`)).json();
+  const followUp = await post(`${endpoint}/messages`, {
+    revision: view.revision,
+    draftVersion: view.review.version,
+    contentVersion: view.review.contentVersion,
+    requestId: 'read-the-draft',
+    text: 'Vilka saker föreslog vi i utkastet?',
+  });
+  expect(followUp.status(), await followUp.text()).toBe(202);
+  await expect
+    .poll(async () => {
+      const result: TextAssistantView = await (
+        await client.get(`${path}/${endpoint}/messages/read-the-draft`)
+      ).json();
+      return result.taskStatus;
+    })
+    .toBe('completed');
+  expect(await readMap()).toEqual(after);
 });
 
 test.each([false, true])(
@@ -233,6 +586,232 @@ test('an explicit typed cancellation consumes the outstanding spoken task withou
   expect(live.sent.filter(({ event }) => isVoiceAnswerRelease(event, true))).toEqual([]);
   expect(await readMap()).toEqual(before);
 });
+
+test('new speech can supersede a spoken reply without keeping its finished draft work active', {
+  tags: ['technical'],
+  timeout: 15_000,
+}, async () => {
+  let finish: () => void = () => {};
+  const held = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  let typeId: string;
+  const typedAnswer = 'Förslagen finns kvar i ditt utkast.';
+  const model = textModel(async (body) => {
+    if (model.requests.length > 1) return [modelMessage(typedAnswer)];
+    const turn = JSON.parse(String(body.input.findLast((item) => item.role === 'user')?.content));
+    await held;
+    return [
+      modelTool('submit_changes', {
+        version: turn.draft.version,
+        contentVersion: turn.draft.contentVersion,
+        completion: 'draft',
+        operations: [
+          {
+            name: 'propose_object',
+            arguments: {
+              id: 'finished-voice-proposal',
+              baseRevision: null,
+              value: { typeId, name: 'Blå cykel' },
+            },
+          },
+        ],
+      }),
+    ];
+  });
+  await setup(model.provider);
+  const before = await readMap();
+  typeId = before.types[0].id;
+  await start();
+  try {
+    speak(live, 'Lägg till en blå cykel i utkastet.');
+    await expect.poll(async () => (await poll()).voice.phase).toBe('working');
+    live.emit(providerId, {
+      type: 'session.input_transcript.delta',
+      event_id: 'unfinished-follow-up',
+      delta: 'Jag skulle vilja koppla…',
+      start_ms: 3000,
+      end_ms: 3400,
+    });
+    finish();
+    await expect
+      .poll(async () => (await poll()).assistant)
+      .toMatchObject({
+        phase: 'ready',
+        result: { changes: [expect.objectContaining({ objectId: 'finished-voice-proposal' })] },
+      });
+    await expect
+      .poll(async () => (await poll()).voice)
+      .toMatchObject({
+        phase: 'listening',
+        summaryReady: false,
+      });
+    expect((await poll()).voice.response).toBeUndefined();
+    expect(voiceAnswerParts(live.sent)).toEqual([]);
+    const updated = await readMap();
+    expect(updated.draft.changes.map((change) => change.id)).toEqual([
+      'independent',
+      'finished-voice-proposal',
+    ]);
+    expect(updated.objects).toEqual(before.objects);
+
+    const { assistant } = await poll();
+    const response = await post(`text-assistant/${session.id}/messages`, {
+      revision: assistant.revision,
+      draftVersion: assistant.review.version,
+      contentVersion: assistant.review.contentVersion,
+      requestId: 'typed-follow-up',
+      text: 'Finns förslagen kvar i mitt utkast?',
+    });
+    expect(response.status(), await response.text()).toBe(202);
+    await expect.poll(async () => (await poll()).voice.response?.text).toBe(typedAnswer);
+    expect(model.requests).toHaveLength(2);
+    expect(await readMap()).toEqual(updated);
+  } finally {
+    finish();
+  }
+});
+
+test.each(['read', 'external edit', 'spoken edit', 'save'])(
+  'a spoken follow-up across a checked proposal preserves its authority: %s',
+  { tags: ['technical'], timeout: 15_000 },
+  async (followUp) => {
+    let finish: () => void = () => {};
+    const held = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    let typeId: string;
+    const initialRequest = 'Lägg till Blå cykel i mitt utkast.';
+    const read = 'Var finns Blå cykel?';
+    const edit = 'Lägg till en ny lampa.';
+    const model = textModel(
+      async (body) => {
+        const turn = JSON.parse(
+          String(body.input.findLast(({ role }) => role === 'user')?.content),
+        );
+        if (turn.message === read) return [modelMessage('Blå cykel ligger i ditt utkast.')];
+        if (turn.message === initialRequest) await held;
+        const first = turn.message === initialRequest;
+        return [
+          modelTool('submit_changes', {
+            version: turn.draft.version,
+            contentVersion: turn.draft.contentVersion,
+            completion: 'draft',
+            operations: [
+              {
+                name: 'propose_object',
+                arguments: {
+                  id: first ? 'new-bike' : 'new-lamp',
+                  baseRevision: null,
+                  value: { typeId, name: first ? 'Blå cykel' : 'Ny lampa' },
+                },
+              },
+            ],
+          }),
+        ];
+      },
+      (body) => {
+        if (!body.instructions.startsWith('SKYTTEL_TURN_SCOPE'))
+          return [modelMessage('{"decision":"allow","complete":true,"fulfillsRequest":true}')];
+        const { current } = JSON.parse(String(body.input[0].content));
+        return current === read
+          ? readOnlyScope()
+          : [
+              modelMessage(
+                JSON.stringify({ mode: 'work', request: current, responseRequired: false }),
+              ),
+            ];
+      },
+    );
+    await setup(model.provider);
+    const before = await readMap();
+    typeId = before.types[0].id;
+    await start();
+    const fragment = (delta: string, startMs: number) =>
+      live.emit(providerId, {
+        type: 'session.input_transcript.delta',
+        event_id: crypto.randomUUID(),
+        delta,
+        start_ms: startMs,
+        end_ms: startMs + 100,
+      });
+    try {
+      speak(live, initialRequest);
+      await expect.poll(async () => (await poll()).voice.phase).toBe('working');
+      const [first, rest] =
+        followUp === 'save'
+          ? ['Spara ', 'hela utkastet.']
+          : followUp === 'spoken edit'
+            ? ['Lägg till ', 'en ny lampa.']
+            : ['Var finns ', 'Blå cykel?'];
+      fragment(first, 1000);
+      finish();
+      await expect.poll(async () => (await poll()).voice.phase).toBe('listening');
+      let externallyEditedDraft: MapState['draft'] | undefined;
+      if (followUp === 'external edit') {
+        const { draft } = await readMap();
+        const changed = await post('map/draft', {
+          version: draft.version,
+          id: 'outside-voice',
+          baseRevision: null,
+          value: { typeId, name: 'Svart cykel' },
+        });
+        expect(changed.status(), await changed.text()).toBe(200);
+        externallyEditedDraft = (await readMap()).draft;
+        expect(externallyEditedDraft.changes.map(({ id }) => id)).toContain('outside-voice');
+      }
+      await poll();
+      fragment(rest, 2000);
+      live.emit(providerId, {
+        type: 'session.delegation.created',
+        offset_ms: 2100,
+        delegation: { id: 'follow-up', target: 'client' },
+      });
+      if (followUp === 'read') {
+        await expect
+          .poll(async () => (await poll()).voice.response?.text)
+          .toContain('Blå cykel ligger i ditt utkast.');
+        expect(model.requests).toHaveLength(2);
+        const turn = JSON.parse(
+          String(model.requests[1].input.findLast(({ role }) => role === 'user')?.content),
+        );
+        expect(turn).toMatchObject({ message: read });
+      } else {
+        // A poll can surface the external edit through the conversation
+        // revision or through the draft version before dispatch.
+        const refusalMessage =
+          followUp === 'external edit'
+            ? /Säg hela uppdraget igen|Samtalet har hunnit ändras/u
+            : /Säg hela uppdraget igen/u;
+        await expect
+          .poll(async () => {
+            const { voice } = await poll();
+            return voice.refusal?.text ?? voice.response?.text ?? '';
+          })
+          .toMatch(refusalMessage);
+        expect(model.requests).toHaveLength(1);
+        expect((await readMap()).draft.changes.map(({ id }) => id)).not.toContain('new-lamp');
+        if (followUp === 'spoken edit') {
+          speak(live, edit, 4000);
+          await expect
+            .poll(async () => (await readMap()).draft.changes.map(({ id }) => id))
+            .toContain('new-lamp');
+          expect(model.requests).toHaveLength(2);
+        }
+      }
+      const current = await readMap();
+      if (followUp === 'external edit') expect(current.draft).toEqual(externallyEditedDraft);
+      expect(current.draft.changes.map(({ id }) => id)).toContain('new-bike');
+      expect(current.objects).toEqual(before.objects);
+      const final = await poll();
+      expect(final.assistant.operations).toEqual([]);
+      expect(final.assistant.saving).toBe(false);
+      expect(final.assistant.phase).not.toBe('recovery');
+    } finally {
+      finish();
+    }
+  },
+);
 
 test.each([Number.NaN, 7])(
   'external usage %s at close cannot reduce checked voice usage or claim a finalized charge',

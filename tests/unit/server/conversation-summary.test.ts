@@ -20,7 +20,7 @@ test('summary requests share the configured provider, preserve historical uncert
   expect(model.requests).toHaveLength(2);
   expect(
     model.requests.every(
-      (request) => request.model === 'gpt-6.1-sol' && !request.store && !request.tools.length,
+      (request) => request.model === 'gpt-6.2-sol' && !request.store && !request.tools.length,
     ),
   ).toBe(true);
   expect(JSON.stringify(model.requests[0].input)).toContain('Privat första del.');

@@ -187,7 +187,7 @@ test('a late delivery connection cannot submit failed work after leaving the hou
     await retrying;
   });
   expect(commands.filter((entry) => entry.path.endsWith('/retry-work'))).toEqual([]);
-  expect(result.current.session?.workFailure).toEqual(failed.workFailure);
+  expect(result.current.session).toBeNull();
 });
 
 test.each(['retry', 'abandon'] as const)(
@@ -213,6 +213,6 @@ test.each(['retry', 'abandon'] as const)(
       waiting.resolve(Response.json({ ...failed, phase: 'ready', workFailure: undefined }));
       await resolving;
     });
-    expect(result.current.session?.workFailure).toEqual(failed.workFailure);
+    expect(result.current.session).toBeNull();
   },
 );

@@ -116,6 +116,7 @@ if (typeof globalThis.AudioContext !== 'function') {
     configurable: true,
     value: class {
       state = 'running';
+      audioWorklet = { async addModule() {} };
       createMediaStreamSource() {
         return { connect() {}, disconnect() {} };
       }
@@ -132,6 +133,18 @@ if (typeof globalThis.AudioContext !== 'function') {
       async close() {
         this.state = 'closed';
       }
+    },
+  });
+}
+
+// jsdom has no audio renderer. Chromium exercises the output processor on PCM.
+if (typeof globalThis.AudioWorkletNode !== 'function') {
+  Object.defineProperty(globalThis, 'AudioWorkletNode', {
+    configurable: true,
+    value: class {
+      port = { onmessage: null, postMessage() {}, close() {} };
+      connect() {}
+      disconnect() {}
     },
   });
 }

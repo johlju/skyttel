@@ -9,6 +9,8 @@
   margin: 0;
 }
 .draft-heading-actions {
+  position: relative;
+  inset-block-start: 4px;
   display: flex;
   gap: 6px;
 }
@@ -18,19 +20,25 @@
 .draft-review-main .conversation-draft-table :is(th, td) {
   min-width: 0;
 }
-.draft-review-main .conversation-draft-table :is(th, td):nth-child(2) {
-  width: 22%;
+.draft-review-main .conversation-draft-table tbody :is(th, td) {
+  vertical-align: middle;
 }
-.draft-review-main .conversation-draft-table :is(th, td):nth-child(3) {
-  width: 23%;
+.draft-review-main .conversation-draft-table thead th:first-child {
+  width: 32%;
+}
+.draft-review-main .conversation-draft-table thead th:nth-child(2) {
+  width: 24%;
 }
 .draft-change {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
-.draft-change > div {
+.draft-change-details {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -61,8 +69,7 @@
 .draft-clickable-row {
   cursor: pointer;
 }
-.draft-clickable-row:hover,
-.draft-clickable-row:focus-within {
+.draft-clickable-row:hover:not([data-hover-suppressed]) {
   background: color-mix(in srgb, var(--space-accent), transparent 94%);
 }
 .household-map.workspace-shell button.draft-open-proposal {

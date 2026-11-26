@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 import { expect, test } from '@playwright/test';
+import { defaultConversationModelChoice } from '../../src/shared/conversation-model.js';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
 import { openProfile, signIn } from '../support/client.js';
 import {
@@ -257,7 +258,7 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
         executedAt: new Date().toISOString(),
         recordingSha256: createHash('sha256').update(audio).digest('hex'),
         chromium: browser.version(),
-        models: ['gpt-live-1', 'gpt-6.1-sol'],
+        models: ['gpt-live-1', defaultConversationModelChoice.model],
         receipt: added[0],
         receivedAudio: true,
         microphoneOff: true,

@@ -13,6 +13,10 @@ För KONTEXT-25 används två separata webbläsarprofiler eller enheter,
 inloggade som Alex i samma kontrollerade installation. Börja med ett tomt
 utkast. Lämna installationen igång mellan profilerna.
 
+Kör `hold-title on` före garagets begäran. När utdraget syns i listan,
+svara på `held.kind: title` med `reply TITEL-ID Fråga om garaget`. Kör
+`hold-title off` före nästa samtal.
+
 Efter **Beskriv garaget utan att ändra något.** skickas följande till
 det nya REQUEST som `held` visar:
 
@@ -22,7 +26,7 @@ tool REQUEST ask_questions {"questions":[{"kind":"information","request":"Beskri
 ```
 <!-- markdownlint-enable MD013 -->
 
-Omladdning och **Återuppta samtalet** ska inte skapa ett nytt modelluppdrag
+Omladdning och val i **Samtal** ska inte skapa ett nytt modelluppdrag
 när bara frågan väntar. Kör `scope-read` innan det andra samtalets
 uppdrag skickas. Efter det uppdraget används dess nya REQUEST:
 
@@ -31,7 +35,7 @@ reply REQUEST Det andra samtalet gäller cykeln.
 ```
 
 Kör `scope-work` när svaret är klart, före garagets förtydligande.
-Efter **Återuppta samtalet** slår användaren på mikrofonen. Ange den
+Efter valet i **Samtal** slår användaren på mikrofonen. Ange den
 kontrollerade repliken med `user Det västra garaget.` följt av `delegate`
 i terminalen.
 
@@ -410,7 +414,8 @@ Det inmatade `operationId` är provdata; servern väljer sitt verkliga ID.
 Läs sparade Lo-värden före ljudet. Kör därefter
 `assistant Sparat.` i terminalen för serverns fragment. Den tysta
 transporten skickar inte detta paket till webbläsarens mottagna ljudspår.
-Kopiera därför även följande paket i Console innan ljudet:
+Kör därför följande i Console för att leverera fragmentet och spela
+den syntetiska tonen i en halv sekund.
 
 ```javascript
 window.skyttelVoiceFixture.emit({
@@ -418,11 +423,11 @@ window.skyttelVoiceFixture.emit({
   event_id: crypto.randomUUID(),
   delta: 'Sparat.', start_ms: 0, end_ms: 100
 });
+window.skyttelVoiceFixture.remoteTone(800, 0, 0.5);
 ```
 
-Kör `window.skyttelVoiceFixture.setSound('remote', true)` i Console och
-slutligen samma kommando med `false`. Först efter mottaget fragment,
-observerad ljudaktivitet och avslutad signal börjar det nya
+Först efter mottaget fragment, observerad ljudaktivitet och avslutad
+signal börjar det nya
 sammanfattningsanropet. Släpp det med sammanfattningskommandot ovan.
 
 De vanliga fallen börjar utan `seed-family`. För ett separat prov av
@@ -461,8 +466,7 @@ verkliga ID:t. Kör följande hela Console-paket för varje egen anslutning:
 ```
 
 Läs status 200 och `voice.phase:"closed"` för varje ID. Transportstoppet
-bevarar samtalet, som återställs pausat vid omladdning. Välj därför
-**Avsluta samtalet** i textvyn innan nästa självständiga fall.
+bevarar samtalet i **Samtal**.
 Ladda därefter om sidan och öppna **Skriv till Skyttel**. Kontrollera noll kontext,
 borttagen tidigare samtalstext och samma hela sparade karta, historik
 och Robins privata förslag. Gör nästa rättelse i det vanliga

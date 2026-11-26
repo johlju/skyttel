@@ -81,6 +81,14 @@ export function assistantReadCache(
     if (previous !== undefined && previous !== current) invalidated.add(name);
     sources.set(name, current);
   }
+  function snapshotGuard() {
+    const before = combinedStamp();
+    const epoch = generation;
+    return () => {
+      if (epoch !== generation || before !== combinedStamp())
+        throw new MapError('assistant_draft_changed', 409);
+    };
+  }
   return {
     facts(message: string, earlier: readonly string[] = [], references: readonly string[] = []) {
       const text = assistantFactRelevanceText(message, earlier, references);
@@ -106,12 +114,11 @@ export function assistantReadCache(
       }
       return facts;
     },
+    snapshotGuard,
     async consistent<T>(load: () => Promise<T>): Promise<T> {
-      const before = combinedStamp();
-      const epoch = generation;
+      const check = snapshotGuard();
       const value = await load();
-      if (epoch !== generation || before !== combinedStamp())
-        throw new MapError('assistant_draft_changed', 409);
+      check();
       return value;
     },
     outdated() {

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 
 /** An adjustable separator: dragging and arrow keys operate the same width. */
 export function ConversationWidthHandle({
+  panel,
   name,
   value,
   minimum,
@@ -11,6 +12,7 @@ export function ConversationWidthHandle({
   onCommit,
   onCancel,
 }: {
+  panel: 'text' | 'draft' | 'list';
   name: string;
   value: number;
   minimum: number;
@@ -40,6 +42,7 @@ export function ConversationWidthHandle({
   return (
     <hr
       className="conversation-width-handle"
+      data-panel={panel}
       tabIndex={0}
       aria-label={name}
       aria-orientation="vertical"

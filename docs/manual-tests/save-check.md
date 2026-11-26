@@ -150,8 +150,8 @@ Avsluta enligt startguiden efter sista observationen och känt utfall.
 2. Tillåt den automatiska kontrollen vid besöket. Starta inget nytt samtal och
    lämna mikrofonen av.
 3. Läs det enda kvittot för Lo Exempel i Rapporter → Ändringshistorik.
-4. Återgå till arbetet, öppna textsamtalet och godkänn vanligt medgivande om det
-   behövs. Läs kontrollens enda förklaring.
+4. Återgå till arbetet, öppna **Skriv till Skyttel** och läs kontrollens
+   enda förklaring i textvyn.
 
 **Förväntat resultat:**
 
@@ -240,8 +240,8 @@ väntande utfallet är känt. Inga verkliga leverantörsanrop ingår.
    mikrofon av. Be därefter operatören släppa kontrollsvaret och invänta
    bekräftelse.
 4. Läs det enda kvittot för Lo Exempel i Rapporter → Ändringshistorik.
-5. Återgå till arbetet, öppna textsamtalet och godkänn vanligt medgivande om det
-   behövs. Läs kontrollens enda förklaring.
+5. Återgå till arbetet, öppna **Skriv till Skyttel** och läs kontrollens
+   enda förklaring i textvyn.
 
 **Förväntat resultat:**
 
@@ -532,7 +532,7 @@ SPARKONTROLL-05.
 
 1. Starta om installationen och ladda om sidan. Låt Skyttel kontrollera
    försöket.
-2. Öppna textsamtalet och läs förklaringen att utkastet inte sparades.
+2. Öppna **Skriv till Skyttel** och läs förklaringen att utkastet inte sparades.
 3. Välj **Visa utkastet** i textvyn och kontrollera hela förslaget Oklart Lo.
    Öppna **Rapporter → Ändringshistorik**. Kräv **Inga genomförda sparanden.**
    Det avvisade försöket ska inte visas som ett genomfört sparande.
@@ -695,8 +695,9 @@ väntande utfallet är känt. Inga verkliga leverantörsanrop ingår.
    operatörens besked att kontrollsvaret hålls. Be sedan operatören släppa det
    och invänta bekräftelse.
 5. Läs det enda genomförda sparandet för Lo i Rapporter.
-6. Återgå, öppna textsamtalet och godkänn nytt medgivande. Läs kvarvarande
-   oskickad text och kontrollens enda förklaring.
+6. Återgå, öppna **Skriv till Skyttel** och läs kontrollens enda förklaring.
+   Välj **Nytt samtal** och godkänn nytt medgivande. Kontrollera att
+   samtalstexten är tom och att den oskickade texten finns kvar i fältet.
 
 **Förväntat resultat:**
 

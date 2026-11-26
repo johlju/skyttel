@@ -419,7 +419,8 @@ export function createApp({
   app.route('/api', profileImageRoutes(database, auth, config.origin));
   app.route('/api', themePreferenceRoutes(database, auth, config.origin));
   app.route('/', assistantRoutes(database, auth, config.origin));
-  let stopVoice: ((sessionId: string) => void) | undefined;
+  let hasActiveVoice: ((id: string, includeListening?: boolean) => boolean) | undefined;
+  let stopVoice: ((sessionId: string, switched?: boolean) => void) | undefined;
   let retireVoiceWork: ((sessionId: string, requestId?: string) => void) | undefined;
   let summarizeVoice: ((sessionId: string, signal: AbortSignal) => Promise<void>) | undefined;
   let newVoiceConversation:
@@ -434,6 +435,7 @@ export function createApp({
     consents,
     now,
     dispatch: dispatchAssistant,
+    hasActiveVoice: (id, includeListening) => hasActiveVoice?.(id, includeListening) ?? false,
     onWork: (id, until) => {
       if (bindings?.work(id, until)) revalidateVoice?.();
     },
@@ -448,7 +450,7 @@ export function createApp({
       costs.model(attempt);
       modelUsage?.(attempt);
     },
-    onStop: (sessionId) => stopVoice?.(sessionId),
+    onStop: (sessionId, switched) => stopVoice?.(sessionId, switched),
     onResetStart: (sessionId, requestId) => retireVoiceWork?.(sessionId, requestId),
     onSummary: (sessionId, signal) => summarizeVoice?.(sessionId, signal),
     onNewConversation: (view, deferVoiceClose) => newVoiceConversation?.(view, deferVoiceClose),
@@ -469,6 +471,7 @@ export function createApp({
   const voiceAssistant = voiceAssistantRoutes({
     now,
     voiceAccess: textAssistant.voiceAccess,
+    voiceDeliveryAvailable: textAssistant.voiceDeliveryAvailable,
     observationResetGeneration: textAssistant.observationResetGeneration,
     expireVoiceWork: textAssistant.expireVoiceWork,
     config,
@@ -479,7 +482,7 @@ export function createApp({
     liveUsage,
     recordUsage: costs.live,
     interrupt: textAssistant.interrupt,
-    conversation: textAssistant.conversation,
+    liveHandoff: textAssistant.liveHandoff,
     transcript: textAssistant.transcript,
     voiceInput: textAssistant.voiceInput,
     observe,
@@ -487,6 +490,7 @@ export function createApp({
     prepareVoiceContext: textAssistant.prepareVoiceContext,
   });
   revalidateVoice = voiceAssistant.revalidate;
+  hasActiveVoice = voiceAssistant.hasActiveVoice;
   stopVoice = voiceAssistant.stopSession;
   retireVoiceWork = voiceAssistant.retireSessionWork;
   summarizeVoice = voiceAssistant.summarizeSession;

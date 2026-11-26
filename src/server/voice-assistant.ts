@@ -6,8 +6,9 @@ import { SidebandWS } from 'openai/resources/live/sideband/ws';
 import { conversationConsentRevoked } from '../shared/conversation-consent.js';
 import { sessionWarningMessage } from '../shared/session-activity.js';
 import type { TextAssistantView } from '../shared/text-assistant.js';
-import type { VoiceAssistantView } from '../shared/voice-assistant.js';
+import { unconfirmedPlaybackIdleMs, type VoiceAssistantView } from '../shared/voice-assistant.js';
 import { voiceErrorGroup } from '../shared/voice-error.js';
+import { newConversationMessage } from './assistant-feedback.js';
 import { voiceAssistantInstructions } from './assistant-instructions.js';
 import {
   type AssistantObservationContext,
@@ -19,15 +20,18 @@ import {
 import type { Config } from './config.js';
 import { voiceConversationModel } from './conversation-capacity.js';
 import type { ConversationConsentProvenance } from './conversation-consent.js';
-import type {
-  LiveModelProfile,
-  LiveSideband,
-  LiveSidebandFactory,
-  LiveUsage,
-  LiveUsageAttempt,
+import {
+  boundedLiveHistory,
+  type LiveHandoff,
+  type LiveModelProfile,
+  type LiveSideband,
+  type LiveSidebandFactory,
+  type LiveUsage,
+  type LiveUsageAttempt,
 } from './live-provider.js';
 import { MapError } from './map.js';
 import type { LocalDispatch } from './text-assistant-mcp.js';
+import { VoiceMessageRefusal } from './voice-message-refusal.js';
 import { voiceWork } from './voice-work.js';
 
 type Voice = Partial<ConversationConsentProvenance> & {
@@ -38,6 +42,10 @@ type Voice = Partial<ConversationConsentProvenance> & {
   assistant: TextAssistantView;
   channel: LiveSideband;
   heartbeat: number;
+  microphoneOn: boolean;
+  speakerActive?: boolean;
+  playbackPendingSince?: number;
+  deliveryConnectionId?: string;
   finalized: boolean;
   timer: NodeJS.Timeout;
   deadlineTimer?: NodeJS.Timeout;
@@ -64,6 +72,10 @@ function startupErrorCode(error: unknown) {
   return 'voice_connection_failed';
 }
 
+function validDeliveryConnectionId(value: unknown) {
+  return value === undefined || (typeof value === 'string' && /^[\w-]{1,128}$/.test(value));
+}
+
 export function voiceAssistantRoutes({
   config,
   dispatch,
@@ -72,7 +84,7 @@ export function voiceAssistantRoutes({
   liveUsage,
   recordUsage,
   interrupt,
-  conversation,
+  liveHandoff,
   transcript,
   contextUsage,
   prepareVoiceContext,
@@ -82,6 +94,7 @@ export function voiceAssistantRoutes({
   liveProfile = voiceConversationModel,
   now = () => Date.now(),
   voiceAccess,
+  voiceDeliveryAvailable,
   expireVoiceWork,
 }: {
   now?: () => number;
@@ -91,6 +104,7 @@ export function voiceAssistantRoutes({
         guard: () => number;
       })
     | undefined;
+  voiceDeliveryAvailable: (sessionId: string, connectionId: string) => boolean;
   expireVoiceWork: (sessionId: string) => void;
   config: Config;
   dispatch: LocalDispatch;
@@ -99,10 +113,14 @@ export function voiceAssistantRoutes({
   liveUsage?: LiveUsage;
   recordUsage?: LiveUsage;
   interrupt: (sessionId: string, revision?: number) => void;
-  conversation?: (
+  liveHandoff?: (sessionId: string) => LiveHandoff;
+  transcript?: (
     sessionId: string,
-  ) => { role: 'user' | 'assistant'; text: string; partial?: boolean }[];
-  transcript?: (sessionId: string, role: 'user' | 'assistant', text: string) => void;
+    role: 'user' | 'assistant',
+    text: string,
+    utteranceStart: boolean,
+    eventId: string,
+  ) => ((requestId?: string) => void) | undefined;
   contextUsage?: (
     sessionId: string,
     contextRevision: number,
@@ -273,7 +291,12 @@ export function voiceAssistantRoutes({
     if (!client)
       return context.json({ error: 'voice_unavailable', voiceErrorGroup: 'administration' }, 503);
     const body = await context.req.json().catch(() => null);
-    if (typeof body?.sdp !== 'string' || !body.sdp || body.sdp.length > 12000)
+    if (
+      typeof body?.sdp !== 'string' ||
+      !body.sdp ||
+      body.sdp.length > 12000 ||
+      !validDeliveryConnectionId(body.deliveryConnectionId)
+    )
       return context.json({ error: 'invalid_request' }, 400);
     if (
       (current.phase === 'working' &&
@@ -530,10 +553,11 @@ export function voiceAssistantRoutes({
         return context.json({ error: 'assistant_context_summary_failed' }, 409);
       if (current.contextSummaryState === 'summarizing')
         return context.json({ error: 'assistant_busy' }, 409);
-      const retained = conversation?.(context.req.param('sessionId'));
+      const retained = liveHandoff?.(sessionId);
+      let currentHistoryItem: InitialItem | undefined;
       if (retained) {
-        history = retained.length
-          ? retained.map(({ role, text, partial }) =>
+        history = retained.dialogue.length
+          ? retained.dialogue.map(({ role, text, partial }) =>
               role === 'user'
                 ? {
                     role,
@@ -547,7 +571,14 @@ export function voiceAssistantRoutes({
                   },
             )
           : undefined;
+        if (retained.currentState)
+          currentHistoryItem = {
+            role: 'assistant',
+            content: [{ type: 'output_text', text: retained.currentState }],
+            status: 'completed',
+          };
       }
+      const initialHistory = boundedLiveHistory(history ?? [], currentHistoryItem);
       stage = 'create';
       const liveSession: LiveCreateParams['session'] = {
         model: liveProfile.model,
@@ -557,7 +588,7 @@ export function voiceAssistantRoutes({
         instructions: voiceAssistantInstructions,
         // Historical rows only seed the provider. They never become voiceWork's
         // pending user fragments, which alone can authorize a fresh save.
-        ...(history ? { input: history } : {}),
+        ...(initialHistory.length ? { input: initialHistory } : {}),
         client: {
           data_channel: {
             allowed_client_events: ['session.close'],
@@ -606,6 +637,8 @@ export function voiceAssistantRoutes({
         channel,
         usage,
         heartbeat: now(),
+        microphoneOn: body.microphoneOn !== false,
+        deliveryConnectionId: body.deliveryConnectionId,
         finalized: false,
         timer: setInterval(() => {
           if (now() - voice.heartbeat > 10_000) void close(voice, 'voice_connection_lost');
@@ -733,9 +766,15 @@ export function voiceAssistantRoutes({
         void close(voice);
         voice.finish?.();
       });
-      const deliveryConnectionId = body.deliveryConnectionId;
       voice.work = voiceWork({
+        requestNewConversation:
+          body.freshConversationControls === true
+            ? () => {
+                voice.view.newConversationRequested = true;
+              }
+            : undefined,
         now,
+        confirmBrowserInput: body.confirmBrowserInput === true,
         allowed: () => {
           if (voice.closed) return false;
           try {
@@ -760,16 +799,27 @@ export function voiceAssistantRoutes({
               }
             : current,
         response: (value) => {
+          if (value?.id !== voice.view.response?.id)
+            voice.playbackPendingSince = value ? now() : undefined;
           voice.view.response = value;
+        },
+        refusal: (value) => {
+          voice.view.refusal = value;
         },
         delivered: (value) => {
           voice.view.replyDelivery ??= [];
           voice.view.replyDelivery.push(value);
         },
-        transcript: (role, text) => transcript?.(context.req.param('sessionId'), role, text),
+        transcript: (role, text, utteranceStart, eventId) => {
+          if (role === 'assistant' && voice.playbackPendingSince !== undefined)
+            voice.playbackPendingSince = now();
+          return transcript?.(sessionId, role, text, utteranceStart, eventId);
+        },
         input: (pending, text) => voiceInput?.(context.req.param('sessionId'), pending, text),
         interrupt: (revision) => interrupt(context.req.param('sessionId'), revision),
         request: async (action, body, signal, observation) => {
+          // A new send gets a new position in the work queue. Replacement
+          // delivery connections apply only to subsequent instructions.
           check();
           const request = new Request(`${config.origin}${path}${action ? `/${action}` : ''}`, {
             method: action && !action.startsWith('messages/') ? 'POST' : 'GET',
@@ -779,7 +829,7 @@ export function voiceAssistantRoutes({
                   action === 'messages'
                     ? {
                         ...(body as Record<string, unknown>),
-                        deliveryConnectionId,
+                        deliveryConnectionId: voice.deliveryConnectionId,
                       }
                     : body,
                 )
@@ -797,17 +847,22 @@ export function voiceAssistantRoutes({
             : dispatch(request));
           check();
           if (!response.ok) {
-            const refusal = await response.json().catch(() => null);
-            throw new Error(refusal?.error ?? 'voice_request_failed');
+            const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
+            const code = body?.error;
+            const refusal =
+              action === 'messages'
+                ? VoiceMessageRefusal.fromResponse(response.status, code)
+                : undefined;
+            if (refusal) throw refusal;
+            throw new Error(typeof code === 'string' ? code : 'voice_request_failed');
           }
           const result = await response.json();
           check();
           return result;
         },
         update: (view, working) => {
-          voice.assistant = view;
-          // The voice works only with a task that was said. A written message
-          // is the conversation's work.
+          // A spoken task can finish after the current conversation has advanced.
+          // Polls read the current conversation independently of this task's view.
           if (!voice.closed)
             voice.view.phase = working
               ? 'working'
@@ -856,11 +911,11 @@ export function voiceAssistantRoutes({
         check();
         if (voice.closed) throw new Error('live_start_interrupted');
         voice.view.phase = voice.assistant.phase === 'recovery' ? 'recovery' : 'listening';
-        if (body.newConversation === true && voice.assistant.reply) {
+        if (body.newConversation === true) {
           // A spoken reset retains its reply after release. Typed/toolbar
           // resets follow the retained capture mode instead.
           const voiced = voice.assistant.resetSource === 'voice' || body.microphoneOn !== false;
-          const reply = voice.assistant.reply;
+          const reply = voice.assistant.reply ?? newConversationMessage(voice.assistant.review);
           voice.assistant = { ...voice.assistant, replyVoiced: voiced };
           const completedReset = voice.assistant.completedReplies?.some(
             (reply) =>
@@ -944,6 +999,20 @@ export function voiceAssistantRoutes({
     if (context.req.param('action') === 'stop') await close(voice);
     voice.assistant = await assistant(path, headers(context.req.raw.headers));
     voice.access();
+    if (context.req.param('action') === 'interrupt') {
+      if (voice.closed || !voice.work) return context.json({ error: 'voice_session_expired' }, 409);
+      const body = await context.req.json().catch(() => null);
+      if (
+        !body ||
+        typeof body !== 'object' ||
+        Array.isArray(body) ||
+        (body.interruptedThroughMs !== undefined &&
+          (!Number.isFinite(body.interruptedThroughMs) || body.interruptedThroughMs < 0))
+      )
+        return context.json({ error: 'invalid_request' }, 400);
+      const canceled = await voice.work.interruptSpeech(body.interruptedThroughMs);
+      return context.json({ voice: voice.view, assistant: canceled });
+    }
     if (context.req.param('action') === 'poll') {
       const body = await context.req.json().catch(() => null);
       if (
@@ -952,12 +1021,34 @@ export function voiceAssistantRoutes({
         !Number.isSafeInteger(body?.draftVersion) ||
         body.draftVersion < 0 ||
         !Number.isSafeInteger(body?.contentVersion) ||
-        body.contentVersion < 1
+        body.contentVersion < 1 ||
+        !validDeliveryConnectionId(body.deliveryConnectionId)
       )
         return context.json({ error: 'invalid_request' }, 400);
+      if (
+        body.deliveryConnectionId !== undefined &&
+        body.deliveryConnectionId !== voice.deliveryConnectionId &&
+        voiceDeliveryAvailable(context.req.param('sessionId'), body.deliveryConnectionId)
+      ) {
+        voice.deliveryConnectionId = body.deliveryConnectionId;
+      }
+      voice.microphoneOn = body.microphoneOn !== false;
+      voice.speakerActive = body.speakerActive === true;
+      if (!voice.view.response || body.playedResponseId === voice.view.response.id)
+        voice.playbackPendingSince = undefined;
+      else if (
+        voice.playbackPendingSince !== undefined &&
+        (voice.speakerActive || body.microphoneActive === true)
+      )
+        voice.playbackPendingSince = now();
       voice.work?.rendered(body);
       voice.work?.activity(body.microphoneActive === true && body.microphoneOn === true);
       voice.work?.speaker(body.speakerActive === true);
+      // Confirming input can start collection using this poll's media state.
+      voice.view.inputVersion = voice.work?.confirmInput(
+        body.confirmedInputVersion,
+        body.playedResponseId,
+      );
       voice.work?.answer(voice.assistant, body.microphoneOn === true);
       voice.quietAt =
         body.microphoneActive !== true && body.speakerActive !== true ? now() : undefined;
@@ -985,6 +1076,18 @@ export function voiceAssistantRoutes({
         }
       }
     },
+    hasActiveVoice: (id: string, includeListening = true) =>
+      [...voices.values()].some(
+        (voice) =>
+          voice.assistant.id === id &&
+          !voice.closed &&
+          ((includeListening && voice.microphoneOn) ||
+            voice.speakerActive ||
+            (voice.playbackPendingSince !== undefined &&
+              now() - voice.playbackPendingSince < unconfirmedPlaybackIdleMs) ||
+            !voice.work?.readyForSummary()),
+      ),
+
     retireSessionWork: (sessionId: string, requestId?: string) => {
       for (const voice of voices.values())
         if (voice.assistant.id === sessionId && !voice.closed) voice.work?.retire(requestId);
@@ -1012,9 +1115,10 @@ export function voiceAssistantRoutes({
         if (!deferVoiceClose) void close(voice);
       }
     },
-    stopSession: (sessionId: string) => {
+    stopSession: (sessionId: string, switched = false) => {
       for (const voice of voices.values())
-        if (voice.assistant.id === sessionId) void close(voice, 'voice_access_lost');
+        if (voice.assistant.id === sessionId)
+          void close(voice, switched ? undefined : 'voice_access_lost');
     },
     close: async () => {
       await Promise.all([...voices.values()].map((voice) => close(voice)));

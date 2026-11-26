@@ -1,10 +1,20 @@
-import { type ReactNode, useEffect, useId, useLayoutEffect, useRef } from 'react';
-import { conversationModels, reasoningLabels } from '../shared/conversation-model.js';
 import {
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
+import {
+  conversationListWidth,
+  conversationPanelGap,
   conversationWidths,
   defaultConversationPreferences,
 } from '../shared/conversation-preferences.js';
 import { ContextMeter } from './ConversationContext.js';
+import { ConversationList } from './ConversationList.js';
 import { ConversationModel } from './ConversationModel.js';
 import { ConversationTranscript } from './ConversationTranscript.js';
 import { ConversationWidthHandle } from './ConversationWidthHandle.js';
@@ -33,6 +43,8 @@ export function TextView({
   onToggleDraft,
   draftContent,
   widthPreferences,
+  listWidth = conversationListWidth,
+  onListWidthChange,
   onStartConversation,
 }: {
   conversation: Conversation;
@@ -49,6 +61,8 @@ export function TextView({
   onToggleDraft?: () => void;
   draftContent?: ReactNode;
   widthPreferences?: ReturnType<typeof useConversationPreferences>;
+  listWidth?: number;
+  onListWidthChange?: (width: number) => void;
   onStartConversation?: (chosen: HTMLElement | null) => void;
 }) {
   const { session, transcript, text, pending, unknown, working } = conversation;
@@ -62,34 +76,41 @@ export function TextView({
     viewport.width,
     draftOpen,
   );
-  useLayoutEffect(() => {
-    const map = root.current?.closest<HTMLElement>('.household-map');
-    map?.style.setProperty('--text-view-width', `${computer ? widths.textWidth : 400}px`);
-    map?.style.setProperty('--draft-view-width', `${computer ? widths.draftWidth : 340}px`);
-  }, [computer, widths.textWidth, widths.draftWidth]);
   const initialComputer = useRef(computer);
   const stop = working && !computer;
   const stopFocused = useRef(false);
-  const endFocused = useRef(false);
-  const retainedOpening = useRef<string | null>(null);
-  const resumeFocused = useRef(false);
-  const resume = useRef<HTMLButtonElement>(null);
-  const newConversation = useRef<HTMLButtonElement>(null);
+  const [listOpen, setListOpen] = useState(false);
+  const [listWidthPreview, setListWidthPreview] = useState<number>();
+  const textWidth = computer ? widths.textWidth : 400;
+  const draftWidth = computer ? widths.draftWidth : 340;
+  const draftSpace = draftWidth + conversationPanelGap;
+  const panelSpace = viewport.width - textWidth - 100;
+  const minimumListWidth = 260;
+  const listMaximum = panelSpace - (draftOpen ? draftSpace : 0) - conversationPanelGap;
+  const renderedListWidth = computer
+    ? Math.max(minimumListWidth, Math.min(listWidthPreview ?? listWidth, listMaximum))
+    : conversationListWidth;
+  const listSpace = renderedListWidth + conversationPanelGap;
+  const sidePanelsFit =
+    panelSpace >=
+    draftSpace + (computer ? minimumListWidth : conversationListWidth) + conversationPanelGap;
+  const compact =
+    viewport.narrow || panelSpace < (draftOpen ? draftSpace : 0) + (listOpen ? listSpace : 0);
+  const resizePanels = computer && !compact;
+  const resizeSpace = widths.available - (listOpen && !compact ? listSpace : 0);
+  const draftVisible = draftOpen && (!compact || !listOpen);
+  const draftInset = draftVisible && !compact ? draftSpace : 0;
+  useLayoutEffect(() => {
+    const map = root.current?.closest<HTMLElement>('.household-map');
+    map?.style.setProperty('--text-view-width', `${textWidth}px`);
+    map?.style.setProperty('--draft-view-width', `${draftWidth}px`);
+    map?.style.setProperty('--draft-view-space', `${draftInset}px`);
+  }, [textWidth, draftWidth, draftInset]);
   const id = useId();
   const heading = useRef<HTMLHeadingElement>(null);
   const field = useRef<HTMLTextAreaElement>(null);
   const body = useRef<HTMLDivElement>(null);
   const follow = useRef(true);
-  useLayoutEffect(() => {
-    if (retainedOpening.current === session?.id && session?.paused) {
-      retainedOpening.current = null;
-      resume.current?.focus();
-    }
-    if (resumeFocused.current && !session?.paused) {
-      resumeFocused.current = false;
-      field.current?.focus();
-    }
-  }, [session]);
   const firstMessage = useRef<{ text: string; asked: boolean } | null>(null);
   useEffect(() => {
     const first = firstMessage.current;
@@ -131,11 +152,13 @@ export function TextView({
     draftHeading.focus();
     focusedDraftOpening.current = focusRequest;
   }, [openingFocus, focusRequest, draftOpen, hidden]);
+  const workStepCount = session?.workSteps?.length;
+  const lastStepRepeatCount = session?.workSteps?.at(-1)?.count;
   // The newest row stays in view, unless the user has scrolled up to read.
   // biome-ignore lint/correctness/useExhaustiveDependencies: follow new rows
   useLayoutEffect(() => {
     if (body.current && follow.current) body.current.scrollTop = body.current.scrollHeight;
-  }, [transcript, working, session?.activity, session?.activitySteps?.length]);
+  }, [transcript, working, session?.activity, workStepCount, lastStepRepeatCount]);
   useLayoutEffect(() => {
     // Present the paused state and deadline on return, above the retained text.
     if (session?.paused && body.current) body.current.scrollTop = 0;
@@ -147,15 +170,9 @@ export function TextView({
       field.current?.focus();
     }
   }, [stop]);
-  useLayoutEffect(() => {
-    if (pending) return;
-    if (!session && endFocused.current && document.activeElement === document.body)
-      newConversation.current?.focus();
-    endFocused.current = false;
-  }, [session, pending]);
   const blocked =
     conversation.inputBlocked ||
-    session?.paused ||
+    Boolean(session?.interruptedRequestId) ||
     session?.workFailure?.code === 'assistant_draft_changed' ||
     pending ||
     unknown ||
@@ -184,12 +201,25 @@ export function TextView({
     <section
       ref={root}
       className={`text-view${draftOpen ? ' draft-open' : ''}`}
+      data-compact={compact}
+      data-list-open={listOpen}
       data-short={short}
       data-mobile={mobile}
+      style={
+        {
+          '--conversation-panel-gap': `${conversationPanelGap}px`,
+          '--conversation-list-width': `${renderedListWidth}px`,
+        } as CSSProperties
+      }
       aria-labelledby={`${id}-title`}
       hidden={hidden}
       onKeyDown={(event) => {
-        if (event.key === 'Escape' && working && !mobile) {
+        if (
+          event.key === 'Escape' &&
+          working &&
+          !mobile &&
+          !(event.target instanceof Element && event.target.closest('dialog'))
+        ) {
           event.preventDefault();
           event.stopPropagation();
           void conversation.cancel();
@@ -205,57 +235,136 @@ export function TextView({
               </h2>
               <ContextMeter percentage={session?.contextPercentage} />
             </div>
-            <button
-              ref={newConversation}
-              type="button"
-              className="text-view-new"
-              disabled={conversation.inputBlocked || pending}
-              onClick={() => (session ? void conversation.newConversation() : startConversation())}
-            >
-              Nytt samtal
-            </button>
-            <button
-              type="button"
-              className="text-view-close"
-              aria-label="Stäng textvyn"
-              title="Stäng textvyn"
-              onClick={onClose}
-            >
-              <WorkspaceIcon name="close" />
-            </button>
+            <div className="text-view-actions">
+              {conversation.listRetained && (
+                <button
+                  type="button"
+                  className="text-view-list-toggle"
+                  aria-label="Samtal"
+                  title="Samtal"
+                  aria-expanded={listOpen}
+                  aria-controls={listOpen ? `${id}-list` : undefined}
+                  onClick={() => {
+                    if (compact && !listOpen && draftOpen) onToggleDraft?.();
+                    setListOpen(!listOpen);
+                  }}
+                >
+                  <WorkspaceIcon name="conversations" />
+                </button>
+              )}
+              <button
+                type="button"
+                className="text-view-new"
+                aria-label="Nytt samtal"
+                title="Nytt samtal"
+                disabled={
+                  conversation.disconnected ||
+                  conversation.available === false ||
+                  pending ||
+                  conversation.switchBlocked
+                }
+                onClick={() =>
+                  session ? void conversation.newConversation() : startConversation()
+                }
+              >
+                <WorkspaceIcon name="new" />
+              </button>
+              <ConversationModel conversation={conversation} />
+              <button
+                type="button"
+                className="text-view-close"
+                aria-label="Stäng textvyn"
+                title="Stäng textvyn"
+                onClick={onClose}
+              >
+                <WorkspaceIcon name="close" />
+              </button>
+            </div>
           </header>
           {widthPreferences?.widthFeedback &&
             !widthPreferences.widthFeedback.includes('återställda') && (
               <p role="status">{widthPreferences.widthFeedback}</p>
             )}
-          {onToggleDraft && (
-            <button
-              type="button"
-              className="text-view-draft-toggle"
-              aria-expanded={draftOpen}
-              aria-label={`${draftOpen ? 'Dölj utkastet' : 'Visa utkastet'} (${draftCount})`}
-              aria-controls={`${id}-draft`}
-              onClick={onToggleDraft}
-            >
-              <span aria-hidden="true" className="draft-direction">
-                {draftOpen ? '▸' : '◂'}
-              </span>
-              <WorkspaceIcon name="draft" />
-              <span>{short ? 'Utkast' : draftOpen ? 'Dölj utkastet' : 'Visa utkastet'}</span>
-              <span className="text-view-draft-count">
-                {short
-                  ? draftCount
-                  : `${draftCount} ${draftCount === 1 ? 'osparad ändring' : 'osparade ändringar'}`}
-              </span>
-            </button>
-          )}
+          <div className="conversation-panel-buttons">
+            {compact && (
+              <button
+                type="button"
+                aria-pressed={!listOpen && !draftOpen}
+                onClick={() => {
+                  setListOpen(false);
+                  if (draftOpen) onToggleDraft?.();
+                }}
+              >
+                Text
+              </button>
+            )}
+            {onToggleDraft && (
+              <button
+                type="button"
+                className="text-view-draft-toggle"
+                aria-expanded={draftVisible}
+                aria-label={`${draftVisible ? 'Dölj utkastet' : 'Visa utkastet'} (${draftCount})`}
+                aria-controls={`${id}-draft`}
+                onClick={() => {
+                  if (compact || !sidePanelsFit) setListOpen(false);
+                  if (!draftOpen || draftVisible) onToggleDraft();
+                }}
+              >
+                <span aria-hidden="true" className="draft-direction">
+                  {draftOpen ? '▸' : '◂'}
+                </span>
+                <WorkspaceIcon name="draft" />
+                <span>
+                  {short || compact ? 'Utkast' : draftOpen ? 'Dölj utkastet' : 'Visa utkastet'}
+                </span>
+                <span className="text-view-draft-count">
+                  {short
+                    ? draftCount
+                    : `${draftCount} ${draftCount === 1 ? 'osparad ändring' : 'osparade ändringar'}`}
+                </span>
+              </button>
+            )}
+          </div>
         </div>
-        {computer && widthPreferences?.known && draftOpen && (
+        {listOpen && !hidden && (
+          <>
+            {compact && children}
+            <ConversationList
+              id={`${id}-list`}
+              conversation={conversation}
+              onSelected={() => {
+                if (compact) {
+                  setListOpen(false);
+                  if (draftOpen) onToggleDraft?.();
+                  root.current?.querySelector<HTMLButtonElement>('.text-view-list-toggle')?.focus();
+                }
+              }}
+            />
+            {resizePanels && onListWidthChange && (
+              <ConversationWidthHandle
+                panel="list"
+                name="Ändra samtalslistans bredd"
+                value={renderedListWidth}
+                minimum={minimumListWidth}
+                maximum={listMaximum}
+                controls={`${id}-list`}
+                onPreview={setListWidthPreview}
+                onCommit={(width) => {
+                  onListWidthChange(width);
+                  setListWidthPreview(undefined);
+                }}
+                onCancel={() => setListWidthPreview(undefined)}
+              />
+            )}
+          </>
+        )}
+        {resizePanels && widthPreferences?.known && draftOpen && (
           <ConversationWidthHandle
+            panel="draft"
             name="Ändra utkastlistans bredd"
             value={widths.draftWidth}
             minimum={260}
-            maximum={widths.available - widths.textWidth}
+            maximum={resizeSpace - widths.textWidth}
             controls={`${id}-draft`}
             onPreview={(draftWidth) => widthPreferences.previewWidths({ draftWidth })}
             onCommit={(draftWidth) => {
@@ -268,26 +377,25 @@ export function TextView({
           id={`${id}-draft`}
           className="text-view-draft"
           aria-label="Utkastet"
-          hidden={!draftOpen}
+          hidden={!draftVisible}
         >
           <h3>Utkast</h3>
           {draftContent}
         </section>
-        {computer && widthPreferences?.known && (
-          <div className="text-view-text-handle">
-            <ConversationWidthHandle
-              name="Ändra samtalstextens bredd"
-              value={widths.textWidth}
-              minimum={300}
-              maximum={widths.available - (draftOpen ? widths.draftWidth : 0)}
-              controls={`${id}-conversation`}
-              onPreview={(textWidth) => widthPreferences.previewWidths({ textWidth })}
-              onCommit={(textWidth) => {
-                void widthPreferences.resize({ textWidth });
-              }}
-              onCancel={widthPreferences.cancelPreview}
-            />
-          </div>
+        {resizePanels && widthPreferences?.known && (
+          <ConversationWidthHandle
+            panel="text"
+            name="Ändra samtalstextens bredd"
+            value={widths.textWidth}
+            minimum={300}
+            maximum={resizeSpace - (draftOpen ? widths.draftWidth : 0)}
+            controls={`${id}-conversation`}
+            onPreview={(textWidth) => widthPreferences.previewWidths({ textWidth })}
+            onCommit={(textWidth) => {
+              void widthPreferences.resize({ textWidth });
+            }}
+            onCancel={widthPreferences.cancelPreview}
+          />
         )}
         <div id={`${id}-conversation`} className="text-view-conversation">
           <div
@@ -298,97 +406,18 @@ export function TextView({
               follow.current = scrollHeight - scrollTop - clientHeight < 80;
             }}
           >
-            {session && (
-              <div className="text-view-lifetime">
-                {session.expiresAt && (
-                  <p role="status" aria-label="Samtalets livslängd">
-                    {session.paused && 'Samtalet är pausat. '}
-                    Löper ut{' '}
-                    <time dateTime={new Date(session.expiresAt).toISOString()}>
-                      {new Date(session.expiresAt).toLocaleString('sv-SE')}
-                    </time>{' '}
-                    efter sju dygn utan ditt meddelande eller uttrycklig återupptagning.
-                    {session.paused &&
-                      ' Nytt samtal tar bort det tidigare samtalet; utkastet ligger kvar.'}
-                  </p>
-                )}
-                {session.paused && conversation.resumeConversation && (
-                  <button
-                    ref={resume}
-                    type="button"
-                    disabled={pending}
-                    onClick={(event) => {
-                      resumeFocused.current = document.activeElement === event.currentTarget;
-                      void conversation.resumeConversation?.();
-                    }}
-                  >
-                    Återuppta samtalet
-                  </button>
-                )}
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={(event) => {
-                    endFocused.current = document.activeElement === event.currentTarget;
-                    void conversation.endConversation();
-                  }}
-                >
-                  Avsluta samtalet
-                </button>
-              </div>
+            {!(compact && listOpen) && children}
+            {session?.waitingForRetainedWork && (
+              <p>Välj det tidigare samtalet i Samtal och fortsätt det avbrutna arbetet där.</p>
             )}
-            {conversation.listRetained && (
-              <div className="text-view-lifetime">
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => void conversation.listRetained?.()}
-                >
-                  Bevarade samtal
-                </button>
-                {conversation.retainedConversations && (
-                  <section aria-label="Bevarade samtal">
-                    {conversation.retainedConversations.length ? (
-                      <ul>
-                        {conversation.retainedConversations.map((retained) => (
-                          <li key={retained.id}>
-                            <p>
-                              {retained.paused ? 'Pausat samtal.' : 'Pågående samtal.'}{' '}
-                              {
-                                conversationModels.find(
-                                  (model) => model.id === retained.modelChoice.model,
-                                )?.name
-                              }
-                              , {reasoningLabels[retained.modelChoice.effort]}. Löper ut{' '}
-                              <time dateTime={new Date(retained.expiresAt).toISOString()}>
-                                {new Date(retained.expiresAt).toLocaleString('sv-SE')}
-                              </time>
-                              .
-                            </p>
-                            <button
-                              type="button"
-                              disabled={pending}
-                              onClick={() => {
-                                retainedOpening.current = retained.id;
-                                void conversation.openRetained?.(retained.id).then((opened) => {
-                                  if (!opened) retainedOpening.current = null;
-                                });
-                              }}
-                            >
-                              Öppna {retained.title}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p>Inga bevarade samtal.</p>
-                    )}
-                  </section>
-                )}
-              </div>
-            )}
-            {children}
             <ConversationTranscript
+              key={session?.id}
+              interruptedRequestId={session?.interruptedRequestId}
+              onContinue={(id) => {
+                field.current?.focus();
+                void conversation.resumeConversation?.(id);
+              }}
+              pending={pending}
               rows={transcript}
               working={working}
               activity={
@@ -396,7 +425,8 @@ export function TextView({
                   ? 'Sammanfattar samtalet'
                   : session?.activity
               }
-              activitySteps={session?.activitySteps}
+              workSteps={session?.workSteps}
+              storedRows={session?.conversation}
               computer={computer}
               announce={!hidden}
               announceWorking={false}
@@ -412,9 +442,6 @@ export function TextView({
             {session?.canceled ? 'Avbrutet. Föreslagna ändringar ligger kvar i utkastet.' : ''}
           </p>
           {notice}
-          <div className="text-view-model">
-            <ConversationModel conversation={conversation} />
-          </div>
           <form
             className="text-view-message"
             onSubmit={(event) => {

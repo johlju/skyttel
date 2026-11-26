@@ -42,6 +42,7 @@ function Width() {
       </aside>
       {wide && (
         <ConversationWidthHandle
+          panel="text"
           name="Ändra textvyns bredd"
           controls="text-view"
           value={shown}

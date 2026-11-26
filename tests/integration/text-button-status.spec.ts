@@ -224,7 +224,7 @@ test('TEXTBRICKA-03: röstrutan ersätter brickan och samma olästa svar annonse
     });
     await expect.poll(() => held.length).toBe(2);
     await turnMicrophoneOff(page);
-    await expect(voiceBox(page)).toContainText('Skyttel arbetar');
+    await expect(voiceBox(page)).toContainText('Arbetar');
     await expect(button).toHaveAccessibleName('Skriv till Skyttel');
     await expect(button.locator('.text-button-marker')).toHaveCount(0);
     held[1]([modelMessage('Det talade svaret.')]);

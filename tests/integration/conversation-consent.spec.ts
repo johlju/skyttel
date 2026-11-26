@@ -44,7 +44,10 @@ const messageField = (page: Page) => page.getByLabel('Meddelande till Skyttel');
 const microphones = (page: Page) =>
   page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks);
 const newConversation = (page: Page) =>
-  page.getByRole('button', { name: 'Nytt samtal', exact: true }).click();
+  page
+    .getByRole('region', { name: 'Skriv till Skyttel', exact: true })
+    .getByRole('button', { name: 'Nytt samtal', exact: true })
+    .click();
 const bounds = async (control: Locator) => {
   const box = await control.boundingBox();
   if (!box) throw new Error('The control has no place on the screen');
@@ -168,11 +171,11 @@ test('MEDGIVANDE-02: vald knapp avgör röst eller text och medgivandet gäller 
     await openConversationText(page);
     await newConversation(page);
     await expect(page.getByRole('log', { name: 'Samtalstext' })).toHaveText(
-      'Skyttel: Nytt samtal. Utkastet är tomt.',
+      'Här visas det du och Skyttel säger och skriver.',
     );
     await expect(consentBox(page)).toBeHidden();
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true');
-    expect(starts).toEqual(['conversation', 'voice', 'voice']);
+    await expect.poll(() => starts).toEqual(['conversation', 'voice', 'conversation', 'voice']);
 
     // Settings keep the map loaded, so the consent for the visit still applies afterwards.
     await openSettings(page);
@@ -220,7 +223,7 @@ test('MEDGIVANDE-03: sparat medgivande följer användaren men inte andra medlem
     const { saved } = await (
       await page.request.get(`${householdPath}/conversation-consent`)
     ).json();
-    expect(saved).toEqual({ textVersion: 4, savedAt: expect.any(String) });
+    expect(saved).toEqual({ textVersion: 5, savedAt: expect.any(String) });
     expect(Date.parse(saved.savedAt)).toBeGreaterThanOrEqual(before);
 
     // Return is paused. An explicit new conversation can use saved consent.

@@ -17,6 +17,7 @@ import { relationshipLabel } from '../shared/relationship-label.js';
 import { relationshipVerb } from '../shared/relationship-verb.js';
 import milkyWay2Credit from './assets/milky-way-2.LICENSE.txt?url&no-inline';
 import { BackgroundMotionSlider } from './BackgroundMotionSlider.js';
+import { conversationSurfaces, type FloatingArea } from './floating-windows.js';
 import { LifecycleStatus } from './Lifecycle.js';
 import { formatCoordinate, MapNavigation } from './MapNavigation.js';
 import type { MapRevealRequest } from './map-display.js';
@@ -28,6 +29,8 @@ import { SpatialOrientation } from './SpatialOrientation.js';
 import { navigationDragThreshold } from './spatial-navigation.js';
 import { connectionOcclusion } from './spatial-occlusion.js';
 import {
+  type MapArea,
+  type PanTarget,
   type ProjectedPoint,
   type ProjectedReferenceLabel,
   spatialScene,
@@ -39,6 +42,91 @@ import { ZeroReferenceTint } from './ZeroReferenceTint.js';
 import { depthTintRegions, verticalCurveTints } from './zero-reference-depth.js';
 
 type LabelBox = { x: number; y: number; width: number; height: number };
+
+function boxArea({ x, y, width, height }: LabelBox): MapArea {
+  return { left: x - width / 2, right: x + width / 2, top: y - height / 2, bottom: y + height / 2 };
+}
+
+function overlaps(a: MapArea, b: MapArea) {
+  return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+}
+
+function connectionOverlaps(
+  start: Pick<ProjectedPoint, 'x' | 'y'>,
+  end: Pick<ProjectedPoint, 'x' | 'y'>,
+  bend: number,
+  area: MapArea,
+) {
+  const dx = end.x - start.x;
+  if (!dx && (start.x < area.left || start.x > area.right)) return false;
+  const a = dx ? (area.left - start.x) / dx : 0;
+  const b = dx ? (area.right - start.x) / dx : 1;
+  const first = Math.max(0, Math.min(a, b));
+  const last = Math.min(1, Math.max(a, b));
+  if (first > last) return false;
+  // The connection has a linear X coordinate and an optional vertical curve.
+  const dy = end.y - start.y;
+  const yAt = (t: number) => start.y + t * (dy + 2 * bend * (1 - t));
+  const y1 = yAt(first);
+  const y2 = yAt(last);
+  const peak = bend ? yAt(Math.max(first, Math.min(last, (dy + 2 * bend) / (4 * bend)))) : y1;
+  return Math.min(y1, y2) <= area.bottom && Math.max(y1, y2, peak) >= area.top;
+}
+
+function clearMapAreas(areas: MapArea[], obstacle: MapArea, clearance: number) {
+  const candidates = areas.flatMap((area) =>
+    overlaps(area, obstacle)
+      ? [
+          { ...area, left: Math.max(area.left, obstacle.right + clearance) },
+          { ...area, right: Math.min(area.right, obstacle.left - clearance) },
+          { ...area, top: Math.max(area.top, obstacle.bottom + clearance) },
+          { ...area, bottom: Math.min(area.bottom, obstacle.top - clearance) },
+        ].filter((value) => value.right - value.left >= 44 && value.bottom - value.top >= 44)
+      : [area],
+  );
+  // Keep alternative free rectangles until all overlays have been considered.
+  return candidates.filter(
+    (area, index) =>
+      !candidates.some(
+        (other, otherIndex) =>
+          otherIndex !== index &&
+          other.left <= area.left &&
+          other.right >= area.right &&
+          other.top <= area.top &&
+          other.bottom >= area.bottom &&
+          (otherIndex < index ||
+            other.left < area.left ||
+            other.right > area.right ||
+            other.top < area.top ||
+            other.bottom > area.bottom),
+      ),
+  );
+}
+
+const mapOverlaySelector =
+  '.workspace-tools, .workspace-context, .map-object-search, .map-search-filter, .workspace-feedback, .voice-box, .workspace-voice-controls, .spatial-tools, .map-navigation, .spatial-view-actions, .map-selection-details';
+
+function mapAreas(canvas: HTMLCanvasElement, selector: string, clearance: number) {
+  const bounds = canvas.getBoundingClientRect();
+  let areas: MapArea[] = [{ left: 0, top: 0, right: bounds.width, bottom: bounds.height }];
+  for (const overlay of canvas.closest('.household-map')?.querySelectorAll(selector) ?? []) {
+    const closedTools = overlay.closest('details:not([open])');
+    if (closedTools && closedTools !== overlay) continue;
+    const box = overlay.getBoundingClientRect();
+    if (!box.width || !box.height) continue;
+    areas = clearMapAreas(
+      areas,
+      {
+        left: box.left - bounds.left,
+        right: box.right - bounds.left,
+        top: box.top - bounds.top,
+        bottom: box.bottom - bounds.top,
+      },
+      clearance,
+    );
+  }
+  return areas;
+}
 
 const skyCredits: Partial<
   Record<ViewSettings['darkBackground'], { name: string; description: string; url: string }>
@@ -174,7 +262,7 @@ export function SpatialMap({
   onCameraAction?: () => void;
   navigationMount?: HTMLElement | null;
   onNavigationChange?: (open: boolean) => void;
-  floatingArea?: import('./floating-windows.js').FloatingArea;
+  floatingArea?: FloatingArea;
   navigationHidden?: boolean;
   navigationFocus?: boolean;
 }) {
@@ -238,6 +326,7 @@ export function SpatialMap({
   }
   useEffect(() => () => cancelHold(), [cancelHold]);
   const canvas = useRef<HTMLCanvasElement>(null);
+  const previousTextWidth = useRef(0);
   const surface = useRef<HTMLDivElement>(null);
   const labelLayer = useRef<HTMLDivElement>(null);
   const labelObserver = useRef<ResizeObserver | null>(null);
@@ -509,63 +598,11 @@ export function SpatialMap({
   const focusObjects = useCallback((ids: string[], reveal?: MapRevealRequest) => {
     const element = canvas.current;
     if (!element) return false;
-    const bounds = element.getBoundingClientRect();
     // Short screens need every available pixel for the full 44px targets.
     const clearance = (window.visualViewport?.height ?? window.innerHeight) <= 450 ? 0 : 12;
     // Reserve actual fixed tools, including expanded controls and live status.
     // The filter dialog is an overlay and must not change camera framing.
-    // Reading details stay open; focus reserves their actual visible area.
-    let areas = [{ left: 0, top: 0, right: bounds.width, bottom: bounds.height }];
-    const overlays = element
-      .closest('.household-map')
-      ?.querySelectorAll(
-        '.workspace-tools, .workspace-context, .map-object-search, .map-search-filter, .workspace-feedback, .voice-box, .workspace-voice-controls, .spatial-tools, .map-navigation, .spatial-view-actions, .map-selection-details',
-      );
-    for (const overlay of overlays ?? []) {
-      const closedTools = overlay.closest('details:not([open])');
-      if (closedTools && closedTools !== overlay) continue;
-      const box = overlay.getBoundingClientRect();
-      if (!box.width || !box.height) continue;
-      const obstacle = {
-        left: box.left - bounds.left,
-        right: box.right - bounds.left,
-        top: box.top - bounds.top,
-        bottom: box.bottom - bounds.top,
-      };
-      const candidates = areas.flatMap((area) => {
-        if (
-          obstacle.left >= area.right ||
-          obstacle.right <= area.left ||
-          obstacle.top >= area.bottom ||
-          obstacle.bottom <= area.top
-        )
-          return [area];
-        return [
-          { ...area, left: Math.max(area.left, obstacle.right + clearance) },
-          { ...area, right: Math.min(area.right, obstacle.left - clearance) },
-          { ...area, top: Math.max(area.top, obstacle.bottom + clearance) },
-          { ...area, bottom: Math.min(area.bottom, obstacle.top - clearance) },
-        ].filter((value) => value.right - value.left >= 44 && value.bottom - value.top >= 44);
-      });
-      // Keep alternative free rectangles until every overlay is considered.
-      // Choosing greedily can leave an unusably thin strip below the legend.
-      areas = candidates.filter(
-        (area, index) =>
-          !candidates.some(
-            (other, otherIndex) =>
-              otherIndex !== index &&
-              other.left <= area.left &&
-              other.right >= area.right &&
-              other.top <= area.top &&
-              other.bottom >= area.bottom &&
-              (otherIndex < index ||
-                other.left < area.left ||
-                other.right > area.right ||
-                other.top < area.top ||
-                other.bottom > area.bottom),
-          ),
-      );
-    }
+    const areas = mapAreas(element, `${mapOverlaySelector}, ${conversationSurfaces}`, clearance);
     const fittingAreas = areas
       .filter((area) => area.right - area.left >= 44 && area.bottom - area.top >= 44)
       .map((area) => {
@@ -629,7 +666,7 @@ export function SpatialMap({
         for (const overlay of canvas.current
           .closest('.household-map')
           ?.querySelectorAll(
-            '.workspace-tools, .workspace-context, .map-object-search, .map-selection-details, .map-navigation, .conversation-corner',
+            `.workspace-tools, .workspace-context, .map-object-search, .map-selection-details, .map-navigation, .conversation-corner, ${conversationSurfaces}`,
           ) ?? [])
           observer.observe(overlay);
       }
@@ -771,6 +808,26 @@ export function SpatialMap({
   }
   const surfaceWidth = canvas.current?.clientWidth ?? 0;
   const surfaceHeight = canvas.current?.clientHeight ?? 0;
+  const textView = active ? floatingArea?.textView : undefined;
+  const canvasBounds = textView && canvas.current?.getBoundingClientRect();
+  const clippedTextView =
+    textView && canvasBounds
+      ? {
+          left: Math.max(0, textView.x - canvasBounds.left),
+          right: Math.min(surfaceWidth, textView.x + textView.width - canvasBounds.left),
+          top: Math.max(0, textView.y - canvasBounds.top),
+          bottom: Math.min(surfaceHeight, textView.y + textView.height - canvasBounds.top),
+        }
+      : undefined;
+  const textOverlay =
+    clippedTextView &&
+    clippedTextView.left < clippedTextView.right &&
+    clippedTextView.top < clippedTextView.bottom
+      ? clippedTextView
+      : undefined;
+  const coveredByTextView = (box: LabelBox) =>
+    Boolean(textOverlay && overlaps(boxArea(box), textOverlay));
+  const mapTextInset = textOverlay ? Math.max(0, surfaceWidth - textOverlay.left) : 0;
   const depthPatches = scene.current?.referenceDepthPatches() ?? [];
   const tintOpacity = preferences.zeroReferenceTint / 100;
   const markerTints = new Map(
@@ -818,10 +875,11 @@ export function SpatialMap({
     return new Set(cells(box, 5).flatMap((key) => occupied.get(key) ?? []));
   }
   for (const box of reservedBoxes) reserve(box);
+  const markerSize = 44;
   for (const point of locations.values()) {
     // Match the native target and the depth-scaled orb. The collision gap
     // also protects their focus and proposal outlines.
-    const diameter = Math.max(44, 34 * point.scale);
+    const diameter = Math.max(markerSize, 34 * point.scale);
     reserve({ ...point, width: diameter, height: diameter });
   }
   const edges = mapConnections(state.draft, objects, relationships, previousIds).flatMap(
@@ -830,7 +888,11 @@ export function SpatialMap({
       const target = edge.targetId ? locations.get(edge.targetId) : undefined;
       if (!source || (edge.targetId && !target)) return [];
       const end = target ?? {
-        x: source.x + (source.x > surfaceWidth * 0.65 ? -100 : 100),
+        x:
+          source.x +
+          (source.x > Math.min(surfaceWidth, textOverlay?.left ?? surfaceWidth) * 0.65
+            ? -100
+            : 100),
         y: source.y + (source.y > surfaceHeight * 0.65 ? -80 : 80),
         depth: source.depth,
       };
@@ -869,6 +931,54 @@ export function SpatialMap({
       ];
     },
   );
+  useLayoutEffect(() => {
+    // Only a new or wider text view can trigger automatic panning.
+    const width = textView?.width ?? 0;
+    if (width <= previousTextWidth.current) {
+      previousTextWidth.current = width;
+      return;
+    }
+    if (!textOverlay || !canvas.current || (revealRequest && !revealRequest.complete)) return;
+
+    const marker = (point: Pick<ProjectedPoint, 'x' | 'y' | 'depth'>): PanTarget => ({
+      ...point,
+      width: markerSize,
+      height: markerSize,
+    });
+    const selectedEdge =
+      selection?.kind === 'relationship' ? edges.find((edge) => edge.selected) : undefined;
+    let targets: PanTarget[];
+    let covered: boolean;
+    if (selectedEdge) {
+      const { source, start, end, tip, edge, bend } = selectedEdge;
+      targets = [marker(source), edge.targetId ? marker(end) : { ...end, width: 26, height: 26 }];
+      covered =
+        targets.some(coveredByTextView) || connectionOverlaps(start, tip, bend, textOverlay);
+      if (bend) {
+        targets.push({
+          x: (source.x + end.x) / 2,
+          y: (source.y + end.y + bend) / 2,
+          depth: 2 / (1 / source.depth + 1 / end.depth),
+          width: 8,
+          height: 8,
+        });
+      }
+    } else {
+      targets = selectedIds.flatMap((id) => {
+        const point = locations.get(id);
+        return point ? [marker(point)] : [];
+      });
+      if (!targets.length || targets.length !== selectedIds.length) return;
+      covered = targets.some(coveredByTextView);
+    }
+    // Leave the width pending until the selection has been projected.
+    previousTextWidth.current = width;
+    if (covered)
+      scene.current?.panIntoView(
+        targets,
+        mapAreas(canvas.current, `${mapOverlaySelector}, ${conversationSurfaces}`, 4),
+      );
+  });
   function place(candidates: LabelBox[], selected = false): LabelBox | null {
     let fallback: LabelBox | undefined;
     let leastOverlap = Number.POSITIVE_INFINITY;
@@ -877,7 +987,8 @@ export function SpatialMap({
         candidate.x - candidate.width / 2 < 8 ||
         candidate.x + candidate.width / 2 > surfaceWidth - 8 ||
         candidate.y - candidate.height / 2 < 8 ||
-        candidate.y + candidate.height / 2 > surfaceHeight - 8
+        candidate.y + candidate.height / 2 > surfaceHeight - 8 ||
+        coveredByTextView(candidate)
       )
         continue;
       const overlap = [...nearby(candidate)].reduce((sum, other) => {
@@ -901,7 +1012,7 @@ export function SpatialMap({
       }
     }
     if (allLabels) {
-      let box = fallback ?? candidates[0];
+      let box = fallback ?? candidates.find((candidate) => !coveredByTextView(candidate));
       if (box && selected) {
         box = {
           ...box,
@@ -909,6 +1020,7 @@ export function SpatialMap({
           y: Math.max(box.height / 2 + 8, Math.min(surfaceHeight - box.height / 2 - 8, box.y)),
         };
       }
+      if (box && coveredByTextView(box)) return null;
       if (box) reserve(box);
       return box ?? null;
     }
@@ -1024,7 +1136,8 @@ export function SpatialMap({
       box.x - box.width / 2 < 8 ||
       box.x + box.width / 2 > surfaceWidth - 8 ||
       box.y - box.height / 2 < 8 ||
-      box.y + box.height / 2 > surfaceHeight - 8
+      box.y + box.height / 2 > surfaceHeight - 8 ||
+      coveredByTextView(box)
     )
       return false;
     if (
@@ -1252,7 +1365,13 @@ export function SpatialMap({
     </MapNavigation>
   );
   return (
-    <section className="spatial-map" aria-label="Rymdkarta">
+    <section
+      className="spatial-map"
+      aria-label="Rymdkarta"
+      style={
+        mapTextInset ? ({ '--map-text-inset': `${mapTextInset}px` } as CSSProperties) : undefined
+      }
+    >
       <h2>Rymdkarta</h2>
       {settingsMount &&
         createPortal(
@@ -1831,6 +1950,7 @@ export function SpatialMap({
                   data-object-id={object.id}
                   type="button"
                   disabled={disabled}
+                  inert={coveredByTextView({ ...point, width: markerSize, height: markerSize })}
                   aria-label={`Välj objekt: ${object.name}`}
                   aria-describedby={
                     labels.has(object.id) ? `${labelPrefix}-${object.id}` : undefined

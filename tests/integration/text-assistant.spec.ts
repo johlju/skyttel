@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import type { SaveOperation, SaveReceipt } from '../../src/shared/map.js';
 import type { TextAssistantView } from '../../src/shared/text-assistant.js';
 import { controlledBatchDelivery } from '../support/batch-response-delivery.js';
+import { bikeQuestion, blueBikeModel } from '../support/blue-bike-model.js';
 import {
   closeSupportDialog,
   closeTextView,
@@ -61,6 +62,44 @@ function completionAuthorization(body: ModelRequest) {
     ),
   ];
 }
+
+test('TEXT-20: följdfrågan identifierar cykeln i utkastet', async ({ page }) => {
+  let vehicleTypeId: string;
+  const bikeId = crypto.randomUUID();
+  const model = blueBikeModel(bikeId, () => vehicleTypeId);
+  const app = await createInstallation(undefined, { modelFetch: model.provider });
+  try {
+    await signIn(page.request, app.origin);
+    const { household } = await (await createHousehold(page.request, app.origin)).json();
+    const initial = await (
+      await page.request.get(`${app.origin}/api/households/${household.id}/map`)
+    ).json();
+    vehicleTypeId = initial.types.find((type: { name: string }) => type.name === 'Fordon').id;
+    await page.goto(app.origin);
+    await consent(page);
+    await expect(
+      page.getByRole('button', { name: 'Modell och resonemang: GPT-6.1 Terra, Hög', exact: true }),
+    ).toBeVisible();
+    await send(
+      page,
+      'Lägg till ett objekt av typen Fordon med namnet Blå cykeln i mitt utkast. Lämna det i utkastet.',
+    );
+    const draft = await showDraft(page);
+    const rows = draft.getByRole('table', { name: 'Osparade ändringar' }).locator('tbody tr');
+    await expect(rows).toHaveCount(1);
+    await expect(rows.getByRole('rowheader')).toHaveText('Blå cykeln');
+    await expect(rows.getByRole('cell', { name: 'Fordon', exact: true })).toBeVisible();
+    await send(page, bikeQuestion);
+    await expect(transcript(page)).toContainText(`Blå cykeln (${bikeId})`);
+    await showDraft(page);
+    await expect(rows).toHaveCount(1);
+    await expect(rows.getByRole('rowheader')).toHaveText('Blå cykeln');
+    await expect(rows.getByRole('cell', { name: 'Fordon', exact: true })).toBeVisible();
+    await expect(await openSavedHistory(page)).toContainText('Inga genomförda sparanden.');
+  } finally {
+    await app.close();
+  }
+});
 
 test('TEXT-17: verifierat slutbesked behåller beställd förklaring i text och röst', async ({
   page,

@@ -11,11 +11,11 @@ Utkastets granskning och kartans formulär fungerar även när samtal saknas.
 
 ## Modell och resonemang
 
-I ett pågående samtal öppnar ikonen **Modell och resonemang** ovanför
-meddelandefältet och till höger om röstindikatorn samma val. Dialogens
+I ett pågående samtal finns **Modell och resonemang** direkt till höger om
+**Nytt samtal** i textvyns rubrikrad och även vid röstrutan. Dialogens
 slider har stegen **Låg**, **Medium** och **Hög**. Använd piltangenterna
 eller de tre knapparna för att välja utan att dra. Modellnamnet öppnar
-ett separat val mellan **GPT-6.1 Terra** och **GPT-6.1 Sol**. Modellbyte
+ett separat val mellan **GPT-6.1 Terra** och **GPT-6.2 Sol**. Modellbyte
 behåller resonemangsnivån. Escape eller **Stäng** återför fokus till
 kontrollen som öppnar dialogen utan att avbryta pågående eller köat arbete.
 
@@ -73,8 +73,8 @@ skrivna och talade uppdrag.
 
 ## Medgivande
 
-Skyttel behöver ditt medgivande innan ett samtal startar. Textversion 4
-beskriver installationens lagring av samtalet, dess livslängd och
+Skyttel behöver ditt medgivande innan ett samtal startar. Textversion 5
+beskriver samtalets lagring, titel, livslängd och
 felsökning hos LangSmith när installationens sändning är aktiv. Ett
 medgivande för en tidigare version räcker inte; du behöver godkänna den
 aktuella informationen innan nytt arbete eller beständigt bevarande.
@@ -159,46 +159,50 @@ Skyttel-användare och hushåll. De ingår inte i hushållets karta eller
 fullständiga export. Leverantörernas lagring och webbläsarens
 lagringssamtycke är separata från detta bevarande.
 
-Vid omladdning och serveromstart kan samma webbläsare återfå samtalet med
-arbetet pausat. Öppna **Skriv till Skyttel** och läs texten, frågorna och
-modellvalet. **Samtalet är pausat** betyder att återkomsten inte startar
-modellarbete eller nya sparförsök. Inloggning, hushållsåtkomst och aktuellt
-innehåll kontrolleras på nytt. Pausat arbete och dess kö fortsätter inte
-automatiskt. **Nytt samtal** tar bort det tidigare samtalet och behåller
-utkastet; ett nytt samtal kan kräva medgivande igen.
-Köade skrivna meddelanden visas ordagrant i den återställda samtalstexten.
+När du öppnar hushållet eller laddar om sidan börjar du med ett tomt
+samtal och mikrofonen av. Välj **Prata med Skyttel** för att tala. Du kan
+öppna och stänga textvyn oberoende av mikrofonen. Stäng textvyn med
+krysset i övre högra hörnet. Karta, tabell och inställningar använder
+samma samtal under ditt besök.
 
-Välj **Återuppta samtalet** när du vill fortsätta. Du behöver godkänna
-aktuell information igen om medgivandet bara gällde ett tidigare besök.
-Skyttel kontrollerar aktuellt utkast och tidigare operationers faktiska
-utfall före fortsatt arbete. Bara oavslutat arbete och kvarvarande kö
-fortsätter. Genomförda ändringar upprepas inte, och en tidigare upphävd
-sparbegäran kräver en ny uttrycklig sparbegäran. Ett okänt sparutfall
-måste kontrolleras innan nya ändringar kan börja.
+Öppna **Samtal** med pratbubblorna i textvyns övre rad för att hitta dina
+samtal i hushållet. Varje rad visar titeln och datumet för den senaste
+begäran, när datumet finns. Den senaste begäran ligger först. När du väljer
+en rad visas samtalstexten och mikrofonen stängs av på den enheten.
+Din oskickade text ligger kvar.
+På en bred skärm kan du läsa samtalslistan, utkastet och texten samtidigt.
+På en smal skärm väljer du vilken vy du vill se.
 
-På samma eller en annan enhet väljer du **Bevarade samtal** i textvyn.
-Listan visar dina samtal i det aktuella hushållet, deras modellval och
-utgångstid. Välj **Öppna** vid rätt samtal och läs dess pausade läge innan
-du väljer **Återuppta samtalet**. Om ett annat samtal är öppet pausas det
-separat; texterna slås inte ihop. Skicka eller töm oskickad text innan du
-öppnar ett annat samtal. Vid öppning på en annan enhet stannar den tidigare
-enhetens arbete. Det äldre samtalets modellval ändrar inte ditt senaste
-personliga val för nya samtal. Efter återupptagning kan du skriva eller
-slå på mikrofonen i samma samtal.
+Ett samtal kommer med i listan när du lämnar din första begäran. Först
+visas ett utdrag. Skyttel ber OpenAI att ge begäran en kort titel.
+Öppna **Samtalsinformation** på raden för att se när samtalet löper ut.
+Där kan du också kopiera **Samtals-ID** eller ett LangSmith-filter
+för felsökning.
+Äldre samtal kan sakna datum. Sökningen kan ge få eller inga träffar
+beroende på vilka spår som levereras.
 
-**Löper ut** visar den bestämda tidpunkten. Samtalet raderas efter sju
-dygn utan ett meddelande från dig eller uttrycklig återupptagning.
-Modellarbete, visning och statuskontroller förlänger inte tiden.
-Serveromstart flyttar inte tidpunkten. Inloggningens tidsgränser kan
-kräva ny inloggning innan samtalet löper ut.
+**Nytt samtal** finns som plusknapp i textvyn och vid röstrutan. Du får
+tom samtalstext, ny kontext och ditt senaste personliga modellval.
+Mikrofonen behåller sitt läge. Det tidigare samtalet finns kvar med sina
+väntande frågor. Du kan öppna listan medan Skyttel arbetar. Du kan välja
+ett samtal eller börja ett nytt när bearbetning och uppläsning är klara.
 
-**Avbryt** avbryter återstående arbete och kön men behåller samtalstext,
-väntande delar och genomförda utkaständringar. **Logga ut** pausar
-samtalet. **Avsluta samtalet** raderar texten, kön och oavslutade delar
-med deras sparhinder. Utgång gör samma sak. Varken avslut eller utgång
-sparar eller kastar utkastet. Registrerade sparförsök och sparkvitton
-består separat; ett okänt sparutfall blockerar fortfarande ändringar
-tills det klarläggs. Kontrollera utfallet före ett nytt försök.
+Välj papperskorgen på en rad i **Samtal** och bekräfta med **Ta bort**.
+Skyttel tar bort samtalstexten, kontexten och det oavslutade arbetet från
+installationen. Dina utkaständringar, sparade kartändringar, registrerade
+sparförsök och sparkvitton finns kvar. Om Skyttel arbetar eller talar i det
+valda samtalet, vänta tills aktiviteten är klar. Du kan ta bort ett annat
+samtal under tiden. När du tar bort det öppna samtalet visas en tom
+textvy med mikrofonen av. Texten i meddelandefältet finns kvar.
+
+Om arbete avbryts kan du välja **Fortsätt arbetet** vid begäran.
+Skyttel kontrollerar utkastet, tidigare ändringar och registrerade
+sparförsök innan arbetet fortsätter. Ett osäkert utfall behöver först
+klarläggas. Text som ligger i meddelandefältet skickas först med **Skicka**.
+
+Samtalet löper ut sju dygn efter din senaste begäran. Att läsa samtalet
+eller ta fram titeln förlänger inte tiden. Ditt utkast, registrerade
+sparförsök och sparkvitton har egna livslängder.
 
 ## Håll in för att tala
 
@@ -226,18 +230,22 @@ skärmläsare på pekskärm.
 **Skriv till Skyttel** öppnar och stänger textvyn. Textvyn visar
 samtalstexten och meddelandefältet **Meddelande till Skyttel**.
 
-- På en dator ligger textvyn vid högerkanten och knuffar undan kartan, så
-  att du ser ändringarna i kartan medan du skriver. Meddelandefältet får
-  fokus när textvyn öppnas. Om formulären och textvyn inte får plats
-  samtidigt växlar du mellan dem med verktygsradens knappar. Vyerna
-  behåller sina bredder, oskickad text och det pågående röstsamtalet.
+- På en bred skärm ligger textvyn ovanpå kartan vid högerkanten. Bakgrunden
+  ligger kvar när textvyn öppnas, stängs eller ändrar bredd. Om en öppnad
+  eller bredare textvy skymmer det du har markerat panorerar kartan så långt
+  som behövs för att visa markeringen, om den får plats med aktuell zoom.
+  Kartan behåller sitt läge när du stänger textvyn.
+- På en dator får meddelandefältet fokus när textvyn öppnas. Om formulären
+  och textvyn inte får plats samtidigt växlar du mellan dem med
+  verktygsradens knappar. Vyerna behåller sina bredder, oskickad text och
+  det pågående röstsamtalet.
 - På en mobil enhet och en smal skärm får fältet inte fokus av sig självt.
   Tryck i fältet när du vill skriva. På en smal skärm fyller textvyn
   skärmen under verktygsraden, och **Tabell** och **Karta** tar dess
   plats när du väljer dem.
 - På en bred pekskärm är textvyn 400 px bred, också på en liggande
-  telefon. Kartan syns bredvid. En dator med pekskärm och mus följer
-  datorläget; den främsta pekaren avgör.
+  telefon. Du kan använda den del av kartan som syns bredvid. En dator
+  med pekskärm och mus följer datorläget. Den främsta pekaren avgör.
 - När den synliga höjden är under 520 px på mobil enhet eller smal skärm
   blir överkanten en kompakt rad med kontextmätaren, **Utkast** och
   antalet ändringar, **Nytt samtal** och stängknappen. Fältet är en rad
@@ -247,21 +255,18 @@ samtalstexten och meddelandefältet **Meddelande till Skyttel**.
   ger en ny rad. Fältet behåller fokus efter att meddelandet har skickats.
 - I samtalstexten står det du skriver i en tonad ruta till höger och det
   Skyttel svarar utan ruta. Det du och Skyttel säger med rösten står där
-  också. Raden **Skyttel arbetar…** står sist medan Skyttel arbetar.
-  En roterande ring visar arbetet. Ringen är stilla när du har valt
-  minskad rörelse i systemet. Arbetsraden beskriver aktuellt steg, till
-  exempel **Bearbetar uppgiften** eller **Läser kartan via MCP**.
-  **Visa arbetssteg** visar de senaste stegen i uppdraget, även snabba
-  anrop. Stegen finns kvar efter svaret tills nästa uppdrag börjar.
-  MCP är anslutningen som Skyttel använder för att läsa och ändra
-  hushållets uppgifter.
+  också. När Skyttel använder ett verktyg visas arbetssteget direkt efter
+  din fråga eller instruktion. Kontaktsymbolen visar anrop via MCP, som
+  Skyttel använder för att läsa och ändra hushållets uppgifter.
+  Om samma verktyg anropas två gånger i följd står det till exempel
+  **Läser kartan (2)**. Stegen finns kvar efter svar och avbrott och visas
+  igen när du öppnar ett sparat samtal. Raden **Skyttel arbetar…** visas
+  medan arbetet pågår. Ringen är stilla om du har valt minskad rörelse
+  i systemet.
 - **Stäng textvyn** eller **Skriv till Skyttel** stänger textvyn. Samtalet,
   mikrofonen och din oskickade text finns kvar tills du öppnar den igen.
-- **Nytt samtal** börjar ett samtal om inget finns. I ett pågående samtal
-  tömmer det samtalstexten och kontexten och stoppar pågående
-  arbete. Mikrofonen behåller sitt läge, och ditt
-  utkast och din oskickade text finns kvar. Skyttel säger hur många
-  osparade ändringar som ligger kvar i utkastet.
+- **Nytt samtal** öppnar en tom samtalstext med ny kontext. Ditt utkast
+  och din oskickade text ligger kvar.
 
 På smal skärm står röstrutan ovanför meddelandefältet när textvyn är
 öppen. Ingen rad är reserverad för rösten ovanför textvyn.
@@ -273,22 +278,23 @@ flyttas bort.
 
 ## Textvyns bredd
 
-På dator kan du ändra samtalstextens och utkastets bredd var för sig.
-Dra gränsen vid respektive vänsterkant, eller nå **Ändra samtalstextens
-bredd** och **Ändra utkastlistans bredd** med Tab och använd vänster- och
-högerpil. Varje piltryck flyttar gränsen 24 px. Samtalstexten börjar med
-400 px och utkastet med 340 px; de blir som minst 300 respektive 260 px.
-Kartan lämnas alltid synlig.
+På dator kan du ändra bredden för samtalstexten, utkastet och samtalslistan
+var för sig. Dra i panelens vänsterkant eller nå dess breddhandtag med Tab
+och använd vänster- eller högerpil. Varje piltryck flyttar gränsen 24 px.
+Grundbredderna är 400 px för samtalstexten, 340 px för utkastet och 280 px
+för samtalslistan. Kartan lämnas synlig.
 
-Bredderna sparas direkt för dig i alla dina hushåll och på alla dina
-enheter. På mindre skärm begränsas bara visningen; de sparade bredderna
-kommer tillbaka när de ryms igen. På mobil enhet och smal skärm finns inga
-breddhandtag. Bred pekskärm behåller sidofältet på 400 px.
+Samtalstextens och utkastets bredder sparas för dig i alla dina hushåll
+och på alla dina enheter. Samtalslistan behåller sin bredd under besöket
+i hushållets arbetsyta. På en mindre skärm anpassas visningen efter
+utrymmet. På mobil enhet och smal skärm visas panelerna utan breddhandtag.
+Bred pekskärm behåller sidofältet på 400 px.
 
 I **Inställningar**, **Samtal med Skyttel**, finns **Textvyns bredd** på
-dator, även i ett smalt fönster. **Återställ bredderna** återställer båda
-bredderna och säger **Bredderna är återställda**. Knappen visas bara när
-du har ändrat någon bredd; annars står **Du har inte ändrat bredderna.**
+dator, även i ett smalt fönster. **Återställ bredderna** återställer
+samtalstextens och utkastets bredder och säger **Bredderna är återställda**.
+Knappen visas bara när du har ändrat någon av de sparade bredderna.
+Annars står **Du har inte ändrat bredderna.**
 Det går att återställa även när samtalet inte är tillgängligt. Delen visas
 inte på mobil enhet. Återställning ändrar inte utkastets startval.
 
@@ -297,9 +303,9 @@ inte på mobil enhet. Återställning ändrar inte utkastets startval.
 **Visa utkastet** ovanför samtalstexten visar antalet osparade ändringar.
 Välj knappen för en tabell med symbol, namn, typ och vad som ändras.
 Plus betyder nytt förslag, penna betyder rättelse och kryss betyder
-borttagning. Objekt, samband och egna typer ingår. Tabellen står till
-vänster om samtalstexten på dator och mellan knappen och samtalstexten på
-mobil enhet och smal skärm. **Dölj utkastet** fäller ihop den.
+borttagning. Objekt, samband och egna typer ingår. När panelerna ryms
+står utkastet till vänster om samtalstexten. På mindre skärmar växlar du
+mellan **Utkast** och **Text**. **Dölj utkastet** fäller ihop tabellen.
 Ett utfällt utkast utan ändringar säger **Utkastet är tomt.**
 
 På sidan **Samtal med Skyttel** i Inställningar kan du markera
@@ -307,8 +313,10 @@ På sidan **Samtal med Skyttel** i Inställningar kan du markera
 direkt och gäller dig i alla dina hushåll, på alla dina enheter. Grundvalet
 är hopfällt. Med valet på öppnas ett befintligt utkast när samtalet börjar
 och efter **Nytt samtal**. Ett tomt utkast väntar tills Skyttel föreslår den
-första ändringen. Att visa eller dölja utkastet ändrar bara det pågående
-samtalet. Valet går att spara även när samtalet inte är tillgängligt.
+första ändringen. En öppen utkastpanel på bred skärm förblir öppen när du
+byter samtal, även när utkastet är tomt. Att visa eller dölja panelen
+ändrar inte ditt sparade val. Valet går att spara även när samtalet inte är
+tillgängligt.
 En kort text vid kryssrutan säger om valet sparades eller om du behöver
 försöka igen.
 
@@ -518,7 +526,9 @@ när du använder rösten:
   mikrofonen redan lyssna lokalt medan du håller knappen.
 - **Lyssnar**: mikrofonen är på, och ingen talar.
 - **Du talar**: staplarna följer hur starkt du talar.
-- **Skyttel arbetar**: Skyttel arbetar med ditt uppdrag.
+- **Arbetar** visas medan Skyttel arbetar med ditt uppdrag. En puls går
+  från vänster till höger. Vid längre arbete ligger strecket sedan stilla
+  bland punkterna.
 - **Skyttel talar**: Skyttel svarar med rösten.
 - **Väntar på ditt svar**: Skyttel har ställt en nödvändig fråga. Rutan
   finns kvar när mikrofonen är av; punkterna blir då nedtonade.
@@ -527,10 +537,19 @@ när du använder rösten:
   från avbrottet om du trycker **Avbryt** under beskedet.
 
 Medan Skyttel arbetar eller talar finns stoppikonen **Avbryt** i
-röstrutan. Den stoppar arbetet och tystar Skyttel. Förslag som redan
-ligger i utkastet finns kvar. Med minskad rörelse i systemet rör sig
-vågformen inte: den visar sju punkter när ingen hörs och sju stilla
-staplar när någon hörs. En skärmläsare får höra **Lyssnar** när mikrofonen slås
+röstrutan. Vid pågående arbete i en öppen textvy på en telefon finns
+**Avbryt** vid meddelandefältet. När det inte finns något att avbryta visar
+röstrutan en liten ring. Om du talar under pågående arbete visar röstrutan
+**Du talar**. Vid samtidigt tal visas **Skyttel talar**.
+
+**Avbryt** stoppar arbetet och tystar Skyttel. Om mikrofonen är på när
+Skyttel talar kan du börja rättelsen direkt. De första orden visas i
+samtalstexten. Förslag som redan ligger i utkastet finns kvar.
+
+Med minskad rörelse i systemet rör sig
+vågformen inte. Den visar ett streck bland punkterna under arbete, sju
+stilla staplar när någon hörs och sju punkter i vila.
+En skärmläsare får höra **Lyssnar** när mikrofonen slås
 på, **Skyttel arbetar**, **Sparat** och **Mikrofonen är av** när röstrutan
 försvinner. **Väntar på ditt svar** läses inte upp: Skyttel har just sagt frågan.
 
@@ -668,7 +687,7 @@ efter varje annat svar.
 Väntande ändringar hindrar sparande tills de är klara eller återtagna.
 En oberoende informationsfråga gör inte det. Be om sparande igen när
 en tidigare sparbegäran är upphävd. **Avbryt** och vanliga fel bevarar
-väntande delar; **Nytt samtal** avslutar dem men behåller utkastet.
+väntande delar. Vid **Nytt samtal** hör delarna till det tidigare samtalet.
 **Kasta utkastet** avslutar väntande ändringar och frågor som beror på
 förslagen, medan oberoende informationsfrågor kan finnas kvar.
 
@@ -722,7 +741,7 @@ finns kvar och kan fortsätta när tidigare arbete inte längre kan ändra
 utkastet. Genomförda förslag finns kvar i utkastet. Ett genomfört
 sparande blir inte ångrat. Textvyn visar **Avbrutet. Föreslagna ändringar
 ligger kvar i utkastet.** tills nästa uppdrag börjar eller du väljer
-**Nytt samtal**. Nytt samtal tömmer också kön.
+**Nytt samtal**.
 
 Om ett sparresultat är oklart visar samtalsnotisen **Det är oklart om
 utkastet sparades. Skyttel kontrollerar det.** Kontrollen kräver inget
@@ -739,17 +758,18 @@ kontrollen är klar. Textvyn öppnas inte av förklaringen.
 Bara om kontrollen misslyckas visas **Skyttel kunde inte kontrollera om
 utkastet sparades.** med **Kontrollera om utkastet sparades**. Försök igen
 med den knappen. **Rapporter → Ändringshistorik** innehåller
-även kvitton från andra enheter. Ett avvisat försök behåller utkastet och
+även kvitton från andra enheter. Kontrollen visar ditt sparförsök även om
+en annan användare har sparat sedan dess. När sparandet är bekräftat visas
+ändringarna i kartvyn utan omladdning. Ett avvisat försök behåller utkastet och
 behöver ett nytt underlag och ett nytt sparbesked.
 
 Fråga **Vad var felet?** för att höra det senaste registrerade felet i
-det pågående samtalet. Felminnet följer samtalet och försvinner vid
-**Nytt samtal** eller när samtalet avslutas. Ett oklart sparresultat
+det pågående samtalet. Felminnet hör till det valda samtalet. Ett oklart sparresultat
 behöver kontrolleras innan ett nytt
 uppdrag kan börja.
 
 En avstängd mikrofon behåller samtalstexten i det pågående samtalet.
-**Nytt samtal** tömmer samtalstexten och kontexten.
+**Nytt samtal** öppnar en tom samtalstext med ny kontext.
 När du lämnar hushållets karta, laddar om sidan eller loggar ut bevaras
 ett medgivet samtal med arbetet pausat till sin utgångstid. Återkallad
 hushållsåtkomst avslutar tillgången till samtalet.
@@ -763,7 +783,8 @@ Utloggning, återkallat medgivande eller återkallad åtkomst stoppar fortsatt
 arbete. Återimport eller byte av innehållsägare kräver en ny anslutning.
 Redan lagrade förslag finns i ditt utkast efter ny inloggning. Sparade
 uppgifter och kvitton finns också kvar. Vid serveromstart fortsätter inget
-modellarbete; medgiven samtalstext återställs pausad. Uppgifter som redan
+modellarbete. Du kan välja den bevarade samtalstexten i **Samtal**.
+Uppgifter som redan
 skickats till LangSmith kan finnas kvar där. Ett svar som servern gör klart
 är ingen bekräftelse på att det har nått din webbläsare.
 

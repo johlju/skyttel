@@ -178,8 +178,8 @@ YTA-03.
 4. Öppna **Skriv till Skyttel** och **Visa utkastet**. Läs det tomma utkastet
    utan samtyckesfråga. Stäng texten, välj **Karta**, öppna texten igen och
    välj uttryckligen **Nytt samtal** före medgivande och samtalsstart.
-   Skriv **Jag vill skriva här.** i **Meddelande till Skyttel** och välj
-   **Skicka**. Läs ditt meddelande och svaret **Du kan skriva här.** från
+   Välj **Text**, skriv **Jag vill skriva här.** i **Meddelande till Skyttel**
+   och välj **Skicka**. Läs ditt meddelande och svaret **Du kan skriva här.** från
    den kontrollerade förberedelsen.
    Skriv **Oskickat meddelande medan hjälpen läses** i **Meddelande till
    Skyttel** utan att skicka det.
@@ -190,8 +190,8 @@ YTA-03.
    och tryck Escape. Kontrollera att fokus är kvar på en synlig hjälpknapp.
    Återgå till **Skriv till Skyttel** och läs ditt skickade meddelande,
    det tidigare svaret och hela det oskickade meddelandet. Välj
-   **Visa utkastet** och läs att utkastet
-   fortfarande är tomt; meddelandet ska fortfarande vara oskickat och kvar.
+   **Visa utkastet** och läs att utkastet fortfarande är tomt. Välj **Text**
+   och kontrollera att det oskickade meddelandet finns kvar.
 
 **Förväntat resultat:**
 

@@ -137,7 +137,9 @@ for (const mode of [
           profile: liveProfile.id,
           application,
           repetition: 1,
-          maximumSeconds: mode === 'assessment-tail' || usefulMode ? 20 : 16,
+          // Partial answers render two separate tones six seconds apart. Include
+          // connection setup, both assessments and the session's close grace.
+          maximumSeconds: usefulMode ? 30 : mode === 'assessment-tail' ? 20 : 16,
           stopped: () => stopped,
           sessionTimeLimit: () => {
             stopped = true;

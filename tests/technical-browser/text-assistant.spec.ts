@@ -7,6 +7,7 @@ import { createHousehold, signIn } from '../support/client.js';
 import {
   openConversationDraft,
   openConversationText,
+  selectConversation,
   startConversationWithText,
   turnMicrophoneOn,
 } from '../support/conversation-page.js';
@@ -200,9 +201,7 @@ for (const mode of ['text', 'voice'] as const) {
       await expect.poll(() => events.find((event) => event.event === 'restarted')).toBeTruthy();
       await page.reload();
       await openConversationText(page);
-      await expect(
-        page.getByRole('status', { name: 'Samtalets livslängd', exact: true }),
-      ).toContainText('Samtalet är pausat.');
+      await selectConversation(page, instruction.slice(0, 100));
       await expect(page.getByRole('log', { name: 'Samtalstext', exact: true })).toContainText(
         instruction,
       );

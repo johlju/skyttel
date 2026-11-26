@@ -61,7 +61,7 @@ test('MODELLVAL-05: alla aktiverade modellpar går att välja utan avstängda me
     modelFetch: textModel(() => [modelMessage('Ett svar.')]).provider,
     conversationModels: [
       { model: 'gpt-6.1-terra', effort: 'high' },
-      { model: 'gpt-6.1-sol', effort: 'low' },
+      { model: 'gpt-6.2-sol', effort: 'low' },
     ],
   });
   try {
@@ -77,19 +77,19 @@ test('MODELLVAL-05: alla aktiverade modellpar går att välja utan avstängda me
       .getByRole('button', { name: 'GPT-6.1 Terra', exact: true })
       .click();
     const dialog = page.getByRole('dialog', { name: 'Modellval', exact: true });
-    await dialog.getByRole('button', { name: 'Välj GPT-6.1 Sol, Låg', exact: true }).click();
-    await expect(dialog.getByRole('radio', { name: 'GPT-6.1 Sol', exact: true })).toBeChecked();
+    await dialog.getByRole('button', { name: 'Välj GPT-6.2 Sol, Låg', exact: true }).click();
+    await expect(dialog.getByRole('radio', { name: 'GPT-6.2 Sol', exact: true })).toBeChecked();
     await expect(dialog.getByRole('status')).toContainText('Valet är sparat');
     await page.keyboard.press('Escape');
     const sol = page.getByRole('button', {
-      name: 'Modell och resonemang: GPT-6.1 Sol, Låg',
+      name: 'Modell och resonemang: GPT-6.2 Sol, Låg',
       exact: true,
     });
     await expect(sol).toBeFocused();
     await sol.click();
     await page
       .getByRole('dialog')
-      .getByRole('button', { name: 'GPT-6.1 Sol', exact: true })
+      .getByRole('button', { name: 'GPT-6.2 Sol', exact: true })
       .click();
     await page
       .getByRole('dialog')
@@ -136,17 +136,17 @@ test('MODELLVAL-01: text och röst delar modellval och tre resonemangsnivåer me
     await expect(slider).toHaveAttribute('aria-valuetext', 'Medium');
     await dialog.getByRole('button', { name: 'GPT-6.1 Terra', exact: true }).click();
     const models = page.getByRole('dialog', { name: 'Modellval', exact: true });
-    const sol = models.getByRole('radio', { name: 'GPT-6.1 Sol', exact: true });
+    const sol = models.getByRole('radio', { name: 'GPT-6.2 Sol', exact: true });
     await sol.click();
     await expect(sol).toBeChecked();
     await expect(models.getByRole('status')).toContainText('Valet är sparat');
     await page.keyboard.press('Escape');
     await expect(
-      text.getByRole('button', { name: 'Modell och resonemang: GPT-6.1 Sol, Medium', exact: true }),
+      text.getByRole('button', { name: 'Modell och resonemang: GPT-6.2 Sol, Medium', exact: true }),
     ).toBeFocused();
     await turnMicrophoneOn(page);
     const voiceControl = voiceBox(page).getByRole('button', {
-      name: 'Modell och resonemang: GPT-6.1 Sol, Medium',
+      name: 'Modell och resonemang: GPT-6.2 Sol, Medium',
       exact: true,
     });
     await voiceControl.click();
@@ -156,16 +156,16 @@ test('MODELLVAL-01: text och röst delar modellval och tre resonemangsnivåer me
     await page.keyboard.press('Escape');
     await expect(
       voiceBox(page).getByRole('button', {
-        name: 'Modell och resonemang: GPT-6.1 Sol, Hög',
+        name: 'Modell och resonemang: GPT-6.2 Sol, Hög',
         exact: true,
       }),
     ).toBeFocused();
     await expect(
-      text.getByRole('button', { name: 'Modell och resonemang: GPT-6.1 Sol, Hög', exact: true }),
+      text.getByRole('button', { name: 'Modell och resonemang: GPT-6.2 Sol, Hög', exact: true }),
     ).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
     await text
-      .getByRole('button', { name: 'Modell och resonemang: GPT-6.1 Sol, Hög', exact: true })
+      .getByRole('button', { name: 'Modell och resonemang: GPT-6.2 Sol, Hög', exact: true })
       .click();
     await expect(page.getByRole('dialog', { name: 'Resonemangsnivå', exact: true })).toBeVisible();
     await page.getByRole('dialog').getByRole('button', { name: 'Låg', exact: true }).click();
@@ -203,7 +203,7 @@ test('MODELLVAL-03: ett avaktiverat personligt val behålls tills användaren v�
       'aria-valuetext',
       'Medium',
     );
-    choices.splice(0, choices.length, { model: 'gpt-6.1-sol', effort: 'high' });
+    choices.splice(0, choices.length, { model: 'gpt-6.2-sol', effort: 'high' });
     await app.restart();
     await page.goto(app.origin);
     await startConversationWithText(page);
@@ -212,17 +212,17 @@ test('MODELLVAL-03: ett avaktiverat personligt val behålls tills användaren v�
       .click();
     const dialog = page.getByRole('dialog', { name: 'Resonemangsnivå', exact: true });
     await expect(dialog).toContainText('Det sparade valet är inte aktiverat');
-    await dialog.getByRole('button', { name: 'Välj GPT-6.1 Sol, Hög', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Välj GPT-6.2 Sol, Hög', exact: true }).click();
     await expect(dialog.getByRole('slider')).toHaveAttribute('aria-valuetext', 'Hög');
     await expect(dialog.getByRole('heading')).toBeFocused();
-    await expect(dialog.getByRole('button', { name: 'GPT-6.1 Sol', exact: true })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'GPT-6.2 Sol', exact: true })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(
-      page.getByRole('button', { name: 'Modell och resonemang: GPT-6.1 Sol, Hög', exact: true }),
+      page.getByRole('button', { name: 'Modell och resonemang: GPT-6.2 Sol, Hög', exact: true }),
     ).toBeFocused();
     await turnMicrophoneOn(page);
     const voiceControl = voiceBox(page).getByRole('button', {
-      name: 'Modell och resonemang: GPT-6.1 Sol, Hög',
+      name: 'Modell och resonemang: GPT-6.2 Sol, Hög',
       exact: true,
     });
     await voiceControl.click();
@@ -231,7 +231,7 @@ test('MODELLVAL-03: ett avaktiverat personligt val behålls tills användaren v�
       'Hög',
     );
     await expect(
-      page.getByRole('dialog').getByRole('button', { name: 'GPT-6.1 Sol', exact: true }),
+      page.getByRole('dialog').getByRole('button', { name: 'GPT-6.2 Sol', exact: true }),
     ).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(voiceControl).toBeFocused();

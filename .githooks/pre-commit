@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+"""Check the staged contents with the checkout's Biome installation."""
+
+import os
+from pathlib import Path
+import subprocess
+import sys
+from tempfile import TemporaryDirectory
+
+
+def git_paths(*args):
+    output = subprocess.check_output(["git", *args, "-z"])
+    return output.rstrip(b"\0").split(b"\0") if output else []
+
+
+def main():
+    changed = set(git_paths("diff", "--cached", "--name-only", "--no-renames",
+                            "--diff-filter=AMT"))
+    if not changed:
+        return 0
+
+    staged = []
+    config_files = {b"biome.json", b"biome.jsonc", b".gitignore", b".editorconfig", b"package.json"}
+    snapshot = {}
+    for entry in git_paths("ls-files", "--stage"):
+        metadata, path = entry.split(b"\t", 1)
+        if not metadata.startswith(b"100"):
+            continue
+        if path in changed:
+            staged.append(b"./" + path)
+        elif path.rsplit(b"/", 1)[-1] not in config_files:
+            continue
+        snapshot[os.fsdecode(path)] = metadata.split()[1]
+    if not staged:
+        return 0
+
+    biome = Path("node_modules/.bin/biome").resolve()
+    if not biome.is_file():
+        sys.exit("Biome is missing. Run npm run deps:prepare in this checkout.")
+    with TemporaryDirectory(prefix="skyttel-staged-") as directory:
+        # Raw blobs also avoid working-tree line endings and checkout filters.
+        for path, oid in snapshot.items():
+            target = Path(directory, path)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with target.open("wb") as output:
+                subprocess.run(["git", "cat-file", "blob", oid], stdout=output, check=True)
+        return subprocess.run([biome, "check", "--no-errors-on-unmatched", *staged],
+                              cwd=directory).returncode
+
+
+if __name__ == "__main__":
+    sys.exit(main())

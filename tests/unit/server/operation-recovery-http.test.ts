@@ -253,7 +253,7 @@ test.each(['text', 'voice'] as const)(
     expect(batchId).toMatch(/^[\w-]+$/);
     expect(completed.result).toMatchObject({
       kind: 'draft',
-      changes: [{ subject: 'Lo', action: 'lades till' }],
+      changes: [{ subject: 'Lo', action: 'lades till', objectId: 'lo' }],
     });
     expect(completed.error).toBeUndefined();
     expect(completed.unfinishedRequests).toEqual([]);
@@ -395,7 +395,9 @@ test.each([
     expect(recovered.pendingParts?.map((part) => part.status)).toEqual(
       remaining ? ['completed', 'ready'] : ['completed'],
     );
-    expect(recovered.result?.changes).toEqual([{ subject: 'Lo', action: 'lades till' }]);
+    expect(recovered.result?.changes).toEqual([
+      { subject: 'Lo', action: 'lades till', objectId: 'lo' },
+    ]);
     expect(recovered.phase).toBe(remaining ? 'error' : 'ready');
     expect(recovered.error).toBe(remaining ? 'assistant_request_unfinished' : undefined);
     expect(recovered.completedReplies?.filter((reply) => reply.id.startsWith('batch-'))).toEqual([
@@ -534,7 +536,7 @@ test.each([
     ).json();
     expect(recovered.result).toMatchObject({
       kind: 'draft',
-      changes: [{ subject: 'Lo', action: 'lades till' }],
+      changes: [{ subject: 'Lo', action: 'lades till', objectId: 'lo' }],
     });
     expect(recovered.phase).toBe('error');
     expect(recovered.error).toBe('assistant_request_unfinished');
@@ -822,7 +824,7 @@ test.each([
     expect(current.result).toEqual({
       kind: 'draft',
       message: 'Ändringarna genomfördes i utkastet.',
-      changes: [{ subject: 'Lo', action: 'lades till' }],
+      changes: [{ subject: 'Lo', action: 'lades till', objectId: 'lo' }],
     });
     expect(current.completedReplies?.filter((reply) => reply.id.startsWith('batch-'))).toHaveLength(
       1,
@@ -913,7 +915,7 @@ test.each(['new', 'previously opened'] as const)(
       expect(recovered.phase).toBe('ready');
       expect(recovered.result).toMatchObject({
         kind: 'draft',
-        changes: [{ subject: 'Lo', action: 'lades till' }],
+        changes: [{ subject: 'Lo', action: 'lades till', objectId: 'lo' }],
       });
       await expect
         .poll(async () => {
@@ -1507,7 +1509,9 @@ test('a verified failed later draft batch reports its failure without inventing 
     version: 1,
     changes: [{ id: 'lo', after: { name: 'Lo' } }],
   });
-  expect(completed.result?.changes).toEqual([{ subject: 'Lo', action: 'lades till' }]);
+  expect(completed.result?.changes).toEqual([
+    { subject: 'Lo', action: 'lades till', objectId: 'lo' },
+  ]);
   const grant = await connect();
   expect(
     (await tool(grant, 'read_draft_batch', { operationId: ids[0], contentVersion: 1 })).value.batch,

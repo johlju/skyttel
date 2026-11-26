@@ -24,10 +24,10 @@ adapter reads each version from its own committed source. Controlled HTTP and
 SQLite preparation exercises both; no compatibility shim is necessary.
 
 The four result combinations are Terra/high/text, Terra/high/voice,
-Sol/high/text and Sol/high/voice. Each contains both application versions. Exact
-backend IDs are `terra-6.1-high-668` and `sol-6.1-high-668`; their models are
-`gpt-6.1-terra` and `gpt-6.1-sol`. Preserve the historical `terra-high` alias,
-which identifies another model. Do not substitute it. Both exact backends use
+Sol/high/text and Sol/high/voice. Each contains both application versions.
+Use the exact backend IDs in [the campaign profiles](optimization-campaign-profiles.json).
+The historical `terra-high` alias identifies another model.
+Both exact backends use
 high effort, default service tier, a 1,050,000-token context and the verified
 128,000-token maximum output, including reasoning. The 922,000-token normal
 input reservation is context minus maximum output, not a separately published

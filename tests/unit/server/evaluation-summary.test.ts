@@ -117,19 +117,27 @@ test('the evaluation summary uses real price turns and atomically installs ordin
     if (!original) throw new Error('Missing price object');
     const { id: _id, householdId: _household, revision, ...value } = original;
     return [
-      modelTool('propose_object', {
+      modelTool('submit_changes', {
         version: state.draft.version,
         contentVersion: state.contentVersion,
-        id,
-        baseRevision: revision,
-        value: {
-          ...value,
-          properties: value.properties?.map((property) =>
-            property.id === 'price'
-              ? { ...property, value: turn.message.includes('239') ? 239 : first ? 189 : 229 }
-              : property,
-          ),
-        },
+        completion: 'draft',
+        operations: [
+          {
+            name: 'propose_object',
+            arguments: {
+              id,
+              baseRevision: revision,
+              value: {
+                ...value,
+                properties: value.properties?.map((property) =>
+                  property.id === 'price'
+                    ? { ...property, value: turn.message.includes('239') ? 239 : first ? 189 : 229 }
+                    : property,
+                ),
+              },
+            },
+          },
+        ],
       }),
     ];
   });
@@ -160,6 +168,7 @@ test('the evaluation summary uses real price turns and atomically installs ordin
         )
         .toBe('completed');
       const finished = await environment.get<TextAssistantView>(environment.path);
+      expect(finished.unfinishedRequests).toEqual([]);
       expect(await environment.check(step, finished, [])).toEqual([]);
     }
     const before = await environment.read();

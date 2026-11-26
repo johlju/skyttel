@@ -66,20 +66,46 @@ test('SAMTALSUTKAST-01: utkasttabellen visar alla slags ändringar med kartans s
     await toggle(page).click();
     await expect(toggle(page)).toHaveAttribute('aria-expanded', 'true');
     const table = draft(page).getByRole('table', { name: 'Osparade ändringar' });
-    await expect(table.getByRole('columnheader')).toHaveText([
-      'Symbol',
-      'Namn',
-      'Typ',
-      'Vad som ändras',
-    ]);
+    await expect(table.getByRole('columnheader')).toHaveText(['Namn', 'Typ', 'Vad som ändras']);
     await expect(table.locator('tbody tr')).toHaveCount(8);
-    await expect(table.getByRole('row', { name: /Ändra.*Lo Rättad/ })).toContainText(
-      'Namn: Lo Exempel → Lo Rättad',
-    );
-    await expect(table.getByRole('row', { name: /Ta bort.*Kim/ })).toContainText('Tas bort');
-    expect(
-      await table.locator('tbody td:first-child > span[aria-hidden]').allTextContents(),
-    ).toEqual(['✎', '×', '+', '✎', '✎', '+', '+', '+']);
+    const proposalRow = (name: string) =>
+      table.getByRole('row').filter({
+        has: page.getByRole('button', { name: `Visa förslaget: ${name}`, exact: true }),
+      });
+    await expect(proposalRow('Lo Rättad')).toContainText('Namn: Lo Exempel → Lo Rättad');
+    const removalRow = proposalRow('Kim');
+    const removalStatus = removalRow.getByText('Tas bort', { exact: true });
+    await expect(removalStatus).toBeVisible();
+    await expect(table.locator('td:last-child .conversation-draft-symbol')).toHaveText([
+      '✎',
+      '×',
+      '+',
+      '✎',
+      '✎',
+      '+',
+      '+',
+      '+',
+    ]);
+    await removalStatus.hover();
+    const highlight = await removalRow.evaluate((row) => getComputedStyle(row).backgroundColor);
+    expect(highlight).not.toBe('rgba(0, 0, 0, 0)');
+    const removalName = removalRow.getByRole('button', {
+      name: 'Visa förslaget: Kim',
+      exact: true,
+    });
+    await removalName.hover();
+    await expect(removalName).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(removalRow).toHaveCSS('background-color', highlight);
+    await removalStatus.click();
+    const removalDetails = page.getByRole('dialog', { name: 'Kim', exact: true });
+    await expect(removalDetails).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(removalDetails).toBeHidden();
+    await expect(removalName).toBeFocused();
+    await expect(removalRow).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await toggle(page).hover();
+    await removalStatus.hover();
+    await expect(removalRow).toHaveCSS('background-color', highlight);
     for (const line of [
       'Sista fyra: 1111 (Text) → Sista fyra: 2222 (Text)',
       'Lo Rättad → Betalar → Kortet',
@@ -94,7 +120,9 @@ test('SAMTALSUTKAST-01: utkasttabellen visar alla slags ändringar med kartans s
     });
     expect((await read()).draft.relationships).toHaveLength(2);
     expect(await read()).toEqual(beforeReview);
-    const relationship = table.getByRole('row', { name: /Ändra.*Familjens gemensamma musikkonto/ });
+    const relationship = table.getByRole('row', {
+      name: /Familjens gemensamma musikkonto.*Ändras/,
+    });
     await expect(relationship).toContainText('familjen@example.test');
     await expect(relationship).toContainText('musik@example.test');
     const typeCell = relationship.getByRole('cell').filter({ hasText: /^Inloggningsadress$/ });
@@ -132,7 +160,7 @@ test('SAMTALSUTKAST-01: utkasttabellen visar alla slags ändringar med kartans s
     await expect(toggle(page)).toHaveAttribute('aria-expanded', 'false');
     await toggle(page).click();
     await view(page).getByRole('button', { name: 'Nytt samtal' }).click();
-    await expect(toggle(page)).toHaveAttribute('aria-expanded', 'false');
+    await expect(toggle(page)).toHaveAttribute('aria-expanded', 'true');
     expect((await read()).draft.changes).toHaveLength(4);
     expect(await read()).toEqual(beforeReview);
     const savedAfter = await openSavedHistory(page);
@@ -177,13 +205,12 @@ test('SAMTALSUTKAST-02: valet följer användaren mellan hushåll och enheter', 
     await toggle(page).click();
     const restarted = page.waitForResponse(
       (response) =>
-        response.url().startsWith(`${app.origin}/api/households/${household.id}/text-assistant/`) &&
-        response.url().endsWith('/new') &&
+        response.url() === `${app.origin}/api/households/${household.id}/text-assistant` &&
         response.request().method() === 'POST',
     );
     await view(page).getByRole('button', { name: 'Nytt samtal' }).click();
     const restartResponse = await restarted;
-    expect(restartResponse.status()).toBe(200);
+    expect(restartResponse.status()).toBe(201);
     const conversation = await restartResponse.json();
     await expect(toggle(page)).toHaveAttribute('aria-expanded', 'true');
     await readLoProposal(page);
@@ -213,8 +240,7 @@ test('SAMTALSUTKAST-02: valet följer användaren mellan hushåll och enheter', 
       expect.objectContaining({ operationId: receipt.operationId, status: 'succeeded', receipt }),
     ]);
     await view(page).getByRole('button', { name: 'Nytt samtal' }).click();
-    await expect(toggle(page)).toHaveAttribute('aria-expanded', 'false');
-    await toggle(page).click();
+    await expect(toggle(page)).toHaveAttribute('aria-expanded', 'true');
     await expect(draft(page).getByRole('heading', { name: 'Utkast', exact: true })).toBeVisible();
     await expect(draft(page).getByText('Utkastet är tomt.', { exact: true })).toBeVisible();
     const { user: alex } = await (await page.request.get(`${app.origin}/api/bootstrap`)).json();
@@ -303,15 +329,16 @@ for (const configuration of [
         await expect(toggle(page)).toHaveAttribute('aria-expanded', 'true');
         await expect(draft(page).getByRole('table')).toContainText('Lo Exempel');
         await expect(toggle(page)).toHaveAccessibleName('Dölj utkastet (1)');
-        await expect(view(page).locator('.text-view-conversation')).toContainText(
-          'Lo ligger i utkastet.',
-        );
         await readLoProposal(page);
-        const button = await toggle(page).boundingBox();
-        const box = await draft(page).boundingBox();
-        const conversation = await view(page).locator('.text-view-conversation').boundingBox();
-        expect(box?.y).toBeGreaterThanOrEqual((button?.y ?? 0) + (button?.height ?? 0));
-        expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(conversation?.y ?? 0);
+        const conversation = view(page).getByRole('log', { name: 'Samtalstext' });
+        await expect(conversation).toBeHidden();
+        const text = view(page).getByRole('button', { name: 'Text', exact: true });
+        await text.focus();
+        await text.press('Enter');
+        await expect(toggle(page)).toHaveAttribute('aria-expanded', 'false');
+        await expect(conversation).toBeVisible();
+        await expect(conversation).toContainText('Lo ligger i utkastet.');
+        await expect(draft(page)).toBeHidden();
         expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
           configuration.viewport.width,
         );

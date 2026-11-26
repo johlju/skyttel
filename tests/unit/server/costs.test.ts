@@ -34,7 +34,15 @@ test('historical Terra rates and new Sol rates coexist without repricing old usa
       long: { input: 4, cached: 0.4, cacheWrite: 5, output: 18 },
     },
   };
-  const attempts = [legacy, currentRates].map((rates, index) => ({
+  const earlierSol = {
+    ...currentRates,
+    id: 'openai-sol-2026-10-12',
+    model: 'gpt-6.1-sol',
+    sources: [
+      { title: 'GPT-6.1 Sol', url: 'https://developers.openai.com/api/docs/models/gpt-6.1-sol' },
+    ],
+  };
+  const attempts = [legacy, earlierSol, currentRates].map((rates, index) => ({
     id: String(index),
     kind: 'terra' as const,
     month: '2026-10',
@@ -42,7 +50,7 @@ test('historical Terra rates and new Sol rates coexist without repricing old usa
     endedAt: '2026-10-12T00:00:01Z',
     measurement: JSON.stringify({
       kind: 'terra',
-      model: index ? 'gpt-6.1-sol' : 'gpt-5.6-terra',
+      model: rates.model ?? 'gpt-5.6-terra',
       tier: 'default',
       outcome: 'completed',
       usage: { input: 100000, cached: 20000, cacheWrite: 10000, output: 5000, reasoning: 2000 },
@@ -50,11 +58,18 @@ test('historical Terra rates and new Sol rates coexist without repricing old usa
     rates: JSON.stringify(rates),
   }));
   const result = summarizeAttempts(attempts, 10);
-  expect(result.terra.estimatedUsd).toBeCloseTo(0.229 + 0.217, 10);
+  expect(result.terra.estimatedUsd).toBeCloseTo(0.229 + 2 * 0.217, 10);
   expect(result.terra.unpricedAttempts).toBe(0);
-  expect(result.rates).toHaveLength(2);
+  expect(result.rates.map((rate) => rate.model)).toEqual([
+    undefined,
+    'Sol (historisk prislista)',
+    'gpt-6.2-sol',
+  ]);
+  expect(JSON.stringify(result.rates)).not.toMatch(/gpt-6\.1[ -]sol/i);
 });
 const headers = () => ({ origin: app.origin });
+// The independent synthetic title reports eight input and two output tokens.
+const titleUsd = 0.000036;
 async function costs(period = month()) {
   const response = await browser.get(`${app.origin}/api/operator/costs?month=${period}`);
   expect(response.status(), await response.text()).toBe(200);
@@ -87,7 +102,7 @@ async function setup(
     (
       await browser.post(`${path}/${assistant.id}/model-choice`, {
         headers: headers(),
-        data: { model: 'gpt-6.1-sol', effort: 'high' },
+        data: { model: 'gpt-6.2-sol', effort: 'high' },
       })
     ).status(),
   ).toBe(200);
@@ -144,9 +159,9 @@ test('a missing effective model retains the requested Sol pricing assumption whi
   const result = (await costs()).terra;
   // Invalid model metadata stops at interpretation; its reported usage is
   // still retained, with the requested model explicitly marked as assumed.
-  expect(result.estimatedUsd).toBeCloseTo(0.217, 10);
+  expect(result.estimatedUsd).toBeCloseTo(0.217 + titleUsd, 10);
   expect(result).toMatchObject({
-    attempts: 1,
+    attempts: 2,
     uncertainAttempts: 1,
     unpricedAttempts: 0,
     issues: [
@@ -169,7 +184,7 @@ test('an aborted Sol request remains a durable unknown attempt', async () => {
   const scene = await setup(provider.provider);
   await scene.message();
   await expect.poll(() => held).toBe(true);
-  expect((await costs()).terra.attempts).toBe(1);
+  expect((await costs()).terra.attempts).toBe(2);
   const cancelled = await browser.post(`${scene.path}/${scene.assistant.id}/cancel`, {
     headers: headers(),
     data: { revision: 1 },
@@ -178,10 +193,10 @@ test('an aborted Sol request remains a durable unknown attempt', async () => {
   await scene.settled();
   browser = await restartWithSession(browser, () => app.restart());
   expect((await costs()).terra).toMatchObject({
-    attempts: 1,
+    attempts: 2,
     uncertainAttempts: 1,
     unpricedAttempts: 1,
-    usage: { input: { known: 0, missing: 1 } },
+    usage: { input: { known: 8, missing: 1 } },
   });
 });
 
@@ -306,20 +321,20 @@ test('the operator reads separate measured Sol cost and Render assumptions after
   const costs = await response.json();
   expect(costs.render).toEqual({ estimatedUsd: 7.25, estimatedSek: 72.5 });
   expect(costs.terra).toMatchObject({
-    attempts: 2,
+    attempts: 3,
     uncertainAttempts: 0,
     unpricedAttempts: 0,
-    estimatedUsd: 0.001004,
+    estimatedUsd: 0.00104,
   });
   expect(costs.terra.usage).toMatchObject({
-    input: { known: 240, missing: 0 },
+    input: { known: 248, missing: 0 },
     cached: { known: 40, missing: 0 },
     cacheWrite: { known: 0, missing: 0 },
-    output: { known: 60, missing: 0 },
+    output: { known: 62, missing: 0 },
     reasoning: { known: 20, missing: 0 },
   });
   expect(costs.live.attempts).toBe(0);
-  expect(costs.total.estimatedUsd).toBeCloseTo(7.251004, 9);
+  expect(costs.total.estimatedUsd).toBeCloseTo(7.25104, 9);
   expect(JSON.stringify(costs)).not.toMatch(/Privat syntetisk|synthetic-model-key|access_token/);
   browser = await restartWithSession(browser, () => app.restart());
   const restored = await (await browser.get(costPath)).json();
@@ -580,11 +595,11 @@ test.each([
   const result = await costs();
   // Scope interpretation and the worker each return this measured fixture.
   expect(result.terra).toMatchObject({
-    attempts: 2,
+    attempts: 3,
     uncertainAttempts: uncertain * 2,
     unpricedAttempts: unpriced * 2,
   });
-  expect(result.terra.estimatedUsd).toBeCloseTo(usd * 2, 10);
+  expect(result.terra.estimatedUsd).toBeCloseTo(usd * 2 + titleUsd, 10);
 });
 
 test.each([
@@ -620,8 +635,8 @@ test.each([
     await scene.settled();
     const result = await costs();
     expect(result.terra).toMatchObject({
-      attempts,
-      estimatedUsd: 0,
+      attempts: attempts + 1,
+      estimatedUsd: titleUsd,
       uncertainAttempts: attempts,
       unpricedAttempts: attempts,
       issues,
@@ -649,22 +664,22 @@ test('an unfinished provider attempt is visible before its reply and a retry is 
   await scene.message();
   await expect.poll(() => model.requests.length).toBe(1);
   expect((await costs()).terra).toMatchObject({
-    attempts: 2,
+    attempts: 3,
     uncertainAttempts: 1,
     unpricedAttempts: 1,
-    usage: { input: { known: 120, missing: 1 } },
+    usage: { input: { known: 128, missing: 1 } },
   });
   release([modelMessage('Första svaret.')]);
   await scene.settled();
-  expect((await costs()).terra).toMatchObject({ attempts: 2, uncertainAttempts: 0 });
+  expect((await costs()).terra).toMatchObject({ attempts: 3, uncertainAttempts: 0 });
   await scene.message();
   await expect.poll(() => model.requests.length).toBe(2);
   release([modelMessage('Andra svaret.')]);
   await scene.settled();
   expect((await costs()).terra).toMatchObject({
-    attempts: 4,
+    attempts: 5,
     uncertainAttempts: 0,
-    estimatedUsd: 0.002008,
+    estimatedUsd: 0.002044,
   });
 });
 
@@ -690,7 +705,7 @@ test('a provider call spanning a UTC month remains in its start month for both L
     (await browser.post(`${voice.path}/stop`, { headers: headers(), data: {} })).status(),
   ).toBe(200);
   const september = await costs('2026-09');
-  expect(september.terra).toMatchObject({ attempts: 2, uncertainAttempts: 0 });
+  expect(september.terra).toMatchObject({ attempts: 3, uncertainAttempts: 0 });
   expect(september.live).toMatchObject({
     attempts: 1,
     uncertainAttempts: 0,
@@ -803,10 +818,10 @@ test('a failed terminal ledger write preserves the initial unknown attempt and t
       changes: [{ after: { name: 'Privat karttext utanför mätningen' } }],
     });
     expect((await costs()).terra).toMatchObject({
-      attempts: 3,
-      uncertainAttempts: 3,
-      unpricedAttempts: 3,
-      usage: { input: { known: 0, missing: 3 } },
+      attempts: 4,
+      uncertainAttempts: 4,
+      unpricedAttempts: 4,
+      usage: { input: { known: 0, missing: 4 } },
     });
     expect(
       JSON.stringify(fault.prepare('SELECT measurement, rates FROM cost_attempt').all()),
@@ -815,9 +830,9 @@ test('a failed terminal ledger write preserves the initial unknown attempt and t
     fault.exec('DROP TRIGGER fail_cost_finish');
     browser = await restartWithSession(browser, () => app.restart());
     expect((await costs()).terra).toMatchObject({
-      attempts: 3,
-      uncertainAttempts: 3,
-      unpricedAttempts: 3,
+      attempts: 4,
+      uncertainAttempts: 4,
+      unpricedAttempts: 4,
     });
     const operation = await (
       await browser.get(`${scene.householdPath}/map/operations/${saved.receipt.operationId}`)

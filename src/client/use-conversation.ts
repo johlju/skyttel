@@ -24,6 +24,48 @@ import { useVoice, type Voice } from './use-voice.js';
 const deliveryUnavailableMessage =
   'Instruktionen skickades inte. Skyttel kunde inte öppna anslutningen för hela svaret. Texten finns kvar; försök igen när kontakten fungerar.';
 
+/** Rebuild display turns from retained provider fragments without changing their text. */
+function restoreConversationTranscript(
+  sessionId: string,
+  conversation: TextAssistantView['conversation'] = [],
+): TranscriptRow[] {
+  const rows: TranscriptRow[] = [];
+  const spokenRows: Partial<Record<TranscriptRow['role'], TranscriptRow>> = {};
+  let adjacentUtterance: TranscriptRow | undefined;
+  for (const [index, row] of conversation.entries()) {
+    if (row.partial && !row.notice && row.utteranceStart !== true) {
+      // Only an explicit continuation can cross an interleaved row. Older
+      // fragments may have no boundary metadata and join only adjacent speech.
+      const utterance = row.utteranceStart === false ? spokenRows[row.role] : adjacentUtterance;
+      if (utterance?.role === row.role) {
+        if (row.requestId) utterance.id = row.requestId;
+        if (row.speechEventId)
+          utterance.speechEventIds = [...(utterance.speechEventIds ?? []), row.speechEventId];
+        utterance.text += row.text;
+        adjacentUtterance = utterance;
+        continue;
+      }
+    }
+    adjacentUtterance = undefined;
+    if (row.notice) continue;
+    const entry: TranscriptRow = {
+      id: row.role === 'user' && row.requestId ? row.requestId : `restored-${sessionId}-${index}`,
+      role: row.role,
+      text: row.text,
+      partial: row.partial,
+      requestId: row.requestId,
+      speechEventIds: row.speechEventId ? [row.speechEventId] : undefined,
+      voicePending: false,
+    };
+    rows.push(entry);
+    if (row.partial) {
+      spokenRows[row.role] = entry;
+      adjacentUtterance = entry;
+    }
+  }
+  return rows;
+}
+
 function resetReplyId(view: Pick<TextAssistantView, 'id' | 'contextRevision'>) {
   return `new-${view.id}-${view.contextRevision ?? 0}`;
 }
@@ -46,10 +88,13 @@ export type ConversationMode = 'voice' | 'text';
  * owns the conversation, so it survives whichever of them is shown.
  */
 export type Conversation = {
+  switchBlocked?: boolean;
   retainedConversations?: RetainedConversation[];
+  listError?: string;
   listRetained?: () => Promise<void>;
   openRetained?: (id: string) => Promise<boolean>;
-  resumeConversation?: () => Promise<void>;
+  deleteRetained?: (id: string) => Promise<string | undefined>;
+  resumeConversation?: (requestId?: string) => Promise<void>;
   configureModel?: (choice: ConversationModelChoice) => Promise<boolean>;
   /** Conversation input is stopped; the unsent text remains editable. */
   inputBlocked?: boolean;
@@ -201,7 +246,18 @@ export function useConversation({
   const [session, setSession] = useState<TextAssistantView | null>(null);
   const [retainedConversations, setRetainedConversations] = useState<RetainedConversation[]>();
   const resumeRequested = useRef(false);
-  const deliverySessionId = session?.id;
+  const resetCommand = useRef<string | null>(null);
+  const selectedAction = useRef<{
+    type: 'send' | 'voice' | 'retry' | 'retry-work' | 'abandon-work';
+    requestId?: string;
+  } | null>(null);
+  const resolveSelected = useRef<
+    (action: 'retry' | 'abandon', view: TextAssistantView) => Promise<void>
+  >(async () => {});
+  const sendSelected = useRef<(view: TextAssistantView) => Promise<void>>(async () => {});
+  const listRead = useRef(0);
+  const [listError, setListError] = useState('');
+  const deliverySessionId = session?.requiresActivation ? undefined : session?.id;
   useEffect(() => {
     if (deliverySessionId) void delivery?.connect(`${path}/${deliverySessionId}`);
   }, [delivery, path, deliverySessionId]);
@@ -232,6 +288,7 @@ export function useConversation({
             item.id === row.id
               ? {
                   ...row,
+                  requestId: row.requestId ?? item.requestId,
                   voiced: row.voiced ?? item.voiced,
                   voicePending: (row.voiced ?? item.voiced) === undefined && row.voicePending,
                 }
@@ -287,6 +344,18 @@ export function useConversation({
             next.review.version < previous.review.version))
       )
         return;
+      // A poll and a message response can arrive in reverse order at the
+      // same revision. Work steps only grow within a conversation context.
+      const previousSteps = previous?.workSteps ?? [];
+      const nextSteps = next.workSteps ?? [];
+      if (
+        previous?.id === next.id &&
+        (previous.contextRevision ?? 0) === (next.contextRevision ?? 0) &&
+        (previousSteps.length > nextSteps.length ||
+          (previousSteps.length === nextSteps.length &&
+            (previousSteps.at(-1)?.count ?? 0) > (nextSteps.at(-1)?.count ?? 0)))
+      )
+        next = { ...next, workSteps: previousSteps };
       if (previous) {
         const knownReceipts = new Set([
           previous.receipt?.operationId,
@@ -305,19 +374,30 @@ export function useConversation({
       }
       active.current = next;
       setSession(next);
-      if (next.paused) {
+      if (next.paused || next.requiresActivation || (!previous && next.conversation?.length)) {
         completion.current = conversationCompletion(next);
         hydratedReplies.current = new Map(
           (next.completedReplies ?? []).map((reply) => [reply.id, reply.revision]),
         );
+        const rows = restoreConversationTranscript(next.id, next.conversation);
+        if (
+          next.interruptedSpeech &&
+          next.interruptedRequestId &&
+          !rows.some((row) => row.id === next.interruptedRequestId)
+        ) {
+          const row = rows.findLast(
+            (entry) => entry.role === 'user' && entry.text === next.interruptedSpeech,
+          );
+          if (row) row.id = next.interruptedRequestId;
+          else
+            rows.push({
+              role: 'user',
+              id: next.interruptedRequestId,
+              text: next.interruptedSpeech,
+            });
+        }
         setTranscript([
-          ...(next.conversation ?? [])
-            .filter((row) => !row.notice)
-            .map((row, index) => ({
-              ...row,
-              id: `restored-${next.id}-${index}`,
-              voicePending: false,
-            })),
+          ...rows,
           ...(next.queuedRequests ?? [])
             .filter(({ source }) => source !== 'voice')
             .map(({ id, text }) => ({
@@ -391,6 +471,7 @@ export function useConversation({
         if (reply.saveCheck)
           showTranscript({
             id: `check-${reply.saveCheck.id}`,
+            requestId: reply.id,
             role: 'assistant',
             text: reply.saveCheck.reply,
             voiced,
@@ -407,6 +488,7 @@ export function useConversation({
               reply.revision === undefined
                 ? `queued-${next.id}-${reply.id}`
                 : `text-${next.id}-${reply.revision}`,
+            requestId: reply.id,
             role: 'assistant',
             text: reply.text,
             voiced,
@@ -415,6 +497,7 @@ export function useConversation({
         if (reply.receipt && !reply.saveCheck)
           showTranscript({
             id: `saved-${next.id}-${reply.receipt.operationId}`,
+            requestId: reply.id,
             role: 'assistant',
             text: 'Sparat.',
             voiced,
@@ -426,6 +509,7 @@ export function useConversation({
               reply.resetContextRevision === undefined
                 ? `result-${next.id}-${reply.revision}`
                 : resetReplyId({ id: next.id, contextRevision: reply.resetContextRevision }),
+            requestId: reply.id,
             role: 'assistant',
             text: resultReply,
             voiced,
@@ -439,6 +523,7 @@ export function useConversation({
         checkedReplies.current.add(next.saveCheck.id);
         showTranscript({
           id: `check-${next.saveCheck.id}`,
+          requestId: next.taskId,
           role: 'assistant',
           text: next.saveCheck.reply,
           voicePending: voiceConnected.current,
@@ -459,6 +544,7 @@ export function useConversation({
       )
         showTranscript({
           id: `saved-${next.id}-${next.receipt.operationId}`,
+          requestId: next.taskId,
           role: 'assistant',
           text: 'Sparat.',
           voiced,
@@ -479,6 +565,7 @@ export function useConversation({
             next.resetSource && next.discarded
               ? resetReplyId(next)
               : `result-${next.id}-${next.revision}`,
+          requestId: next.taskId,
           role: 'assistant',
           text: resultReply,
           voiced,
@@ -494,6 +581,7 @@ export function useConversation({
       )
         showTranscript({
           id: `text-${next.id}-${next.revision}`,
+          requestId: next.taskId,
           role: 'assistant',
           text: next.modelReply,
           voiced,
@@ -524,14 +612,28 @@ export function useConversation({
     },
     [update],
   );
-  const clear = useCallback(() => {
+  const replaceConversation = useCallback(
+    (next: TextAssistantView) => {
+      active.current = null;
+      completion.current = conversationCompletion();
+      hydratedReplies.current.clear();
+      setTranscript([]);
+      setUnknown(false);
+      update(next);
+    },
+    [update],
+  );
+  const clear = useCallback((keepListAndText = false) => {
     active.current = null;
     completion.current = conversationCompletion();
     hydratedReplies.current.clear();
     setSession(null);
-    setRetainedConversations(undefined);
+    if (!keepListAndText) {
+      setRetainedConversations(undefined);
+      setListError('');
+      setText('');
+    }
     resumeRequested.current = false;
-    setText('');
     setTranscript([]);
     setUnknown(false);
     setDiscovered(null);
@@ -539,6 +641,25 @@ export function useConversation({
     checkedReplies.current.clear();
     checkOccurrence.current = null;
   }, []);
+  const removeDeletedConversation = useCallback(
+    (id: string) => {
+      // A list response sent before deletion must not restore its old row.
+      listRead.current++;
+      setRetainedConversations((rows) => rows?.filter((row) => row.id !== id));
+      if (active.current?.id !== id) return;
+      requestEpoch.current++;
+      selectedAction.current = null;
+      clear(true);
+      setError('');
+      setTaskFailed(false);
+      setStartWithVoice(false);
+      setPending(false);
+      setRequested(null);
+      endVoice.current();
+      callbacks.current.onMapChange();
+    },
+    [clear],
+  );
   const fail = useCallback(
     (failure: unknown) => {
       if (!mounted.current) return;
@@ -562,6 +683,11 @@ export function useConversation({
         callbacks.current.onMapChange();
       } else if (
         failure instanceof MapRequestError &&
+        failure.code === 'assistant_conversation_deleted'
+      ) {
+        if (active.current) removeDeletedConversation(active.current.id);
+      } else if (
+        failure instanceof MapRequestError &&
         failure.code === conversationConsentRequired
       ) {
         // The server has no valid consent, whatever this client last knew.
@@ -583,7 +709,7 @@ export function useConversation({
         setSaveCheckFailed(false);
       }
     },
-    [clear],
+    [clear, removeDeletedConversation],
   );
   useEffect(() => {
     if (!enabled) return;
@@ -608,23 +734,23 @@ export function useConversation({
         // Without an answer the consent box asks. The server decides what is valid.
         if (!controller.signal.aborted) setSavedConsent(null);
       });
-    void request<{ conversation?: TextAssistantView }>(
-      `${path}/restore`,
-      undefined,
-      controller.signal,
-    )
-      .then((result) => {
-        if (!controller.signal.aborted && !active.current && result.conversation)
-          update(result.conversation);
-      })
-      .catch(() => {});
+    const leave = () => {
+      const current = active.current;
+      if (current && !current.requiresActivation)
+        void request(`${path}/${current.id}/pause`, {}, undefined, true).catch(() => {});
+    };
+    window.addEventListener('pagehide', leave);
     return () => {
+      window.removeEventListener('pagehide', leave);
+      selectedAction.current = null;
+      resetCommand.current = null;
       mounted.current = false;
       requestEpoch.current++;
       consentEpoch.current++;
       controller.abort();
       const current = active.current;
-      if (current) void request(`${path}/${current.id}/pause`, {}).catch(() => undefined);
+      if (current && !current.requiresActivation)
+        void request(`${path}/${current.id}/pause`, {}).catch(() => undefined);
       // A conversation that is enabled again starts as it does the first time.
       clear();
       setAvailable(null);
@@ -642,7 +768,7 @@ export function useConversation({
       revoking.current = false;
       setError('');
     };
-  }, [path, consentPath, enabled, clear, update]);
+  }, [path, consentPath, enabled, clear]);
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
@@ -688,7 +814,27 @@ export function useConversation({
       active.current?.id === session.id;
     const timer = setTimeout(
       () => {
-        void request<TextAssistantView>(`${path}/${session.id}`, undefined, controller.signal)
+        void request<TextAssistantView>(
+          session.requiresActivation
+            ? `${path}/retained/${session.id}/open`
+            : `${path}/${session.id}`,
+          undefined,
+          controller.signal,
+        )
+          .catch((error) => {
+            if (
+              relevant() &&
+              !session.requiresActivation &&
+              error instanceof MapRequestError &&
+              error.code === 'assistant_session_expired'
+            )
+              return request<TextAssistantView>(
+                `${path}/retained/${session.id}/open`,
+                undefined,
+                controller.signal,
+              );
+            throw error;
+          })
           .then((result) => {
             if (relevant()) update(result);
           })
@@ -707,12 +853,12 @@ export function useConversation({
     unknown ||
     checking ||
     Boolean(discovered?.some((id) => id !== manualSaveOperationId)) ||
-    session?.batchPending ||
-    session?.phase === 'recovery' ||
+    (!session?.requiresActivation && (session?.batchPending || session?.phase === 'recovery')) ||
     Boolean(
-      session?.operations.some(
-        (item) => item.status === 'pending' && item.operationId !== manualSaveOperationId,
-      ),
+      !session?.requiresActivation &&
+        session?.operations.some(
+          (item) => item.status === 'pending' && item.operationId !== manualSaveOperationId,
+        ),
     );
   const voice = useVoice({
     householdId,
@@ -726,6 +872,12 @@ export function useConversation({
     saveChecking,
     contextFailed: session?.contextSummaryState === 'failed',
     onRecoveryNeeded: () => setUnknown(true),
+    onNewConversation: () => {
+      if (saveChecking || switchBlocked || resetInProgress.current || revoking.current)
+        return false;
+      void newConversation('voice');
+      return true;
+    },
   });
   endVoice.current = () => {
     void voice.endConversation?.();
@@ -771,7 +923,7 @@ export function useConversation({
     const epoch = requestEpoch.current;
     const current = active.current;
     try {
-      if (current) {
+      if (current && !current.requiresActivation) {
         const result = await request<TextAssistantView>(`${path}/${current.id}/recover`, {
           checkId,
         });
@@ -927,6 +1079,55 @@ export function useConversation({
   }, [path, visitConsent, consentValid, pending, update, fail]);
   const start = useCallback(
     async (mode: ConversationMode) => {
+      const command = resetCommand.current;
+      resetCommand.current = null;
+      const action = selectedAction.current;
+      selectedAction.current = null;
+      if (action && active.current) {
+        const current = active.current;
+        const epoch = ++requestEpoch.current;
+        const consent = visitConsent
+          ? { consent: { textVersion: conversationConsentTextVersion } }
+          : {};
+        setPending(true);
+        try {
+          const activated = await request<TextAssistantView>(
+            `${path}/retained/${current.id}/open`,
+            { activate: true, ...consent },
+          );
+          if (!mounted.current || epoch !== requestEpoch.current) return;
+          update(activated);
+          if (action.type === 'retry' && action.requestId === activated.interruptedRequestId) {
+            const next = await request<TextAssistantView>(`${path}/${current.id}/resume`, {
+              requestId: action.requestId,
+              ...consent,
+            });
+            if (epoch === requestEpoch.current) update(next);
+          } else if (
+            (action.type === 'abandon-work' || action.type === 'retry-work') &&
+            action.requestId === activated.workFailure?.requestId &&
+            !activated.paused
+          ) {
+            await resolveSelected.current(
+              action.type === 'retry-work' ? 'retry' : 'abandon',
+              activated,
+            );
+          } else if (action.type === 'voice' && !activated.paused) setStartWithVoice(true);
+          else if (action.type === 'send' && !activated.paused)
+            await sendSelected.current(activated);
+        } catch (error) {
+          if (epoch === requestEpoch.current) {
+            if (error instanceof MapRequestError && error.code === 'assistant_conversation_busy')
+              setError(
+                'Samtalet används på en annan enhet. Vänta tills arbetet är klart och mikrofonen är avstängd.',
+              );
+            else fail(error);
+          }
+        } finally {
+          if (mounted.current && epoch === requestEpoch.current) setPending(false);
+        }
+        return;
+      }
       if (resumeRequested.current) {
         await resumeConversation();
         return;
@@ -937,23 +1138,16 @@ export function useConversation({
       setError('');
       try {
         // A saved consent is on the server. One for the visit is stated with each start.
-        const result = await request<TextAssistantView>(
-          path,
-          visitConsent ? { consent: { textVersion: conversationConsentTextVersion } } : {},
-        );
+        const result = await request<TextAssistantView>(path, {
+          previousId: active.current?.requiresActivation ? undefined : active.current?.id,
+          ...(visitConsent ? { consent: { textVersion: conversationConsentTextVersion } } : {}),
+        });
         if (!mounted.current || epoch !== requestEpoch.current) {
           void request(`${path}/${result.id}/pause`, {}).catch(() => undefined);
           return;
         }
-        // This start follows the user's explicit new-conversation action.
-        if (active.current?.paused) {
-          active.current = null;
-          completion.current = conversationCompletion();
-          hydratedReplies.current.clear();
-          setTranscript([]);
-        }
-        setUnknown(false);
-        update(result);
+        replaceConversation(result);
+        if (command) setText((value) => (value === command ? '' : value));
         callbacks.current.onStarted?.(mode);
       } catch (failure) {
         if (epoch !== requestEpoch.current) return;
@@ -965,7 +1159,7 @@ export function useConversation({
         if (mounted.current && epoch === requestEpoch.current) setPending(false);
       }
     },
-    [path, visitConsent, update, fail, voice.stop, resumeConversation],
+    [path, visitConsent, update, replaceConversation, fail, voice.stop, resumeConversation],
   );
   // A requested start waits for the server's answers about the conversation
   // and the saved consent. It then starts, or the consent box asks first.
@@ -1102,6 +1296,7 @@ export function useConversation({
         if (epoch !== requestEpoch.current) return;
         setUnknown(false);
         update(result);
+        return result;
       } catch (failure) {
         if (epoch === requestEpoch.current) fail(failure);
       } finally {
@@ -1110,8 +1305,26 @@ export function useConversation({
     },
     [path, update, fail],
   );
-  async function send(queue = true) {
-    const current = session;
+  async function send(queue = true, current = session) {
+    const control = conversationCommand(text);
+    if (current && control?.reset && !control.discard) {
+      if (!navigator.onLine || !connection.current || inputBlocked) return;
+      const sent = text;
+      if (!consentValid) {
+        resetCommand.current = sent;
+        setRequested('text');
+        return;
+      }
+      await newConversation();
+      if (active.current && active.current.id !== current.id)
+        setText((value) => (value === sent ? '' : value));
+      return;
+    }
+    if (current?.requiresActivation && !current.interruptedRequestId) {
+      selectedAction.current = { type: 'send' };
+      setRequested('text');
+      return;
+    }
     if (
       !current ||
       current.paused ||
@@ -1124,10 +1337,9 @@ export function useConversation({
       !navigator.onLine
     )
       return;
-    const control = conversationCommand(text);
     if (control?.reset) {
       const sent = text;
-      await newConversation(control.discard);
+      await resetContext(control.discard);
       if (
         active.current?.id === current.id &&
         (active.current.contextRevision ?? 0) > (current.contextRevision ?? 0)
@@ -1138,6 +1350,7 @@ export function useConversation({
     const epoch = ++requestEpoch.current;
     const sent = text;
     const messageId = crypto.randomUUID();
+    const correction = voice.prepareTextCorrection?.();
     setPending(true);
     setError('');
     setTaskFailed(false);
@@ -1163,9 +1376,18 @@ export function useConversation({
         }
         return;
       }
+      // Wait for the stop to cancel the preceding work. Keep the draft versions
+      // that the person saw when they wrote the new message.
+      const confirmed = correction?.interruption ? await correction.interruption : true;
+      const latest = active.current;
+      if (epoch !== requestEpoch.current || latest?.id !== current.id) return;
+      if (!confirmed) return;
       showTranscript({ id: messageId, role: 'user', text: sent });
+      // The user's fresh submission arms the silence gate before any reply can
+      // reach Live, even if the response to this POST is delayed.
+      correction?.armPlayback?.();
       const result = await request<TextAssistantView>(`${path}/${current.id}/messages`, {
-        revision: current.revision,
+        revision: correction?.interruption ? latest.revision : current.revision,
         draftVersion: current.review.version,
         contentVersion: current.review.contentVersion,
         requestId: messageId,
@@ -1195,9 +1417,19 @@ export function useConversation({
       if (mounted.current && epoch === requestEpoch.current) setPending(false);
     }
   }
-  async function resolveWork(action: 'retry' | 'abandon') {
-    const current = active.current;
-    if (!current?.workFailure || current.paused || pending || revoking.current) return;
+  sendSelected.current = (view) => send(true, view);
+  async function resolveWork(action: 'retry' | 'abandon', activated?: TextAssistantView) {
+    const current = activated ?? active.current;
+    if (!current?.workFailure || (!activated && pending) || revoking.current) return;
+    if (current.requiresActivation) {
+      selectedAction.current = {
+        type: action === 'retry' ? 'retry-work' : 'abandon-work',
+        requestId: current.workFailure.requestId,
+      };
+      setRequested('text');
+      return;
+    }
+    if (current.paused) return;
     const requestId = current.workFailure.requestId;
     const epoch = ++requestEpoch.current;
     setPending(true);
@@ -1222,13 +1454,20 @@ export function useConversation({
       if (accepted) connection?.observeAccepted(accepted);
       setUnknown(false);
       update(result);
+      if (action === 'abandon' && !result.workFailure && result.reply)
+        showTranscript({
+          id: `result-${result.id}-${result.revision}`,
+          role: 'assistant',
+          text: result.reply,
+        });
     } catch (failure) {
       if (epoch === requestEpoch.current) fail(failure);
     } finally {
       if (mounted.current && epoch === requestEpoch.current) setPending(false);
     }
   }
-  async function newConversation(discard = false) {
+  resolveSelected.current = resolveWork;
+  async function resetContext(discard = false) {
     const current = active.current;
     if (!current || resetInProgress.current || saveChecking || revoking.current) return;
     if (current.paused && !consentValid) {
@@ -1274,9 +1513,53 @@ export function useConversation({
       if (mounted.current && epoch === requestEpoch.current) setPending(false);
     }
   }
+  const switchBlocked = Boolean(
+    pending ||
+      (!session?.requiresActivation &&
+        !session?.waitingForRetainedWork &&
+        session?.phase === 'working') ||
+      voice.working ||
+      voice.speaking ||
+      voice.playbackPending ||
+      voice.starting ||
+      (!session?.requiresActivation && session?.contextSummaryState === 'summarizing'),
+  );
+  async function newConversation(resetSource?: 'voice') {
+    if (saveChecking || switchBlocked || resetInProgress.current || revoking.current) return;
+    if (!consentValid) {
+      setRequested('text');
+      return;
+    }
+    const epoch = ++requestEpoch.current;
+    resetInProgress.current = true;
+    setPending(true);
+    setStartWithVoice(false);
+    try {
+      const next = await voice.newConversation(() =>
+        request<TextAssistantView>(path, {
+          resetSource,
+          previousId: active.current?.requiresActivation ? undefined : active.current?.id,
+          ...(visitConsent ? { consent: { textVersion: conversationConsentTextVersion } } : {}),
+        }),
+      );
+      if (!mounted.current || epoch !== requestEpoch.current) {
+        void request(`${path}/${next.id}/pause`, {}).catch(() => undefined);
+        return;
+      }
+      setError('');
+      replaceConversation(next);
+    } catch (failure) {
+      if (epoch === requestEpoch.current) fail(failure);
+    } finally {
+      resetInProgress.current = false;
+      if (mounted.current && epoch === requestEpoch.current) setPending(false);
+    }
+  }
   const selectionAcknowledged = useRef<string | null>(null);
   const selectionKey =
-    session?.phase === 'working' && session.selection?.revision === session.revision
+    !session?.requiresActivation &&
+    session?.phase === 'working' &&
+    session.selection?.revision === session.revision
       ? JSON.stringify([session.id, session.selection])
       : null;
   useEffect(() => {
@@ -1301,7 +1584,7 @@ export function useConversation({
     })();
     return () => abort.abort();
   }, [selectionKey, pending, command]);
-  const working = session?.phase === 'working';
+  const working = !session?.requiresActivation && session?.phase === 'working';
   const deliveryFailed = deliveryResults.some(
     (item) =>
       item.state === 'failed' &&
@@ -1328,53 +1611,68 @@ export function useConversation({
       error: consentError,
     },
     session,
+    switchBlocked,
     retainedConversations,
+    listError,
     listRetained: async () => {
-      if (pending) return;
+      const read = ++listRead.current;
       const epoch = requestEpoch.current;
-      setPending(true);
-      setError('');
       try {
         const result = await request<{ conversations: RetainedConversation[] }>(`${path}/retained`);
-        if (mounted.current && epoch === requestEpoch.current)
+        if (mounted.current && epoch === requestEpoch.current && read === listRead.current) {
+          setListError('');
           setRetainedConversations(result.conversations);
-      } catch (failure) {
-        if (epoch === requestEpoch.current) fail(failure);
-      } finally {
-        if (mounted.current && epoch === requestEpoch.current) setPending(false);
+        }
+      } catch {
+        if (mounted.current && epoch === requestEpoch.current && read === listRead.current)
+          setListError('Samtalslistan kunde inte hämtas.');
       }
     },
-    openRetained: async (id) => {
-      if (pending) return false;
-      if (text.trim()) {
-        setError('Skicka eller töm meddelandefältet innan du öppnar ett annat samtal.');
-        return false;
+    deleteRetained: async (id) => {
+      try {
+        await request(`${path}/retained/${id}/delete`, {});
+      } catch (failure) {
+        if (failure instanceof MapRequestError && failure.code === 'assistant_conversation_busy')
+          return 'Skyttel arbetar eller talar i samtalet. Vänta tills det är klart.';
+        if (!(failure instanceof MapRequestError && failure.code === 'assistant_session_expired'))
+          return 'Samtalet kunde inte tas bort. Försök igen.';
       }
+      if (mounted.current) removeDeletedConversation(id);
+    },
+    openRetained: async (id) => {
+      if (switchBlocked) return false;
       const epoch = ++requestEpoch.current;
       setPending(true);
       setError('');
       try {
+        const next = await request<TextAssistantView>(`${path}/retained/${id}/open`);
+        if (!mounted.current || epoch !== requestEpoch.current) return false;
+        setStartWithVoice(false);
         await voice.stop();
         const current = active.current;
-        if (current && current.id !== id) await request(`${path}/${current.id}/pause`, {});
-        const next = await request<TextAssistantView>(`${path}/retained/${id}/open`, {});
+        if (current && !current.requiresActivation && current.id !== id)
+          await request(`${path}/${current.id}/pause`, {});
         if (!mounted.current || epoch !== requestEpoch.current) return false;
-        active.current = null;
-        completion.current = conversationCompletion();
-        hydratedReplies.current.clear();
-        setTranscript([]);
-        setRetainedConversations(undefined);
-        setUnknown(false);
-        update(next);
+        replaceConversation(next);
         return true;
       } catch (failure) {
-        if (epoch === requestEpoch.current) fail(failure);
+        if (epoch === requestEpoch.current) {
+          if (failure instanceof MapRequestError && failure.status === 404) {
+            setRetainedConversations((rows) => rows?.filter((row) => row.id !== id));
+            setError('Det valda samtalet är inte längre tillgängligt.');
+          } else fail(failure);
+        }
         return false;
       } finally {
         if (mounted.current && epoch === requestEpoch.current) setPending(false);
       }
     },
-    resumeConversation,
+    resumeConversation: async (requestId) => {
+      if (!requestId) return resumeConversation();
+      if (active.current?.interruptedRequestId !== requestId) return;
+      selectedAction.current = { type: 'retry', requestId };
+      setRequested('text');
+    },
     transcript,
     configureModel: async (choice: ConversationModelChoice) => {
       const current = active.current;
@@ -1410,7 +1708,11 @@ export function useConversation({
         callbacks.current.onUnavailable?.();
         return;
       }
-      if (!session && !pending) {
+      if (mode === 'voice' && session?.requiresActivation && !pending) {
+        selectedAction.current = { type: 'voice' };
+        voice.prepareAudio?.();
+        setRequested(mode);
+      } else if (!session && !pending) {
         if (mode === 'voice' && consentValid && available === true) voice.prepareAudio?.();
         setRequested(mode);
       }
@@ -1420,6 +1722,8 @@ export function useConversation({
       // The user has approved, and the save is on its way: it cannot be taken back here.
       if (savingConsent) return;
       resumeRequested.current = false;
+      selectedAction.current = null;
+      resetCommand.current = null;
       void voice.stop();
       setRequested(null);
       setConsentError('');
@@ -1430,15 +1734,18 @@ export function useConversation({
     cancel: async () => {
       const current = active.current;
       if (!current) return;
-      const cancelWork = async () => {
-        await command('cancel', {
+      const cancelWork = () =>
+        command('cancel', {
           revision: current.revision,
           contextRevision: current.contextRevision ?? 0,
           all: true,
         });
-        return active.current ?? undefined;
-      };
-      if (voice.state === 'listening' || voice.starting) await voice.silence(cancelWork);
+      if (voice.state === 'listening' || voice.starting)
+        await voice.silence(async () => {
+          const canceled = await cancelWork();
+          if (!canceled) throw new Error('Conversation cancellation could not be confirmed');
+          return canceled;
+        });
       else await cancelWork();
     },
     newConversation,
@@ -1466,7 +1773,9 @@ export function useConversation({
       }
     },
     recover,
-    retry: (operationId) => command('retry', { operationId }),
+    retry: async (operationId) => {
+      await command('retry', { operationId });
+    },
     retryWork: () => resolveWork('retry'),
     abandonWork: () => resolveWork('abandon'),
   };

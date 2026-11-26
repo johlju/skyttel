@@ -40,7 +40,7 @@ async function selectPricedModel(flow: { path: string; session: TextAssistantVie
     (
       await client.post(`${flow.path}/text-assistant/${flow.session.id}/model-choice`, {
         headers: { origin: app.origin },
-        data: { model: 'gpt-6.1-sol', effort: 'high' },
+        data: { model: 'gpt-6.2-sol', effort: 'high' },
       })
     ).status(),
   ).toBe(200);
@@ -164,8 +164,8 @@ for (const mode of ['sequential', 'overlap'] as const) {
     const unknown = events.find((event) => event.kind === 'work_result');
     expect(unknown).toMatchObject({
       taskId: 'controlled',
-      consentTextVersion: 4,
-      conversationConsentTextVersion: 4,
+      consentTextVersion: 5,
+      conversationConsentTextVersion: 5,
       status: 'incomplete',
       data: { disposition: 'unknown', reason: 'batch_outcome_unknown' },
     });
@@ -189,8 +189,8 @@ for (const mode of ['sequential', 'overlap'] as const) {
     expect(results).toHaveLength(2);
     expect(results[1]).toMatchObject({
       taskId: 'controlled',
-      consentTextVersion: 4,
-      conversationConsentTextVersion: 4,
+      consentTextVersion: 5,
+      conversationConsentTextVersion: 5,
       status: 'completed',
       context: {
         providerCallId: unknown?.context?.providerCallId,
@@ -264,8 +264,8 @@ for (const mode of ['sequential', 'overlap'] as const) {
     const costPath = `${app.origin}/api/operator/costs?month=${new Date().toISOString().slice(0, 7)}`;
     const cost = await (await client.get(costPath)).json();
     expect(cost.terra).toMatchObject({
-      attempts: 3,
-      usage: { input: { known: 360 }, output: { known: 90 } },
+      attempts: 4,
+      usage: { input: { known: 368 }, output: { known: 92 } },
     });
     expect(cost.terra.estimatedUsd).toBeGreaterThan(0);
     const endpoint = `${flow.path}/text-assistant/${flow.session.id}`;
@@ -530,9 +530,9 @@ for (const mode of ['sequential', 'overlap'] as const) {
         )
       ).json();
       expect(cost.terra).toMatchObject({
-        attempts: 4,
+        attempts: 5,
         uncertainAttempts: 1,
-        usage: { input: { known: 360, missing: 1 }, output: { known: 90, missing: 1 } },
+        usage: { input: { known: 368, missing: 1 }, output: { known: 92, missing: 1 } },
       });
       expect(cost.terra.estimatedUsd).toBeGreaterThan(0);
       expect(await (await client.get(`${flow.path}/map`)).json()).toEqual(changed);
@@ -662,8 +662,8 @@ for (const mode of ['sequential', 'overlap'] as const) {
           )
         ).json();
         expect(cost.terra).toMatchObject({
-          attempts: 3,
-          usage: { input: { known: 360, missing: 0 }, output: { known: 90, missing: 0 } },
+          attempts: 4,
+          usage: { input: { known: 368, missing: 0 }, output: { known: 92, missing: 0 } },
         });
         expect(model.requests).toHaveLength(1);
         expect(model.authorizationRequests).toHaveLength(2);
@@ -853,10 +853,10 @@ for (const mode of ['sequential', 'overlap'] as const) {
         )
       ).json();
       expect(cost.terra).toMatchObject({
-        attempts: 5,
+        attempts: 6,
         uncertainAttempts: 1,
         unpricedAttempts: 1,
-        usage: { input: { known: 480, missing: 1 }, output: { known: 120, missing: 1 } },
+        usage: { input: { known: 488, missing: 1 }, output: { known: 122, missing: 1 } },
       });
       expect(cost.terra.estimatedUsd).toBeGreaterThan(0);
       expect(cost.total.incomplete).toBe(true);
@@ -1089,10 +1089,10 @@ for (const mode of ['sequential', 'overlap'] as const) {
       )
     ).json();
     expect(cost.terra).toMatchObject({
-      attempts: mode === 'overlap' ? 2 : 1,
+      attempts: mode === 'overlap' ? 3 : 2,
       usage: {
-        input: { known: mode === 'overlap' ? 240 : 120 },
-        output: { known: mode === 'overlap' ? 60 : 30 },
+        input: { known: mode === 'overlap' ? 248 : 128 },
+        output: { known: mode === 'overlap' ? 62 : 32 },
       },
     });
     await flow.submit('Läs bara utkastet.', await flow.current(), 'fresh-read');

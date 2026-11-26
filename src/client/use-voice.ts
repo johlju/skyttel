@@ -1,7 +1,11 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { conversationConsentRevoked } from '../shared/conversation-consent.js';
 import type { TextAssistantView } from '../shared/text-assistant.js';
-import type { VoiceAssistantResponse, VoiceAssistantView } from '../shared/voice-assistant.js';
+import {
+  unconfirmedPlaybackIdleMs,
+  type VoiceAssistantResponse,
+  type VoiceAssistantView,
+} from '../shared/voice-assistant.js';
 import type { TranscriptRow } from './ConversationTranscript.js';
 import { MapRequestError, request } from './map-request.js';
 import { type TaskDeliveryConnection, TaskDeliveryContext } from './task-delivery.js';
@@ -27,6 +31,7 @@ export type Voice = {
   starting: boolean;
   /** Skyttel is heard. */
   speaking: boolean;
+  playbackPending?: boolean;
   /** The user is heard, with the microphone on. */
   userSpeaking: boolean;
   /** Skyttel works with a task that the user gave with the voice. */
@@ -38,6 +43,7 @@ export type Voice = {
   savedId?: string;
   error: string;
   failure?: VoiceFailure & { occurrence: number };
+  refusal?: VoiceAssistantView['refusal'];
   playbackBlocked: boolean;
   disconnected: boolean;
   /** The microphone cannot be turned on: Skyttel works with a written message. */
@@ -60,6 +66,10 @@ export type Voice = {
   endConversation?: () => Promise<void>;
   /** Silences what Skyttel is saying. */
   silence: (cancelWork?: () => Promise<TextAssistantView | void>) => Promise<void>;
+  /** Captures the current audible interruption for a fresh written correction. */
+  prepareTextCorrection?: () =>
+    | { interruption?: Promise<boolean>; armPlayback?: () => void }
+    | undefined;
   /** Replace provider context and queued audio while keeping the authorized microphone. */
   newConversation: (reset: () => Promise<TextAssistantView>) => Promise<TextAssistantView>;
   playAudio: () => void;
@@ -83,15 +93,76 @@ type Attempt = {
   /** Microphone owned while a conversation reset waits for the server. */
   retained?: MediaStream;
   poll?: ReturnType<typeof setTimeout>;
+  resumeRequested?: boolean;
+  resumeMicrophone?: (mode?: 'prepare' | 'resume') => void;
   held?: HeldRequest;
   ready?: boolean;
   /** Keep the microphone choice through the new peer's asynchronous ready event. */
   contextRenewal?: boolean;
   summaryPausedAt?: number;
   providerGeneration?: number;
-  output?: { text: string; heard: boolean; speaking: boolean; matched?: string };
+  inputVersion?: number;
+  playedResponseId?: string;
+  output?: {
+    text: string;
+    audibleTextLength?: number;
+    mediaEnd?: number;
+    evidence?: {
+      started: boolean;
+      fragments: { from: number; remainingMs: number; textLength: number }[];
+    };
+    speaking: boolean;
+  };
   acknowledgement?: { id: string; lastActivity: number; notified: boolean };
+  refusalId?: string;
+  newConversationHandled?: boolean;
 };
+
+function voiceAnchor(view: TextAssistantView) {
+  return {
+    revision: view.revision,
+    draftVersion: view.review.version,
+    contentVersion: view.review.contentVersion,
+  };
+}
+
+function matchesVoiceAnchor(anchor: ReturnType<typeof voiceAnchor>, view: TextAssistantView) {
+  return (
+    anchor.revision === view.revision &&
+    anchor.draftVersion === view.review.version &&
+    anchor.contentVersion === view.review.contentVersion
+  );
+}
+
+function workingOnWrittenMessage(view: TextAssistantView | null) {
+  return view?.phase === 'working' && view.taskSource === 'text';
+}
+
+function spokenWords(text: string) {
+  return text
+    .toLocaleLowerCase('sv')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
+function reflectsOrdinaryReply(expected: string, spoken: string) {
+  const expectedText = spokenWords(expected);
+  const expectedWords = expectedText.split(' ');
+  if (expectedWords.length >= 3 && ` ${spoken} `.includes(` ${expectedText} `)) return true;
+  const spokenTerms = new Set(spoken.split(' '));
+  const mainWords = expectedWords.filter((word) => word.length >= 4);
+  const terms = [...new Set(mainWords)];
+  const matched = terms.filter((word) => spokenTerms.has(word)).length;
+  // A brief acknowledgement or an opening fragment should still leave the
+  // text-view notice available. Look for substantial overlap including the end.
+  return (
+    matched >= 3 &&
+    matched * 3 >= terms.length * 2 &&
+    spoken.split(' ').length * 4 >= expectedWords.length * 3 &&
+    mainWords.slice(-2).some((word) => spokenTerms.has(word))
+  );
+}
+
 async function stopRemote(path: string, id: string) {
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -122,6 +193,7 @@ export function useVoice(options: {
   /** The server refuses the voice work. The failure says why. */
   onAccessLost: (failure: MapRequestError) => void;
   onRecoveryNeeded?: () => void;
+  onNewConversation?: () => boolean;
   autoStart?: boolean;
   onTranscript?: (row: TranscriptRow) => void;
   /** Network or service conditions forbid sending microphone input. */
@@ -134,6 +206,11 @@ export function useVoice(options: {
   const path = options.assistant
     ? `/api/households/${encodeURIComponent(options.householdId)}/text-assistant/${encodeURIComponent(options.assistant.id)}/voice`
     : null;
+  const transfer = useRef<{
+    id: string;
+    input?: RetainedInput;
+    resetConversation?: boolean;
+  } | null>(null);
   const latest = useRef(options);
   latest.current = options;
   // Permission promises and transport callbacks must read the same current
@@ -147,6 +224,7 @@ export function useVoice(options: {
     );
   }, []);
   const current = useRef<Attempt | null>(null);
+  const interrupting = useRef<{ path: string | null; result: Promise<boolean> } | null>(null);
   const prepared = useRef<VoicePlayback | null>(null);
   const held = useRef<HeldRequest | null>(null);
   const cancelledHeldStart = useRef(false);
@@ -178,6 +256,19 @@ export function useVoice(options: {
   const [off, setOff] = useState(false);
   const offRef = useRef(off);
   offRef.current = off;
+  const pauseCapture = useCallback(() => {
+    const attempt = current.current;
+    if (attempt) {
+      attempt.resumeRequested = false;
+      attempt.transport?.setMicrophonePaused(true);
+    }
+    offRef.current = true;
+    setOff(true);
+  }, []);
+  const writtenWork = workingOnWrittenMessage(options.assistant);
+  useEffect(() => {
+    if (writtenWork && current.current) current.current.resumeRequested = false;
+  }, [writtenWork]);
   const [activity, setActivity] = useState({ microphone: false, speaker: false });
   const activityRef = useRef(activity);
   activityRef.current = activity;
@@ -202,32 +293,30 @@ export function useVoice(options: {
     // A typed task has no Live delegation event. Output from a preceding task
     // must not prove completion of this task's question or save response.
     const attempt = current.current;
-    if (attempt) attempt.output = { text: '', heard: false, speaking: false };
+    if (attempt) attempt.output = { text: '', speaking: false };
   }, [options.assistant?.taskId]);
   checkOutput.current = () => {
     const attempt = current.current;
     const response = voice?.response;
     const output = attempt?.output;
     if (!attempt || !response || !output || completedOutput.current.has(response.id)) return;
-    const words = (text: string) =>
-      text
-        .toLocaleLowerCase('sv')
-        .replace(/[^\p{L}\p{N}]+/gu, ' ')
-        .trim();
-    if (!response.text || !words(output.text).includes(words(response.text))) return;
-    if (output.matched !== response.id) {
-      output.matched = response.id;
-      // Earlier audio and a pause before the final word do not prove that the
-      // audio associated with a newly delivered transcript has even started.
-      output.heard = output.speaking;
-    }
-    if (!output.heard || output.speaking) return;
-    // A matching transcript alone never starts the timer: audio must first be
-    // observed, and then drain. Live offers no complete-turn event; future
-    // unsolicited output cannot be ruled out by this bounded-word check.
+    const expected = spokenWords(response.text);
+    const audible = spokenWords(output.text.slice(0, output.audibleTextLength ?? 0));
+    if (!expected || output.speaking) return;
+    const replyHeard =
+      ` ${audible} `.includes(` ${expected} `) ||
+      (output.audibleTextLength === output.text.length &&
+        response.conversationalText &&
+        !response.questionPending &&
+        !response.receiptOperationId &&
+        reflectsOrdinaryReply(response.conversationalText, audible));
+    if (!replyHeard) return;
+    // Live offers no complete-turn event. Acknowledge the words matched to
+    // observed audio after playback drains.
     completedOutput.current.add(response.id);
+    attempt.playedResponseId = response.id;
     setFailure((previous) => (previous?.noticeId === 'voiceReplyUnconfirmed' ? null : previous));
-    attempt.output = { text: '', heard: false, speaking: false };
+    attempt.output = { text: '', speaking: false };
     if (response.questionPending) setSpokenQuestion(response.revision);
     if (
       response.receiptOperationId &&
@@ -367,9 +456,13 @@ export function useVoice(options: {
     };
   }, [options.householdId, stop]);
   const prepareAudio = useCallback(() => {
+    const attempt = current.current;
+    if (attempt) {
+      if (offRef.current) attempt.resumeMicrophone?.('prepare');
+      return;
+    }
     if (
       prepared.current ||
-      current.current ||
       typeof navigator.mediaDevices?.getUserMedia !== 'function' ||
       typeof RTCPeerConnection !== 'function' ||
       typeof AudioContext !== 'function'
@@ -412,7 +505,7 @@ export function useVoice(options: {
         controller: new AbortController(),
         held: held.current ?? undefined,
         contextRenewal: summaryRenewal.current,
-        output: { text: '', heard: false, speaking: false },
+        output: { text: '', speaking: false },
       };
       current.current = attempt;
       epoch.current++;
@@ -426,6 +519,7 @@ export function useVoice(options: {
       setError(null);
       const active = () => mounted.current && current.current === attempt;
       let admitted = initial;
+      let synchronized: TextAssistantView | undefined;
       const anchor = () => {
         const shown = latest.current.assistant;
         const assistant =
@@ -437,11 +531,7 @@ export function useVoice(options: {
             shown.review.version >= admitted.review.version)
             ? shown
             : admitted;
-        return {
-          revision: assistant.revision,
-          draftVersion: assistant.review.version,
-          contentVersion: assistant.review.contentVersion,
-        };
+        return voiceAnchor(assistant);
       };
       const fail = (failure?: unknown) => {
         if (!active()) return;
@@ -460,23 +550,44 @@ export function useVoice(options: {
           if (task.delivery && ids.has(task.id)) attempt.delivery?.observeAccepted(task.delivery);
       };
       const poll = async () => {
+        attempt.poll = undefined;
         if (!active() || !attempt.voiceId) return;
         if (!navigator.onLine || latest.current.inputBlocked) {
           attempt.poll = setTimeout(() => void poll(), 500);
           return;
         }
         try {
+          // connect reuses the live socket and opens a new one if it closed.
+          const responseDelivery = await delivery?.connect(path.replace(/\/voice$/, ''));
+          if (!active()) return;
+          if (responseDelivery) attempt.delivery = responseDelivery;
+          const rendered = anchor();
           const result = await request<VoiceAssistantResponse>(
             `${path}/${attempt.voiceId}/poll`,
             {
-              ...anchor(),
+              ...rendered,
               microphoneOn: !offRef.current,
               microphoneActive: !offRef.current && activityRef.current.microphone,
               speakerActive: activityRef.current.speaker,
+              confirmedInputVersion:
+                interrupting.current?.path === path ? undefined : attempt.inputVersion,
+              playedResponseId:
+                interrupting.current?.path === path ? undefined : attempt.playedResponseId,
+              deliveryConnectionId: responseDelivery?.id,
             },
             attempt.controller.signal,
           );
           if (!active()) return;
+          if (result.voice.newConversationRequested && !attempt.newConversationHandled)
+            attempt.newConversationHandled = latest.current.onNewConversation?.();
+          if (!active()) return;
+          if (workingOnWrittenMessage(result.assistant)) attempt.resumeRequested = false;
+          // A successful poll has registered both the displayed anchor and
+          // the server's current pending questions on this voice connection.
+          synchronized = matchesVoiceAnchor(rendered, result.assistant)
+            ? result.assistant
+            : undefined;
+          attempt.inputVersion = result.voice.inputVersion;
           observeDelivery(result);
           apply(result.assistant, result.voice.replyDelivery);
           if ((result.assistant.contextRevision ?? 0) > (initial.contextRevision ?? 0)) {
@@ -485,7 +596,7 @@ export function useVoice(options: {
           }
           if (result.assistant.contextSummaryState === 'failed') {
             attempt.transport?.suspendInput();
-            setOff(true);
+            pauseCapture();
             attempt.poll = setTimeout(() => void poll(), 500);
             return;
           }
@@ -513,18 +624,32 @@ export function useVoice(options: {
             return;
           }
           setVoice(result.voice);
+          const refusal = result.voice.refusal;
+          const newRefusal = refusal && refusal.id !== attempt.refusalId;
+          if (newRefusal) {
+            attempt.refusalId = refusal.id;
+            // This newer outcome supersedes the playback warning. Actual
+            // playback may still be verified by the audio path.
+            if (attempt.acknowledgement) attempt.acknowledgement.notified = true;
+            setFailure((previous) =>
+              previous?.noticeId === 'voiceReplyUnconfirmed' ? null : previous,
+            );
+          }
           const response = result.voice.response;
           if (response && !completedOutput.current.has(response.id)) {
             if (attempt.acknowledgement?.id !== response.id)
               attempt.acknowledgement = {
                 id: response.id,
                 lastActivity: Date.now(),
-                notified: false,
+                notified: Boolean(newRefusal),
               };
             const acknowledgement = attempt.acknowledgement;
             if (activityRef.current.speaker || activityRef.current.microphone)
               acknowledgement.lastActivity = Date.now();
-            if (!acknowledgement.notified && Date.now() - acknowledgement.lastActivity >= 15_000) {
+            if (
+              !acknowledgement.notified &&
+              Date.now() - acknowledgement.lastActivity >= unconfirmedPlaybackIdleMs
+            ) {
               acknowledgement.notified = true;
               setError({ noticeId: 'voiceReplyUnconfirmed' });
             }
@@ -544,11 +669,39 @@ export function useVoice(options: {
             void stop();
             return;
           }
+          if (attempt.resumeRequested) attempt.resumeMicrophone?.();
           attempt.poll = setTimeout(() => void poll(), 500);
         } catch (failure) {
           if (!navigator.onLine || latest.current.inputBlocked)
             attempt.poll = setTimeout(() => void poll(), 500);
           else fail(failure);
+        }
+      };
+      attempt.resumeMicrophone = (mode = 'resume') => {
+        if (
+          !inputAllowed() ||
+          attempt.summaryPausedAt !== undefined ||
+          workingOnWrittenMessage(latest.current.assistant)
+        ) {
+          attempt.resumeRequested = false;
+          return;
+        }
+        if (
+          synchronized &&
+          matchesVoiceAnchor(anchor(), synchronized) &&
+          latest.current.assistant?.phase === synchronized.phase
+        ) {
+          if (mode === 'prepare') return;
+          attempt.resumeRequested = false;
+          attempt.transport?.setMicrophonePaused(false);
+          offRef.current = false;
+          setOff(false);
+          return;
+        }
+        if (mode === 'resume') attempt.resumeRequested = true;
+        if (attempt.poll !== undefined) {
+          clearTimeout(attempt.poll);
+          void poll();
         }
       };
       try {
@@ -603,16 +756,54 @@ export function useVoice(options: {
             onDisconnected: (value) => {
               if (!active()) return;
               setDisconnected(value);
-              if (value) setOff(true);
+              if (value) pauseCapture();
             },
             onTranscript: (row) => {
               if (active()) latest.current.onTranscript?.(row);
             },
-            onOutputTranscript: (text) => {
-              if (!active() || !attempt.output) return;
+            onOutputTranscript: (text, interval) => {
+              const output = attempt.output;
+              if (!active() || !output) return;
               if (attempt.acknowledgement) attempt.acknowledgement.lastActivity = Date.now();
-              attempt.output.text += text;
+              output.text += text;
+              if (interval && (output.mediaEnd === undefined || interval.end > output.mediaEnd)) {
+                const from = Math.max(interval.start, output.mediaEnd ?? interval.start);
+                output.evidence ??= { started: false, fragments: [] };
+                output.evidence.fragments.push({
+                  from: performance.now(),
+                  remainingMs: interval.end - from,
+                  textLength: output.text.length,
+                });
+                output.mediaEnd = interval.end;
+              }
               checkOutput.current();
+            },
+            needsPlaybackProgress: () => Boolean(attempt.output?.evidence),
+            onPlaybackProgress: (from, at, renderedMs, speaker) => {
+              const output = attempt.output;
+              const evidence = output?.evidence;
+              if (!active() || !output || !evidence) return;
+              if (!evidence.started && !speaker) return;
+              const previousAudibleLength = output.audibleTextLength;
+              // A stats read can finish after more transcript has arrived. Spend
+              // its frames once, and only on fragments present during the sample.
+              while (renderedMs > 0 && evidence.fragments.length) {
+                const fragment = evidence.fragments[0];
+                if (at <= fragment.from) break;
+                if (from < fragment.from) renderedMs = Math.min(renderedMs, at - fragment.from);
+                const credit = Math.min(renderedMs, fragment.remainingMs);
+                evidence.started = true;
+                fragment.remainingMs -= credit;
+                fragment.from = at;
+                renderedMs -= credit;
+                if (fragment.remainingMs >= 0.001) break;
+                output.audibleTextLength = fragment.textLength;
+                evidence.fragments.shift();
+              }
+              if (!evidence.fragments.length) output.evidence = undefined;
+              // Receiver stats can finish after activity has already reported silence.
+              if (!speaker && output.audibleTextLength !== previousAudibleLength)
+                checkOutput.current();
             },
             onAudioActivity: (value) => {
               activityRef.current = value;
@@ -620,12 +811,11 @@ export function useVoice(options: {
               setActivity(value);
               if (attempt.output) {
                 attempt.output.speaking = value.speaker;
-                attempt.output.heard ||= value.speaker;
                 checkOutput.current();
               }
             },
             onDelegation: () => {
-              attempt.output = { text: '', heard: false, speaking: false };
+              attempt.output = { text: '', speaking: false };
             },
           },
           playback,
@@ -650,12 +840,15 @@ export function useVoice(options: {
               if (!active()) throw new DOMException('Voice setup cancelled', 'AbortError');
               if (delivery && !attempt.delivery)
                 throw new Error('The whole-answer delivery connection is unavailable');
+              const rendered = anchor();
               result = await request<VoiceAssistantResponse>(
                 path,
                 {
                   sdp,
+                  confirmBrowserInput: true,
+                  freshConversationControls: true,
                   deliveryConnectionId: attempt.delivery?.id,
-                  ...anchor(),
+                  ...rendered,
                   microphoneOn: !(reuse?.paused ?? attempt.held?.released ?? false),
                   // The server supplies the authoritative conversation context.
                   // Only an actual reset authorizes its spoken acknowledgement.
@@ -665,6 +858,7 @@ export function useVoice(options: {
                 },
                 options.signal,
               );
+              if (matchesVoiceAnchor(rendered, result.assistant)) synchronized = result.assistant;
             } catch (failure) {
               if (
                 failure instanceof MapRequestError &&
@@ -713,22 +907,27 @@ export function useVoice(options: {
         fail(failure);
       }
     },
-    [path, apply, stop, setError, inputAllowed, delivery],
+    [path, apply, stop, setError, inputAllowed, delivery, pauseCapture],
   );
   useEffect(() => {
-    if (options.autoStart) void start();
-  }, [options.autoStart, start]);
+    const next = transfer.current;
+    if (next && next.id === options.assistant?.id) {
+      transfer.current = null;
+      void start(next.input, undefined, next.resetConversation);
+    } else if (options.autoStart) void start();
+  }, [options.autoStart, options.assistant?.id, start]);
+  useEffect(
+    () => () => {
+      for (const track of transfer.current?.input?.stream.getTracks() ?? []) track.stop();
+      transfer.current = null;
+    },
+    [],
+  );
   const starting = state === 'connecting' || state === 'permission';
   const working = state === 'listening' && voice?.phase === 'working';
   const speaking = state === 'listening' && activity.speaker;
   const activate = useCallback(() => {
-    if (
-      latest.current.inputBlocked ||
-      latest.current.saveChecking ||
-      latest.current.contextFailed ||
-      !navigator.onLine
-    )
-      return;
+    if (!inputAllowed()) return;
     if (state === 'idle') {
       setError(null);
       if (held.current) {
@@ -740,10 +939,11 @@ export function useVoice(options: {
       prepareAudio();
       void start();
     } else if (state === 'listening') {
-      current.current?.transport?.setMicrophonePaused(!off);
-      setOff(!off);
+      const attempt = current.current;
+      if (offRef.current && !attempt?.resumeRequested) attempt?.resumeMicrophone?.();
+      else pauseCapture();
     } else if (starting) void stop();
-  }, [state, starting, off, start, stop, prepareAudio, setError]);
+  }, [state, starting, start, stop, prepareAudio, setError, inputAllowed, pauseCapture]);
   // Quiet gaps cannot prove that the final utterance or answer has finished.
   // The muted connection closes with the conversation, access loss or leaving the household.
   const renew = useCallback(
@@ -795,6 +995,14 @@ export function useVoice(options: {
         }
         if (mounted.current && current.current === continuation) {
           current.current = null;
+          if (assistant.id !== latest.current.assistant?.id) {
+            transfer.current = {
+              id: assistant.id,
+              resetConversation,
+              input: stream ? { stream, paused: offRef.current } : undefined,
+            };
+            return assistant;
+          }
           await start(
             stream ? { stream, paused: offRef.current } : undefined,
             assistant,
@@ -870,8 +1078,8 @@ export function useVoice(options: {
         summaryRenewal.current = false;
       });
   };
-  const silence = useCallback(
-    (cancelWork?: () => Promise<TextAssistantView | void>) => {
+  const interrupt = useCallback(
+    async (cancelWork?: () => Promise<TextAssistantView | void>) => {
       const attempt = current.current;
       const response = voice?.response;
       if (
@@ -881,7 +1089,31 @@ export function useVoice(options: {
         completedOutput.current.add(response.id);
         announceSave(response.receiptOperationId);
       }
-      // Live has no output-cancel event. Retire the entire output stream, retaining
+      const playedBeforeInterrupt = attempt?.playedResponseId;
+      const interruption = attempt?.voiceId && attempt.transport?.interruptSpeech();
+      if (attempt && interruption) {
+        // Muting publishes silence synchronously. It cannot prove the reply drained.
+        attempt.playedResponseId = playedBeforeInterrupt;
+        if (response) completedOutput.current.add(response.id);
+        attempt.output = undefined;
+        try {
+          const result = await request<VoiceAssistantResponse>(
+            `${attempt.path}/${attempt.voiceId}/interrupt`,
+            interruption,
+            attempt.controller.signal,
+          );
+          if (current.current !== attempt) return false;
+          apply(result.assistant, result.voice.replyDelivery);
+          return true;
+        } catch (failure) {
+          if (current.current === attempt) {
+            latest.current.onRecoveryNeeded?.();
+            await stop(voiceErrorNotice(failure, 'interrupted'));
+          }
+          return false;
+        }
+      }
+      // Stopping work without an audible reply retires its provider context, retaining
       // the authorized input and conversation as historical text in a fresh session.
       const interrupted = renew(async () => {
         const [result, canceled] = await Promise.all([
@@ -903,24 +1135,43 @@ export function useVoice(options: {
         return assistant;
       });
       const generation = epoch.current;
-      return interrupted
-        .then(() => undefined)
-        .catch(() => {
-          if (!mounted.current || epoch.current !== generation) return;
+      try {
+        await interrupted;
+        return true;
+      } catch {
+        if (mounted.current && epoch.current === generation) {
           latest.current.onRecoveryNeeded?.();
           setError(voiceErrorNotice(undefined, 'interrupted'));
-        });
+        }
+        return false;
+      }
     },
-    [renew, apply, voice?.response, announceSave, setError],
+    [renew, apply, voice?.response, announceSave, setError, stop],
+  );
+  const silence = useCallback<Voice['silence']>(
+    async (cancelWork) => {
+      if (interrupting.current?.path === path) {
+        await interrupting.current.result;
+        return;
+      }
+      const result = interrupt(cancelWork);
+      interrupting.current = { path, result };
+      try {
+        await result;
+      } finally {
+        if (interrupting.current?.result === result) interrupting.current = null;
+      }
+    },
+    [interrupt, path],
   );
   const level = useCallback(() => current.current?.transport?.microphoneLevel() ?? 0, []);
   const startHeld = useCallback(() => {
     if (!inputAllowed() || latest.current.assistant?.phase === 'working') return;
-    if (current.current?.transport && state === 'listening') {
+    const attempt = current.current;
+    if (attempt?.transport && state === 'listening') {
       held.current = { released: false, controller: new AbortController() };
-      current.current.held = held.current;
-      current.current.transport.setMicrophonePaused(false);
-      setOff(false);
+      attempt.held = held.current;
+      if (offRef.current) attempt.resumeMicrophone?.();
       return;
     }
     if (current.current || (held.current && !held.current.released)) return;
@@ -979,31 +1230,28 @@ export function useVoice(options: {
     if (!held.current) return;
     held.current.released = true;
     held.current.buffer?.capture(false);
-    current.current?.transport?.setMicrophonePaused(true);
+    pauseCapture();
     setHeldListening(false);
-    setOff(true);
-    offRef.current = true;
-  }, []);
+  }, [pauseCapture]);
   useEffect(() => {
     if (!options.contextFailed) return;
     held.current?.buffer?.capture(false);
     held.current?.buffer?.transmit(false);
     current.current?.transport?.suspendInput();
-    offRef.current = true;
-    setOff(true);
-  }, [options.contextFailed]);
+    pauseCapture();
+  }, [options.contextFailed, pauseCapture]);
   useEffect(() => {
     const blocked = () => {
       if (!latest.current.inputBlocked && navigator.onLine !== false) return;
       releaseHeld();
       held.current?.buffer?.discard();
       current.current?.transport?.discardPendingInput();
-      setOff(true);
+      pauseCapture();
     };
     if (options.inputBlocked) blocked();
     window.addEventListener('offline', blocked);
     return () => window.removeEventListener('offline', blocked);
-  }, [options.inputBlocked, releaseHeld]);
+  }, [options.inputBlocked, pauseCapture, releaseHeld]);
   useEffect(() => {
     const transport = current.current?.transport;
     if (options.saveChecking) {
@@ -1045,6 +1293,12 @@ export function useVoice(options: {
         : microphone,
     starting,
     speaking,
+    playbackPending: Boolean(
+      state === 'listening' &&
+        voice?.response &&
+        !completedOutput.current.has(voice.response.id) &&
+        !current.current?.acknowledgement?.notified,
+    ),
     userSpeaking: microphone === 'on' && activity.microphone,
     working,
     waitingForAnswer: Boolean(
@@ -1052,6 +1306,7 @@ export function useVoice(options: {
     ),
     saved,
     savedId,
+    refusal: state === 'listening' && current.current?.path === path ? voice?.refusal : undefined,
     error,
     failure: failure ?? undefined,
     playbackBlocked,
@@ -1059,7 +1314,10 @@ export function useVoice(options: {
     disabled:
       contextPaused ||
       state === 'closing' ||
-      (microphone === 'off' && !starting && !working && options.assistant?.phase === 'working'),
+      (microphone === 'off' &&
+        !starting &&
+        options.assistant?.phase === 'working' &&
+        (!working || writtenWork)),
     level,
     activate,
     start: () => {
@@ -1073,13 +1331,19 @@ export function useVoice(options: {
       releaseHeld();
       held.current?.buffer?.discard();
       current.current?.transport?.discardPendingInput();
-      current.current?.transport?.setMicrophonePaused(true);
-      setOff(true);
+      pauseCapture();
     },
     newConversation,
     stop: close,
     endConversation: () => stop(null, true),
     silence,
+    prepareTextCorrection: () => {
+      const attempt = current.current;
+      const interruption =
+        interrupting.current?.path === path ? interrupting.current.result : undefined;
+      const armPlayback = offRef.current ? undefined : attempt?.transport?.prepareTextCorrection();
+      if (armPlayback || interruption) return { interruption, armPlayback };
+    },
     playAudio,
   };
 }

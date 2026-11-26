@@ -80,9 +80,9 @@ test.each([
   ['gpt-6.1-terra', 'low'],
   ['gpt-6.1-terra', 'medium'],
   ['gpt-6.1-terra', 'high'],
-  ['gpt-6.1-sol', 'low'],
-  ['gpt-6.1-sol', 'medium'],
-  ['gpt-6.1-sol', 'high'],
+  ['gpt-6.2-sol', 'low'],
+  ['gpt-6.2-sol', 'medium'],
+  ['gpt-6.2-sol', 'high'],
 ])(
   'spoken requests use %s/%s while Live keeps its listening and speaking model',
   async (selectedModel, effort) => {
@@ -207,7 +207,7 @@ test.each(['handoff', 'queue', 'cancel', 'new'] as const)(
       delegation: { id: crypto.randomUUID(), type: 'delegation', target: 'client' },
     });
     await started;
-    const choice = { model: 'gpt-6.1-sol', effort: 'low' };
+    const choice = { model: 'gpt-6.2-sol', effort: 'low' };
     expect((await post(`${base}/${view.id}/model-choice`, choice)).status()).toBe(200);
     const send = () =>
       post(`${base}/${view.id}/messages`, {
@@ -249,9 +249,9 @@ test.each(['handoff', 'queue', 'cancel', 'new'] as const)(
         reasoning: { effort: 'high' },
       });
     for (const entry of model.requests.slice(retired ? 1 : 2))
-      expect(entry).toMatchObject({ model: 'gpt-6.1-sol', reasoning: { effort: 'low' } });
+      expect(entry).toMatchObject({ model: 'gpt-6.2-sol', reasoning: { effort: 'low' } });
     expect(model.authorizationRequests.at(-1)).toMatchObject({
-      model: 'gpt-6.1-sol',
+      model: 'gpt-6.2-sol',
       reasoning: { effort: 'low' },
     });
     expect(model.requests).toHaveLength(action === 'new' ? 3 : 4);
@@ -262,9 +262,9 @@ test.each([
   ['gpt-6.1-terra', 'low'],
   ['gpt-6.1-terra', 'medium'],
   ['gpt-6.1-terra', 'high'],
-  ['gpt-6.1-sol', 'low'],
-  ['gpt-6.1-sol', 'medium'],
-  ['gpt-6.1-sol', 'high'],
+  ['gpt-6.2-sol', 'low'],
+  ['gpt-6.2-sol', 'medium'],
+  ['gpt-6.2-sol', 'high'],
 ])(
   '%s/%s is used by interpretation, draft work, independent checking and summary',
   async (selectedModel, effort) => {
@@ -372,7 +372,7 @@ test('an active request retains its model and a queued request binds the later c
   view = await first.json();
   await started;
   expect((await send('Beskriv den igen.')).status()).toBe(202);
-  const choice = { model: 'gpt-6.1-sol', effort: 'medium' };
+  const choice = { model: 'gpt-6.2-sol', effort: 'medium' };
   expect((await post(`${base}/${view.id}/model-choice`, choice)).status()).toBe(200);
   release();
   await expect
@@ -398,7 +398,7 @@ test('a disabled default is preserved and no provider call probes it or silently
   const model = textModel(() => [modelMessage('Ett svar.')]);
   app = await createInstallation(undefined, {
     modelFetch: model.provider,
-    conversationModels: [{ model: 'gpt-6.1-sol', effort: 'high' }],
+    conversationModels: [{ model: 'gpt-6.2-sol', effort: 'high' }],
   });
   browser = await request.newContext();
   await signIn(browser, app.origin);
@@ -450,12 +450,12 @@ test('a disabled default is preserved and no provider call probes it or silently
   ]);
   expect(
     (
-      await post(`${base}/${view.id}/model-choice`, { model: 'gpt-6.1-sol', effort: 'low' })
+      await post(`${base}/${view.id}/model-choice`, { model: 'gpt-6.2-sol', effort: 'low' })
     ).status(),
   ).toBe(409);
   expect(
     (
-      await post(`${base}/${view.id}/model-choice`, { model: 'gpt-6.1-sol', effort: 'high' })
+      await post(`${base}/${view.id}/model-choice`, { model: 'gpt-6.2-sol', effort: 'high' })
     ).status(),
   ).toBe(200);
 });
@@ -476,7 +476,7 @@ test('new conversations use Terra/high and an explicit choice is personal while 
   const second: TextAssistantView = await (
     await other.post(base, { headers: { origin: app.origin }, data: approvedForVisit })
   ).json();
-  const choice = { model: 'gpt-6.1-sol', effort: 'low' };
+  const choice = { model: 'gpt-6.2-sol', effort: 'low' };
   const changed = await post(`${base}/${first.id}/model-choice`, choice);
   expect(changed.status(), await changed.text()).toBe(200);
   expect(await changed.json()).toMatchObject({ modelChoice: choice });

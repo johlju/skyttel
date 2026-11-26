@@ -134,6 +134,13 @@ export const conversationNoticeDefinitions = [
     live: 'polite',
   },
   {
+    id: 'voiceRequestRefused',
+    text: 'Det talade uppdraget startade inte.',
+    kind: 'event',
+    icon: 'warning',
+    live: 'polite',
+  },
+  {
     id: 'playbackStopped',
     text: 'Webbläsaren stoppade ljudet.',
     action: 'Starta ljudet',

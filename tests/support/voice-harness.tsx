@@ -26,6 +26,7 @@ export function StandaloneVoice({
   const voice = useVoice(options);
   const button = useRef<HTMLButtonElement>(null);
   const notices = useConversationNotice({
+    voiceRefusal: voice.refusal,
     conditions: {
       ...(voice.failure ? { [voice.failure.noticeId]: true } : {}),
       playbackStopped: voice.playbackBlocked,

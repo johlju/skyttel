@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { draftChangeCount, type MapDraft } from '../shared/map.js';
 import {
   objectDifferences,
@@ -9,22 +10,11 @@ import { WorkspaceIcon } from './WorkspaceTools.js';
 
 export { draftChangeCount as draftCount } from '../shared/map.js';
 
-/** The same plus, pencil and cross as the map, with a textual action too. */
-function symbol(before: unknown, after: unknown) {
-  const action = after ? (before ? 'Ändra' : 'Lägg till') : 'Ta bort';
-  return (
-    <>
-      <span
-        className="conversation-draft-symbol"
-        data-action={after ? (before ? 'changed' : 'added') : 'removed'}
-        aria-hidden="true"
-      >
-        {after ? (before ? '✎' : '+') : '×'}
-      </span>
-      <span className="visually-hidden">{action}</span>
-    </>
-  );
-}
+const draftStatuses = {
+  added: { symbol: '+', label: 'Läggs till' },
+  changed: { symbol: '✎', label: 'Ändras' },
+  removed: { symbol: '×', label: 'Tas bort' },
+};
 
 /** One row per proposal, including relationships and the household's own types. */
 export function ConversationDraft({
@@ -40,8 +30,17 @@ export function ConversationDraft({
   warnings?: Record<string, string>;
   blocked?: boolean;
 }) {
+  const [hoverSuppressedKey, setHoverSuppressedKey] = useState<string>();
+
+  function openProposal(key: string) {
+    setHoverSuppressedKey(key);
+    onOpen?.(key);
+  }
+
   if (!draftChangeCount(draft) || !draft) return <p>Utkastet är tomt.</p>;
   const rows = draftProposalDescriptors(draft).map((proposal) => {
+    const { before, after } = proposal.change;
+    const action = after ? (before ? 'changed' : 'added') : 'removed';
     const differences =
       proposal.kind === 'Objekt'
         ? objectDifferences(proposal.change)
@@ -53,8 +52,8 @@ export function ConversationDraft({
     return {
       key: proposal.key,
       name: proposal.name,
-      before: proposal.change.before,
-      after: proposal.change.after,
+      action,
+      status: draftStatuses[action],
       type:
         proposal.kind === 'Objekt' || proposal.kind === 'Samband'
           ? proposal.change.type.name
@@ -67,7 +66,6 @@ export function ConversationDraft({
       <table aria-label="Osparade ändringar">
         <thead>
           <tr>
-            <th scope="col">Symbol</th>
             <th scope="col">Namn</th>
             <th scope="col">Typ</th>
             <th scope="col">Vad som ändras</th>
@@ -78,15 +76,18 @@ export function ConversationDraft({
             <tr
               key={row.key}
               className={onOpen ? 'draft-clickable-row' : undefined}
+              data-hover-suppressed={row.key === hoverSuppressedKey || undefined}
+              onPointerMove={
+                row.key === hoverSuppressedKey ? () => setHoverSuppressedKey(undefined) : undefined
+              }
               onClick={
                 onOpen
                   ? (event) => {
-                      if (!(event.target as HTMLElement).closest('button')) onOpen(row.key);
+                      if (!(event.target as HTMLElement).closest('button')) openProposal(row.key);
                     }
                   : undefined
               }
             >
-              <td>{symbol(row.before, row.after)}</td>
               <th scope="row">
                 {onOpen ? (
                   <button
@@ -95,7 +96,7 @@ export function ConversationDraft({
                     className="draft-open-proposal"
                     aria-label={`Visa förslaget: ${row.name}`}
                     aria-haspopup="dialog"
-                    onClick={() => onOpen(row.key)}
+                    onClick={() => openProposal(row.key)}
                   >
                     {row.name}
                   </button>
@@ -106,14 +107,26 @@ export function ConversationDraft({
               <td>{row.type}</td>
               <td>
                 <div className="draft-change">
-                  <div>
-                    {row.differences.length
-                      ? row.differences.map((line) => <div key={line}>{line}</div>)
-                      : row.after
-                        ? row.before
-                          ? 'Ändras'
-                          : 'Läggs till'
-                        : 'Tas bort'}
+                  <div className="draft-change-details">
+                    <span
+                      className="conversation-draft-symbol"
+                      data-action={row.action}
+                      aria-hidden="true"
+                    >
+                      {row.status.symbol}
+                    </span>
+                    <div>
+                      {row.differences.length ? (
+                        <>
+                          <span className="visually-hidden">{row.status.label}</span>
+                          {row.differences.map((line) => (
+                            <div key={line}>{line}</div>
+                          ))}
+                        </>
+                      ) : (
+                        row.status.label
+                      )}
+                    </div>
                   </div>
                   {onOpen && (
                     <button

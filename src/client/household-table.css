@@ -47,7 +47,7 @@
   border-color: var(--space-accent);
 }
 .household-map.workspace-shell[data-narrow="false"].text-view-open .household-table {
-  right: var(--text-view-space);
+  inset-inline-end: calc(var(--text-view-space) + var(--draft-view-space, 0px));
 }
 .household-table :is(select, input) {
   font: inherit;

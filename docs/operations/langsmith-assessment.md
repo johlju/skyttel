@@ -69,12 +69,16 @@ health when investigating a failure or changing configuration.
    delivery, drop counts, and safe error categories describe trace delivery.
    They do not prove that household work succeeded. Health values reset on
    process restart and cannot provide a complete history.
-2. Find the affected backend-task trace in the intended LangSmith project.
-   For voice, inspect the separate voice-session trace and its explicit
-   delegation links to backend tasks. Use the recorded conversation, request,
+2. In the intended LangSmith project, find the affected backend-task trace
+   for text requests. For voice, start with the delegation output in the
+   voice-session trace. It carries the error code for a recognized admission
+   refusal. With `assistant_unavailable`, the refusal can occur before a
+   backend task starts. Follow a backend-task link only when the delegation
+   output includes one. Use the recorded conversation, request,
    task, delegation, provider-call, tool-execution, and span identities as
    applicable. Do not infer parentage from nearby timestamps or count shared
-   backend spans twice.
+   backend spans twice. For `backend_failed`,
+   use the last confirmed step to locate the failure when possible.
 3. Inspect the relevant exact text, model action, model attempt, MCP work,
    and backend result in LangSmith. Distinguish failure, cancellation,
    disconnection, incomplete work, and a successful observed ending. A start

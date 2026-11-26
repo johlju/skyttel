@@ -16,9 +16,14 @@ import { createPreparedContext, expect, test } from '../support/test.js';
 import { modelMessage, textModel } from '../support/text-model.js';
 
 const view = (page: Page) => page.getByRole('region', { name: 'Skriv till Skyttel', exact: true });
-const handle = (page: Page, part: 'text' | 'draft') =>
+const handleName = {
+  text: 'Ändra samtalstextens bredd',
+  draft: 'Ändra utkastlistans bredd',
+  list: 'Ändra samtalslistans bredd',
+};
+const handle = (page: Page, part: keyof typeof handleName) =>
   view(page).getByRole('separator', {
-    name: part === 'text' ? 'Ändra samtalstextens bredd' : 'Ändra utkastlistans bredd',
+    name: handleName[part],
     exact: true,
   });
 const widths = (page: Page) => page.getByRole('region', { name: 'Textvyns bredd', exact: true });
@@ -110,22 +115,51 @@ test('TEXTBREDD-01: handtagen ändrar bredderna var för sig utan att avbryta sa
   const { app, path, read } = await arrange(page);
   try {
     await startConversationWithText(page);
-    const gripOffset = async (control: Locator) =>
-      control.evaluate((element) => {
-        const panel = element.closest('.text-view');
-        if (!panel) throw new Error('Missing text view');
-        return (
-          element.getBoundingClientRect().left +
-          Number.parseFloat(getComputedStyle(element, '::after').left) -
-          panel.getBoundingClientRect().left
+    const checkBorder = async (part: keyof typeof handleName, panel: Locator) => {
+      const box = await panel.boundingBox();
+      if (!box) throw new Error('Missing conversation panel');
+      const control = handle(page, part);
+      const target = await control.boundingBox();
+      if (!target) throw new Error('Missing resize handle');
+      expect(target.x + target.width - box.x).toBeCloseTo(1);
+      const y = target.y + target.height / 2;
+      const hit = (x: number) =>
+        control.evaluate(
+          (element, point) => document.elementFromPoint(point.x, point.y) === element,
+          {
+            x,
+            y,
+          },
         );
-      });
-    expect(await gripOffset(handle(page, 'text'))).toBeLessThanOrEqual(4);
+      expect(await hit(box.x + 0.5)).toBe(true);
+      expect(await hit(box.x + 10)).toBe(false);
+    };
+    await checkBorder('text', view(page));
+    const listToggle = view(page).getByRole('button', { name: 'Samtal', exact: true });
+    const list = view(page).getByRole('region', { name: 'Samtal', exact: true });
+    await listToggle.click();
+    await checkBorder('list', list);
+    await listToggle.click();
     await openDraft(page);
-    expect(await gripOffset(handle(page, 'draft'))).toBeLessThanOrEqual(4);
+    const draft = view(page).getByRole('region', { name: 'Utkastet', exact: true });
+    await checkBorder('text', view(page));
+    await checkBorder('draft', draft);
     await value(handle(page, 'text'), 400);
     await value(handle(page, 'draft'), 340);
     await renderedWidths(page, 400, 340);
+    await listToggle.click();
+    await checkBorder('list', list);
+    await value(handle(page, 'list'), 280);
+    await drag(page, handle(page, 'list'), 100);
+    await value(handle(page, 'list'), 380);
+    expect((await list.boundingBox())?.width).toBe(380);
+    await handle(page, 'list').press('ArrowLeft');
+    await value(handle(page, 'list'), 404);
+    await renderedWidths(page, 400, 340);
+    await listToggle.click();
+    await listToggle.click();
+    await value(handle(page, 'list'), 404);
+    await listToggle.click();
     const initialProposal = await readDraftProposal(page, 'Lo Exempel');
     await expect(initialProposal).toContainText('Osparad breddprovuppgift');
     await closeSupportDialog(page, 'Lo Exempel');
@@ -191,16 +225,15 @@ test('TEXTBREDD-01: handtagen ändrar bredderna var för sig utan att avbryta sa
     await expect(handle(page, 'text')).toHaveAccessibleDescription(
       'Dra eller använd vänster- och högerpil för att ändra bredden.',
     );
-    expect((await handle(page, 'text').boundingBox())?.width).toBe(24);
     await drag(page, handle(page, 'text'), -1000);
     await value(handle(page, 'text'), 300);
     await drag(page, handle(page, 'draft'), -1000);
     await value(handle(page, 'draft'), 260);
     await drag(page, handle(page, 'text'), 2000);
-    await value(handle(page, 'text'), 1240);
+    await value(handle(page, 'text'), 1232);
     const box = await view(page).boundingBox();
     expect(box?.x).toBeGreaterThanOrEqual(99);
-    await expect.poll(read).toMatchObject({ textWidth: 1240, draftWidth: 260 });
+    await expect.poll(read).toMatchObject({ textWidth: 1232, draftWidth: 260 });
     const retained = await readDraftProposal(page, 'Lo Exempel');
     await expect(retained).toContainText('Lo Exempel');
     await expect(retained).toContainText('Person');
@@ -236,7 +269,7 @@ test('TEXTBREDD-02: bredderna följer användaren och skärmens begränsning spa
     await value(handle(second, 'text'), 624);
     await value(handle(second, 'draft'), 460);
     await second.setViewportSize({ width: 850, height: 900 });
-    await value(handle(second, 'text'), 490);
+    await value(handle(second, 'text'), 482);
     await value(handle(second, 'draft'), 260);
     expect((await view(second).boundingBox())?.x).toBeGreaterThanOrEqual(99);
     await expect.poll(read).toMatchObject({ textWidth: 624, draftWidth: 460 });
@@ -246,7 +279,7 @@ test('TEXTBREDD-02: bredderna följer användaren och skärmens begränsning spa
     await expect(handle(second, 'draft')).toHaveCount(0);
     await value(handle(second, 'text'), 624);
     await openDraft(second);
-    await value(handle(second, 'text'), 490);
+    await value(handle(second, 'text'), 482);
     await second.setViewportSize({ width: 1600, height: 900 });
     await value(handle(second, 'text'), 624);
     await value(handle(second, 'draft'), 460);

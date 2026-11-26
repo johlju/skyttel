@@ -694,7 +694,7 @@ test('db:setup upgrades the previous development preview and can repeatedly seed
   const envFile = join(directory, '.env');
   writeFileSync(envFile, '');
   let previousHousehold = 'home';
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (const [attempt, nextSequence] of [0, 80, 0].entries()) {
     const result = spawnSync('npm', ['run', 'db:setup'], {
       env: {
         PATH: process.env.PATH,
@@ -708,6 +708,9 @@ test('db:setup upgrades the previous development preview and can repeatedly seed
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain('Development database reset and seeded with TestHousehold.');
     database = openDatabase(path);
+    expect(database.prepare('SELECT nextSequence FROM conversation_request_order').get()).toEqual({
+      nextSequence,
+    });
     const administrator = database
       .prepare(`SELECT m.userId, m.householdId, m.role FROM membership m
         JOIN account a ON a.userId = m.userId WHERE a.providerId = 'google' AND a.accountId = ?`)
@@ -754,6 +757,9 @@ test('db:setup upgrades the previous development preview and can repeatedly seed
     ]);
     expect(database.prepare('SELECT COUNT(*) AS count FROM household').get()).toEqual({ count: 1 });
     previousHousehold = administrator.householdId;
+    if (attempt === 0)
+      database.prepare('UPDATE conversation_request_order SET nextSequence = 80').run();
+    if (attempt === 1) database.prepare('DELETE FROM conversation_request_order').run();
     database.close();
     database = undefined;
   }

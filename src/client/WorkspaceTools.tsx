@@ -24,8 +24,11 @@ const paths = {
   depthBackward: 'M5 3h10v4H5zM10 8v13m-4-4 4 4 4-4M18 9l3 3-3 3',
   mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8',
   activity: 'M3 12h4l3-8 4 16 3-8h4',
+  mcp: 'M9 3v5m6-5v5M6 8h12v3a6 6 0 0 1-12 0V8m6 9v4',
+  tool: 'M20 4a5 5 0 0 1-6 7L6 20a2 2 0 1 1-3-3l9-8a5 5 0 0 1 7-6l-3 3 2 2z',
   new: 'M12 4v16M4 12h16',
   list: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
+  conversations: 'M3 4h13v9H9l-4 3v-3H3zM19 8h2v10h-2v3l-4-3h-4v-2',
   text: 'M4 5h16M12 5v15M8 20h8',
   settings: 'M4 7h16M4 17h16M8 4v6M16 14v6',
   profile: 'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0M4 21v-2a8 8 0 0 1 16 0v2',
@@ -97,12 +100,14 @@ export function WorkspaceTools({
   onExpandedChange,
   conversationUnavailable = false,
   conversationOngoing = false,
+  conversationPaused = false,
   hasDraft = false,
 }: {
   surface?: 'map' | 'table' | 'reports';
   workDisabled?: boolean;
   conversationUnavailable?: boolean;
   conversationOngoing?: boolean;
+  conversationPaused?: boolean;
   hasDraft?: boolean;
   /** Opens a tool. The chosen button is where a conversation's consent box opens. */
   onOpen: (target: WorkspaceTarget, chosen: HTMLElement) => void;
@@ -136,24 +141,27 @@ export function WorkspaceTools({
       tools.current?.querySelector<HTMLButtonElement>('.workspace-text')?.focus();
     }
   }, [hasDraft]);
+  const canUseVoiceControl = !conversationUnavailable && !conversationPaused;
   const microphonePress = useMicrophonePress({
     button: microphoneButton,
     canHold: () =>
       Boolean(
         holdVoice?.canHold &&
-          !conversationUnavailable &&
+          canUseVoiceControl &&
           !voiceControl?.disabled &&
           !voiceControl?.starting &&
           voiceControl?.microphone !== 'on' &&
           navigator.onLine !== false,
       ),
-    prepare: () => holdVoice?.prepare(),
+    prepare: () => {
+      if (!conversationPaused) holdVoice?.prepare();
+    },
     startHeld: () => holdVoice?.start(),
     releaseHeld: () => holdVoice?.release(),
     short: () => {
       onExpandedChange(false);
       setUtility(null);
-      if (voiceControl && !conversationUnavailable) voiceControl.activate();
+      if (voiceControl && canUseVoiceControl) voiceControl.activate();
       else if (microphoneButton.current) onOpen('voice', microphoneButton.current);
     },
   });
@@ -164,9 +172,11 @@ export function WorkspaceTools({
     query.addEventListener('change', change);
     return () => query.removeEventListener('change', change);
   }, []);
-  const microphoneDescription = voiceControl?.starting
-    ? 'Avbryt starten av rösten'
-    : `Prata med Skyttel (${microphoneShortcut()}). Håll in för att tala tills du släpper.`;
+  const microphoneDescription = conversationPaused
+    ? 'Starta mikrofonen i det valda samtalet.'
+    : voiceControl?.starting
+      ? 'Avbryt starten av rösten'
+      : `Prata med Skyttel (${microphoneShortcut()}). Håll in för att tala tills du släpper.`;
   const voiceDescription = `${microphoneDescription}${conversationUnavailable ? ' Inte tillgängligt just nu.' : ''}`;
   const utilityPanel = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -241,7 +251,7 @@ export function WorkspaceTools({
                   : label
               }
               aria-description={
-                target === 'voice' && !touch
+                target === 'voice' && (!touch || conversationPaused)
                   ? voiceDescription
                   : conversationUnavailable &&
                       (target === 'voice' || (target === 'conversation' && !conversationOngoing))
@@ -265,7 +275,7 @@ export function WorkspaceTools({
                 target === 'new'
                   ? workDisabled
                   : target === 'voice' && conversationOngoing
-                    ? !conversationUnavailable && voiceControl?.disabled
+                    ? canUseVoiceControl && voiceControl?.disabled
                     : undefined
               }
               aria-pressed={

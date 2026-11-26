@@ -3,7 +3,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 
 vi.setConfig({ expect: { poll: { timeout: 5000 } } });
 
-import type { MapState } from '../../../src/shared/map.js';
+import type { MapState, SaveReceipt } from '../../../src/shared/map.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
@@ -247,6 +247,25 @@ test.each(['text', 'voice'] as const)(
   },
 );
 
+function alterSaveReceipt(
+  alter: (receipt: SaveReceipt) => void,
+): NonNullable<Parameters<typeof createInstallation>[1]>['assistantDispatch'] {
+  return async (request, dispatch) => {
+    const rpc =
+      request.method === 'POST' && new URL(request.url).pathname === '/mcp'
+        ? await request.clone().json()
+        : null;
+    const response = await dispatch(request);
+    if (rpc?.params?.name !== 'save_draft') return response;
+    const body = await response.json();
+    const content = body.result.content.find((item: { type: string }) => item.type === 'text');
+    const result = JSON.parse(content.text);
+    alter(result.receipt);
+    content.text = JSON.stringify(result);
+    return Response.json(body);
+  };
+}
+
 test.each(['login actor', 'other owner', 'other household', 'other content generation'])(
   'a save response for the %s cannot confirm the restored owner operation',
   async (mismatch) => {
@@ -265,24 +284,13 @@ test.each(['login actor', 'other owner', 'other household', 'other content gener
     });
     const fixture = await restored({
       modelFetch: model.provider,
-      assistantDispatch: async (request, dispatch) => {
-        const rpc =
-          request.method === 'POST' && new URL(request.url).pathname === '/mcp'
-            ? await request.clone().json()
-            : null;
-        const response = await dispatch(request);
-        if (rpc?.params?.name !== 'save_draft') return response;
-        const body = await response.json();
-        const content = body.result.content.find((item: { type: string }) => item.type === 'text');
-        const result = JSON.parse(content.text);
-        if (mismatch === 'login actor') result.receipt.userId = actorId;
-        else if (mismatch === 'other owner') result.receipt.userId = 'unrelated-content-owner';
-        else if (mismatch === 'other household') result.receipt.householdId = 'unrelated-household';
-        else result.receipt.contentVersion++;
-        content.text = JSON.stringify(result);
+      assistantDispatch: alterSaveReceipt((receipt) => {
+        if (mismatch === 'login actor') receipt.userId = actorId;
+        else if (mismatch === 'other owner') receipt.userId = 'unrelated-content-owner';
+        else if (mismatch === 'other household') receipt.householdId = 'unrelated-household';
+        else receipt.contentVersion++;
         tampered = true;
-        return Response.json(body);
-      },
+      }),
     });
     actorId = fixture.actorId;
     const { browser, path, post } = fixture;
@@ -324,3 +332,29 @@ test.each(['login actor', 'other owner', 'other household', 'other content gener
     expect(model.requests).toHaveLength(1);
   },
 );
+
+test('retry rejects a mismatched receipt and recovery confirms the original save', async () => {
+  const { post, browser, path, state, ownerId } = await restored({
+    modelFetch: textModel(() => []).provider,
+    assistantDispatch: alterSaveReceipt((receipt) => {
+      receipt.operationId = 'other-save';
+    }),
+  });
+  const operationId = 'pending-restored-save';
+  const prepared = await post('map/operations', {
+    operationId,
+    version: state.draft.version,
+    contentVersion: state.contentVersion,
+  });
+  expect(prepared.status()).toBe(200);
+  const session: TextAssistantView = await (await post('text-assistant', approvedForVisit)).json();
+  const route = `text-assistant/${session.id}`;
+  const retried = await (await post(`${route}/retry`, { operationId })).json();
+  expect(retried).toMatchObject({ phase: 'recovery', error: 'assistant_provider_failed' });
+  expect(retried.receipt).toBeUndefined();
+  const recovered = await (await post(`${route}/recover`, {})).json();
+  expect(recovered).toMatchObject({ phase: 'ready', receipt: { operationId, userId: ownerId } });
+  expect((await (await browser.get(`${path}/map/history`)).json()).history).toEqual([
+    recovered.receipt,
+  ]);
+});

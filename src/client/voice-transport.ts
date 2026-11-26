@@ -1,7 +1,11 @@
 import { type ExchangeSdp, OpenAILiveWebRTC } from 'openai/live/webrtc';
+import { voiceTranscriptBoundaries, voiceTranscriptGapMs } from '../shared/voice-transcript.js';
 import type { TranscriptRow } from './ConversationTranscript.js';
 import type { HeldInput } from './voice-held-input.js';
+import outputWorkletUrl from './voice-output-worklet.ts?worker&url';
 import silentPlaybackUrl from './voice-silence.wav?no-inline';
+
+const outputModules = new WeakMap<AudioContext, Promise<void>>();
 
 /** Unlock the eventual output element and audio meter during the user's start gesture. */
 export function prepareVoicePlayback(audio = new Audio(), audioContext = new AudioContext()) {
@@ -51,7 +55,9 @@ export function createVoiceTransport(
     onTranscript?: (row: TranscriptRow) => void;
     onAudioActivity?: (activity: { microphone: boolean; speaker: boolean }) => void;
     /** Text aligned with provider output audio; it does not define a complete turn. */
-    onOutputTranscript?: (text: string) => void;
+    onOutputTranscript?: (text: string, interval?: { start: number; end: number }) => void;
+    needsPlaybackProgress?: () => boolean;
+    onPlaybackProgress?: (from: number, at: number, renderedMs: number, speaker: boolean) => void;
     /** Skyttel has taken on a task from what the user said. */
     onDelegation?: () => void;
     inputAllowed?: () => boolean;
@@ -64,9 +70,14 @@ export function createVoiceTransport(
   const live = new OpenAILiveWebRTC();
   audio.autoplay = true;
   const remoteTracks = new Set<MediaStreamTrack>();
+  let output: AudioWorkletNode | undefined;
+  let muted = false;
+  let correctionStarted = false;
+  let interruptedThrough = -1;
   let microphone: MediaStream | undefined;
   let connected = false;
   let started = false;
+  let timelineOrigin = Number.POSITIVE_INFINITY;
   let stopped = false;
   let playbackTransferred = false;
   let closed = false;
@@ -81,6 +92,7 @@ export function createVoiceTransport(
     const analyser = audioContext.createAnalyser();
     analyser.fftSize = samples.length;
     source.connect(analyser);
+    if (!input && output) source.connect(output);
     meters.push({ source, analyser, input });
   }
   const measuring = () =>
@@ -100,66 +112,172 @@ export function createVoiceTransport(
   const audible = (analyser: AnalyserNode) => peak(analyser) > 3 / 128;
   // Observe only the already-authorized streams. Incoming audio remains
   // independent of the microphone being off, and transcripts never imply playback.
+  const meterIntervalMs = 100;
+  let receiver: RTCRtpReceiver | undefined;
+  let lastPosition:
+    | {
+        id: string;
+        mediaStart: number;
+        renderStart: number;
+        renderedMs: number;
+        at: number;
+      }
+    | undefined;
+  let readingPosition = false;
+  const rendering = () =>
+    measuring() &&
+    playing &&
+    !muted &&
+    [...remoteTracks].some(
+      (track) => track.enabled && !track.muted && track.readyState !== 'ended',
+    );
+
+  async function playbackProgress(at: number, sampledMs: number, speaker: boolean) {
+    if (!callbacks.needsPlaybackProgress?.() || !callbacks.onPlaybackProgress || !rendering()) {
+      lastPosition = undefined;
+      return;
+    }
+    const current = receiver;
+    if (!current?.getStats) {
+      if (speaker) callbacks.onPlaybackProgress(at - sampledMs, at, sampledMs, true);
+      return;
+    }
+    if (readingPosition) return;
+    readingPosition = true;
+    const renderTime = audioContext.currentTime;
+    try {
+      const stats = await current.getStats();
+      if (current !== receiver || !rendering()) {
+        lastPosition = undefined;
+        return;
+      }
+      for (const report of stats.values()) {
+        if (report.type !== 'inbound-rtp' || report.kind !== 'audio') continue;
+        const rate = stats.get(report.codecId)?.clockRate;
+        // Samples emitted by the jitter buffer include rendered pauses. Exclude
+        // concealment generated locally to fill in missing network audio.
+        const mediaMs = ((report.jitterBufferEmittedCount - report.concealedSamples) * 1000) / rate;
+        if (!(rate > 0 && Number.isFinite(mediaMs))) continue;
+        if (!lastPosition || lastPosition.id !== report.id) {
+          lastPosition = {
+            id: report.id,
+            mediaStart: mediaMs,
+            renderStart: renderTime,
+            renderedMs: 0,
+            at,
+          };
+          return;
+        }
+        // Both clocks report in blocks. Comparing their positions from one
+        // origin preserves frames across uneven meter ticks.
+        const renderedMs = Math.min(
+          mediaMs - lastPosition.mediaStart,
+          (renderTime - lastPosition.renderStart) * 1000,
+        );
+        const elapsed = renderedMs - lastPosition.renderedMs;
+        if (elapsed > 0) callbacks.onPlaybackProgress(lastPosition.at, at, elapsed, speaker);
+        lastPosition.at = at;
+        lastPosition.renderedMs = Math.max(lastPosition.renderedMs, renderedMs);
+        return;
+      }
+    } catch {
+      // Some receivers do not expose playout counters. Only credit audible samples.
+    } finally {
+      readingPosition = false;
+    }
+    lastPosition = undefined;
+    if (speaker && rendering()) callbacks.onPlaybackProgress(at - sampledMs, at, sampledMs, true);
+  }
+  let lastSample = performance.now();
   const activityTimer = setInterval(() => {
+    const at = performance.now();
+    const sampledMs = Math.min(meterIntervalMs, at - lastSample);
+    lastSample = at;
     const next = { microphone: false, speaker: false };
     if (measuring()) {
       for (const { analyser, input } of meters) {
         if (input ? paused : !playing) continue;
         if (input) next.microphone ||= audible(analyser);
-        else next.speaker ||= audible(analyser);
+        else next.speaker ||= !muted && audible(analyser);
       }
     }
+    void playbackProgress(at, sampledMs, next.speaker);
     if (next.microphone !== activity.microphone || next.speaker !== activity.speaker) {
       activity = next;
       callbacks.onAudioActivity?.(next);
     }
-  }, 100);
+  }, meterIntervalMs);
   let startupTimer: ReturnType<typeof setTimeout> | undefined;
   let disconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let userRow: TranscriptRow | undefined;
   let assistantRow: TranscriptRow | undefined;
-  let userEnd: number | undefined;
+  const transcriptBoundaries = voiceTranscriptBoundaries();
   let userAt = 0;
   let assistantSince = false;
   let assistantBoundary = false;
   let assistantAt = 0;
-  const turnGap = 2000;
   const audioTime = (value: number) => Number.isFinite(value) && value >= 0;
+  // At receipt, the provider has already reached this position. Keep the
+  // earliest inferred origin so delayed events cannot move the cutoff back.
+  function observePosition(position: number, receivedAt: number) {
+    if (audioTime(position)) timelineOrigin = Math.min(timelineOrigin, receivedAt - position);
+  }
   function finish(row: TranscriptRow | undefined) {
     if (!row?.partial) return;
     row.partial = false;
     callbacks.onTranscript?.({ ...row });
   }
+  function startCorrection() {
+    if (closed || stopped || !muted || correctionStarted) return false;
+    correctionStarted = true;
+    output?.port.postMessage('correction');
+    return true;
+  }
   function transcript(
     role: TranscriptRow['role'],
-    event: { delta: string; start_ms: number; end_ms: number },
+    event: { event_id: string; delta: string; start_ms: number; end_ms: number },
   ) {
     if (closed || stopped || !event.delta) return;
     const now = performance.now();
     if (role === 'user') {
-      const gap =
-        userEnd !== undefined && audioTime(event.start_ms) && event.start_ms >= userEnd
-          ? event.start_ms - userEnd
-          : now - userAt;
+      const correction =
+        Boolean(event.delta.trim()) &&
+        audioTime(event.start_ms) &&
+        audioTime(event.end_ms) &&
+        event.end_ms >= event.start_ms &&
+        event.end_ms > interruptedThrough &&
+        startCorrection();
+      const userEnd =
+        audioTime(event.end_ms) && (!audioTime(event.start_ms) || event.end_ms >= event.start_ms)
+          ? event.end_ms
+          : undefined;
+      const starts = transcriptBoundaries.append(role, event.start_ms, userEnd, {
+        newUtterance: correction,
+        fallbackGapMs: assistantSince ? now - userAt : 0,
+      });
       finish(assistantRow);
-      if (!userRow || (assistantSince && gap >= turnGap)) {
+      if (!userRow || starts) {
         finish(userRow);
         userRow = { id: crypto.randomUUID(), role, text: '' };
         assistantRow = undefined;
       }
       userRow.text += event.delta;
+      userRow.speechEventIds = [...(userRow.speechEventIds ?? []), event.event_id];
       userRow.partial = true;
       userAt = now;
-      userEnd =
-        audioTime(event.end_ms) && (!audioTime(event.start_ms) || event.end_ms >= event.start_ms)
-          ? event.end_ms
-          : undefined;
+      if (userEnd !== undefined) observePosition(userEnd, now);
       assistantSince = false;
       callbacks.onTranscript?.({ ...userRow });
     } else {
+      // The output fragment can extend beyond what has played.
+      observePosition(event.start_ms, now);
       assistantSince = true;
       finish(userRow);
-      if (!assistantRow || (assistantBoundary && now - assistantAt >= turnGap)) {
+      const assistantEnd = audioTime(event.end_ms) ? event.end_ms : undefined;
+      const starts = transcriptBoundaries.append(role, event.start_ms, assistantEnd, {
+        newUtterance: assistantBoundary && now - assistantAt >= voiceTranscriptGapMs,
+      });
+      if (!assistantRow || starts) {
         finish(assistantRow);
         assistantRow = { id: crypto.randomUUID(), role, text: '', voiced: true };
       }
@@ -173,16 +291,17 @@ export function createVoiceTransport(
   async function playAudio() {
     if (closed || stopped) return;
     try {
-      await audio.play();
+      await Promise.all([audio.play(), audioContext.resume()]);
       if (!closed && !stopped) {
+        output?.connect(audioContext.destination);
         playing = true;
         buffered?.playbackReady();
-        void audioContext.resume().catch(() => {});
         callbacks.onPlaybackBlocked(false);
         ready();
       }
     } catch {
       if (!closed && !stopped) {
+        output?.disconnect();
         playing = false;
         for (const track of microphone?.getTracks() ?? []) track.enabled = false;
         buffered?.capture(false);
@@ -195,9 +314,14 @@ export function createVoiceTransport(
       event.track.stop();
       return;
     }
+    receiver = event.receiver;
+    lastPosition = undefined;
     remoteTracks.add(event.track);
     meter(new MediaStream([event.track]), false);
     audio.loop = false;
+    // Keep Chromium pulling the WebRTC receiver. The rendering graph owns
+    // the only audible path and connects to the speaker once play succeeds.
+    audio.muted = true;
     audio.srcObject = new MediaStream([...remoteTracks]);
     void playAudio();
   };
@@ -261,15 +385,25 @@ export function createVoiceTransport(
     live.on('session.input_transcript.delta', (event) => transcript('user', event)),
     live.on('session.output_transcript.delta', (event) => {
       transcript('assistant', event);
-      if (!closed && !stopped && event.delta) callbacks.onOutputTranscript?.(event.delta);
+      if (!closed && !stopped && event.delta) {
+        const interval =
+          audioTime(event.start_ms) && audioTime(event.end_ms) && event.end_ms > event.start_ms
+            ? { start: event.start_ms, end: event.end_ms }
+            : undefined;
+        callbacks.onOutputTranscript?.(event.delta, interval);
+        if (interval && !lastPosition && receiver?.getStats)
+          void playbackProgress(performance.now(), 0, false);
+      }
     }),
-    live.on('session.delegation.created', () => {
+    live.on('session.delegation.created', (event) => {
+      observePosition(event.offset_ms, performance.now());
       assistantBoundary = true;
       finish(assistantRow);
       if (!closed && !stopped) callbacks.onDelegation?.();
     }),
     live.on('session.started', (event) => {
       if (typeof event.session?.id !== 'string' || !event.session.id) return;
+      if (!started) observePosition(0, performance.now());
       started = true;
       ready();
     }),
@@ -294,6 +428,9 @@ export function createVoiceTransport(
     finish(assistantRow);
     stopped = true;
     clearInterval(activityTimer);
+    output?.disconnect();
+    output?.port.postMessage('close');
+    output?.port.close();
     activity = { microphone: false, speaker: false };
     callbacks.onAudioActivity?.(activity);
     for (const { source, analyser } of meters) {
@@ -329,6 +466,30 @@ export function createVoiceTransport(
     live.close();
   }
   return {
+    prepareTextCorrection() {
+      if (!muted || correctionStarted) return undefined;
+      const interruption = interruptedThrough;
+      return () => {
+        if (interruption === interruptedThrough) startCorrection();
+      };
+    },
+    interruptSpeech() {
+      // Also check the current samples: the activity display updates at 10 Hz.
+      if (!output || !playing || !measuring() || muted) return undefined;
+      if (!activity.speaker && !meters.some(({ input, analyser }) => !input && audible(analyser)))
+        return undefined;
+      muted = true;
+      correctionStarted = false;
+      interruptedThrough = performance.now() - timelineOrigin;
+      output.port.postMessage('interrupt');
+      finish(userRow);
+      finish(assistantRow);
+      userRow = assistantRow = undefined;
+      transcriptBoundaries.reset();
+      activity = { ...activity, speaker: false };
+      callbacks.onAudioActivity?.(activity);
+      return { interruptedThroughMs: interruptedThrough };
+    },
     suspendInput() {
       paused = true;
       buffered?.capture(false);
@@ -363,6 +524,23 @@ export function createVoiceTransport(
           stopCapture();
           throw new DOMException('Voice setup cancelled', 'AbortError');
         }
+        let module = outputModules.get(audioContext);
+        if (!module) {
+          module = audioContext.audioWorklet.addModule(outputWorkletUrl);
+          outputModules.set(audioContext, module);
+        }
+        await module;
+        if (closed || stopped || signal.aborted)
+          throw new DOMException('Voice setup cancelled', 'AbortError');
+        output = new AudioWorkletNode(audioContext, 'skyttel-voice-output', {
+          channelCount: 1,
+          channelCountMode: 'explicit',
+          outputChannelCount: [1],
+        });
+        output.port.onmessage = ({ data }) => {
+          if (data === 'open') muted = false;
+        };
+        output.onprocessorerror = audioFailed;
         for (const track of microphone.getTracks()) {
           if (!buffered) track.enabled = false;
           track.addEventListener('ended', microphoneEnded);

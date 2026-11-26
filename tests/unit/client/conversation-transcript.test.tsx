@@ -4,27 +4,60 @@ import {
   ConversationTranscript,
   type TranscriptRow,
 } from '../../../src/client/ConversationTranscript.js';
+import type { ConversationWorkStep } from '../../../src/shared/text-assistant.js';
 
 afterEach(cleanup);
 
 test('work descriptions and actual MCP steps are visible without becoming conversation replies', () => {
-  const view = render(
+  const rows: TranscriptRow[] = [
+    { id: 'speech', role: 'user', text: 'Läs kartan.', speechEventIds: ['speech-fragment'] },
+    { id: 'queued', role: 'user', text: 'En till fråga.' },
+  ];
+  const storedRows = [
+    {
+      role: 'user' as const,
+      text: 'Läs kartan.',
+      speechEventId: 'speech-fragment',
+      requestId: 'one',
+    },
+  ];
+  const step: ConversationWorkStep = {
+    id: 'read',
+    requestId: 'one',
+    kind: 'mcp',
+    text: 'Läser kartan',
+    count: 1,
+  };
+  const log = () => [...view.getByRole('log').children].map((row) => row.textContent);
+  const announcement = () =>
+    view.container.querySelector('.conversation-work-announcement')?.textContent;
+  const view = render(<ConversationTranscript rows={rows} working />);
+  view.rerender(
+    <ConversationTranscript rows={rows} storedRows={storedRows} working workSteps={[step]} />,
+  );
+  expect(log()).toEqual([
+    'Du: Läs kartan.',
+    'MCP: Läser kartan',
+    'Du: En till fråga.',
+    'Skyttel arbetar…',
+  ]);
+  expect(announcement()).toBe('MCP: Läser kartan.');
+  view.rerender(
     <ConversationTranscript
-      rows={[]}
-      working
-      activity="Bearbetar uppgiften"
-      activitySteps={[{ id: 'read', text: 'Läser kartan via MCP' }]}
+      rows={rows}
+      storedRows={storedRows}
+      working={false}
+      interruptedRequestId="speech"
+      workSteps={[{ ...step, count: 2 }]}
     />,
   );
-  expect(view.getByRole('log').textContent).toContain('Bearbetar uppgiften.');
-  expect(view.getByText('Visa arbetssteg').closest('details')?.hasAttribute('open')).toBe(false);
-  expect(view.getByRole('log').querySelector('[aria-live="polite"]')?.textContent).toBe(
-    ' Bearbetar uppgiften.',
-  );
-  expect(view.getByText('Läser kartan via MCP')).toBeDefined();
-  view.rerender(<ConversationTranscript rows={[]} working={false} />);
-  expect(view.queryByText('Visa arbetssteg')).toBeNull();
-  expect(view.getByRole('log').textContent).toBe('Här visas det du och Skyttel säger och skriver.');
+  expect(log()).toEqual([
+    'Du: Läs kartan.',
+    'MCP: Läser kartan (2)',
+    'Arbetet avbröts. Fortsätt arbetet',
+    'Du: En till fråga.',
+  ]);
+  expect(announcement()).toBe('MCP: Läser kartan (2).');
 });
 
 test('only new unvoiced assistant rows are polite announcements, without history replay', () => {

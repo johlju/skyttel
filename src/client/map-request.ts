@@ -13,7 +13,12 @@ export class MapRequestError extends Error {
   }
 }
 
-export async function request<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+export async function request<T>(
+  path: string,
+  body?: unknown,
+  signal?: AbortSignal,
+  keepalive = false,
+): Promise<T> {
   const response = await fetch(path, {
     method: body === undefined ? 'GET' : 'POST',
     credentials: 'same-origin',
@@ -27,6 +32,7 @@ export async function request<T>(path: string, body?: unknown, signal?: AbortSig
           },
     body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
     signal,
+    keepalive,
   });
   if (!response.ok) {
     const result = await response.json().catch(() => ({}));

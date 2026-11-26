@@ -126,7 +126,7 @@ test('the consent box opens next to the chosen button, on the side that has room
   await expect
     .element(page.getByRole('complementary', { name: 'Kom igång med kartan' }))
     .not.toBeInTheDocument();
-  expect(starts).toEqual([{ consent: { textVersion: 4 } }]);
+  expect(starts).toEqual([{ consent: { textVersion: 5 } }]);
   await expect
     .element(page.getByRole('region', { name: 'Samtal och text', exact: true }))
     .not.toBeInTheDocument();

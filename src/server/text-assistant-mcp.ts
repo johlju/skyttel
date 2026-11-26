@@ -187,21 +187,19 @@ export async function connectTextAssistant({
         args: Record<string, unknown>,
         guard?: AssistantTaskGuard,
         continuation = false,
+        readSignal?: AbortSignal,
       ) {
         if (closed) throw new MapError('assistant_session_expired', 409);
         authorize();
         guard?.();
+        const invoke = () =>
+          activeClient.callTool({ name, arguments: args }, undefined, { signal: readSignal });
         return assistantTaskAccess.run(
           (contentVersion) => {
             authorize(contentVersion);
             guard?.(contentVersion);
           },
-          () =>
-            continuation
-              ? assistantTaskConnection.run(privateClientId, () =>
-                  activeClient.callTool({ name, arguments: args }),
-                )
-              : activeClient.callTool({ name, arguments: args }),
+          () => (continuation ? assistantTaskConnection.run(privateClientId, invoke) : invoke()),
         );
       },
       close,

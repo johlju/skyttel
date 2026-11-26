@@ -250,15 +250,31 @@ TAL-03.
     "spec": "tests/integration/voice-assistant.spec.ts",
     "caseId": "TAL-03"
   },
-  "reference": "Chromium och kontrollerade text-/mediesvar enligt angiven separat förberedelse. Samtalet återkommer pausat efter faktisk serveromstart; sparutfallet läses före Nytt samtal. Faktisk röst eller uppläsning bedöms separat.",
+  "reference": "Chromium och kontrollerade text-/mediesvar enligt angiven separat förberedelse. Samtalet återkommer pausat efter faktisk serveromstart; sparutfallet läses före Nytt samtal. I ett separat textsamtal tappas webbläsarsvaret med kvittot för Mira efter genomfört sparande för att prova kontrollen utan omladdning. Faktisk röst eller uppläsning bedöms separat.",
   "outcomes": [
     "Bekräfta verklig markering och återhämta samma beständiga sparförsök.",
-    "Beskrivningen går att läsa i korta uppgiftsfönster efter hela svaret."
+    "Beskrivningen går att läsa i korta uppgiftsfönster efter hela svaret.",
+    "Efter ett tappat webbläsarsvar kan användaren kontrollera sparandet och se Mira Exempel som sparad i kartvyn utan omladdning."
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/text-assistant.test.ts",
+      "title": "original save request returns its own receipt after another member saves (interrupted lookup, replay)",
+      "purpose": "Kontrollera samma kvitto efter ett annat sparande, spärren vid okänt utfall och åtkomst vid uppslag och omsändning."
+    }
   ]
 }
 ```
 -->
 <!-- markdownlint-enable MD013 -->
+
+**Ytterligare underlag:** [Serverprovet](../../tests/unit/server/text-assistant.test.ts)
+kontrollerar att en omsändning efter en annan medlems sparande ger samma
+kvitto. Det provar även avbrutet uppslag, spärren för nya sparförsök och
+åtkomst till utfallet.
 
 **Separat förberedelse:** Följ
 [tidslinje TAL-03](voice-controls-preparation.md#tidslinje-tal-03) vid de
@@ -282,27 +298,41 @@ till TAL-17/23/24.
    utkastet sparades. Mikrofonen är av.
 3. Startoperatören behåller samma databas och startar om enligt tidslinjen.
    Efter borttagen blockering, ladda om och välj Tabell. Öppna **Skriv till
-   Skyttel** och läs att samtalet är pausat och när det löper ut.
+   Skyttel** och välj **Samtal → Markera Lo Exempel.**.
 4. Läs Kontrollen visar att hela utkastet sparades. Ändringarna finns i
    hushållets karta. Läs hela sparade Lo Exempel, typ Person och beskrivningen
-   Påhittad uppgift. Välj därefter **Nytt samtal**, godkänn medgivandet om det
-   behövs och slå på mikrofonen.
+   Påhittad uppgift. Öppna textvyn och välj **Avstå från det oavslutade
+   arbetet** för den återstående uppgiften. Godkänn vid behov och läs
+   bekräftelsen. Välj **Nytt samtal** och slå på mikrofonen.
 5. Bryt den kontrollerade leverantörskontakten efter sparandet. Ladda om och
    öppna Rapporter → Ändringshistorik. Öppna Identifiera sparandet och
    användaren och läs samma sparande.
 6. Välj Tillbaka till arbetet, starta rösten och följ den separata preliminära
    användningsmätningen i tidslinjen. Nytt samtal ska bevara mikrofonvalet och
-   samma genomförda sparande. Logga ut.
+   samma genomförda sparande. Ladda om sidan.
+7. Skapa **Mira Exempel** med typen **Person** och välj **Lägg i utkastet och
+   stäng**. Välj **Karta** och se Mira som förslag. Börja ett nytt samtal i
+   textvyn och granska Mira i utkastet. Förbered det tappade webbläsarsvaret
+   enligt tidslinjen. Skicka **Spara hela utkastet.**
+8. Vänta tills samtalsnotisen visar **Skyttel kunde inte kontrollera om
+   utkastet sparades.** och knappen **Kontrollera om utkastet sparades**.
+   Släpp blockeringen och välj knappen. Läs resultatet i samtalstexten och
+   stäng textvyn.
+   Kontrollera att Mira syns som sparad i samma kartvy utan omladdning.
+   Slå på mikrofonen igen och logga ut.
 
 **Förväntat resultat:**
 
 - Markering bekräftas först efter den verkliga webbläsarens återkoppling. Ett
   accepterat kommentarspaket är inte bevis för hörbart tal.
 - Beskrivningens text går att läsa även i det kortaste uppgiftsfönstret.
-- Omstart återställer samtalet pausat. Det registrerade sparförsöket
-  kontrolleras separat och slutförs exakt en gång. Läs dess utfall före ett
+- Efter omstart väljer användaren samtalet från listan. Det registrerade
+  sparförsöket kontrolleras separat och slutförs exakt en gång. Läs dess
+  utfall före ett
   uttryckligt nytt samtal; korta ja eller nya allmänna uppdrag ersätter inte
   försöket.
+- Efter ett tappat kvittosvar kan du läsa sparbeskedet med samtalsnotisens
+  kontroll och se Mira som sparad i kartvyn utan omladdning.
 - Avbrutet ljud återtar inget genomfört sparande. Saknad slutlig mätning förblir
   osäker: 12 följt av 15 är 15 kända sekunder, inte 27 eller säkert noll.
 
@@ -368,8 +398,8 @@ till TAL-17/23/24.
 
 ### TAL-05: dialog, avstängd mikrofon och arbetsraden finns kvar under samtalet
 
-**Syfte:** Följa båda talarna, stänga av mikrofonen utan att tappa samtalet och
-se att Skyttel arbetar med ett talat uppdrag.
+**Syfte:** Följa båda talarna, se att Skyttel arbetar med ett talat uppdrag
+och läsa samma sammanhållna repliker efter omstart.
 
 **Användare:** Alex i den kontrollerade installationen.
 
@@ -389,9 +419,20 @@ TAL-05.
     "spec": "tests/integration/voice-assistant.spec.ts",
     "caseId": "TAL-05"
   },
-  "reference": "Chromium och kontrollerade text-/mediesvar enligt angiven separat förberedelse; faktisk röst eller uppläsning bedöms separat.",
+  "reference": "Chromium och kontrollerade textfragment till både webbläsaren och servern. Återställning efter faktisk serveromstart; verkligt tal eller uppläsning bedöms separat.",
   "outcomes": [
-    "Följa båda talarna, stänga av mikrofonen utan att tappa samtalet och se att Skyttel arbetar med ett talat uppdrag."
+    "Båda talarnas repliker hålls ihop. Samtalet finns kvar när mikrofonen stängs av och en egen rad visar när Skyttel arbetar.",
+    "Efter omstart visar det pausade samtalet samma hela repliker i samma ordning. Nytt samtal bevarar utkastet."
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "playwright",
+      "suite": "technical-browser",
+      "spec": "tests/technical-browser/conversation-transcript.spec.ts",
+      "title": "speech fragments form the same transcript rows during voice and after restoration",
+      "purpose": "Kontrollerar att både nya fragment och äldre fragment utan markörer bildar läsbara rader efter omstart."
+    }
   ]
 }
 ```
@@ -412,8 +453,12 @@ till TAL-17/23/24.
    fortfarande av. Slå själv på den; samma dialog ska finnas kvar.
 3. Låt Kontrollera utkastet vänta. Läs Skyttel arbetar sist i samtalstexten. Låt
    frågan Vem använder musiken? tillkomma; arbetsraden ska försvinna.
-4. Slå av mikrofonen. Tidigare dialog finns kvar. Välj Nytt samtal och läs
-   beskedet om kvarvarande osparad ändring. Läs hela Lo-förslaget.
+4. Slå av mikrofonen. Kontrollera att tidigare dialog finns kvar. Följ
+   tidslinjen för omstart, ladda om sidan och välj **Skriv till Skyttel**.
+   Välj **Samtal → Kim betalar för musiken.** och läs samma repliker i samma ordning.
+5. Välj **Nytt samtal** och **Godkänn och starta** om medgivanderutan visas.
+   Kontrollera att den nya samtalstexten är tom.
+   Läs hela Lo-förslaget.
 
 **Förväntat resultat:**
 
@@ -422,12 +467,16 @@ till TAL-17/23/24.
 - Paus behåller samtal och ljuduppspelning. En återhämtad anslutning startar
   inte en mikrofon som användaren har pausat.
 - Raden **Skyttel arbetar…** skiljer väntan från ett färdigt svar.
+- Efter omstart och val i **Samtal** visas hela repliker i samma ordning,
+  även när fragment från de
+  två talarna kommer om vartannat under en kort paus.
 - Samtalstexten är tillfällig och är inte ett sparkvitto. **Nytt samtal** tömmer
   den men bevarar utkastet.
 
 ### TAL-06: avbryt uppdrag från kartan och behåll samtalet och tidigare förslag
 
-**Syfte:** Nå avbrott utan öppen dialog och bevara redan utfört arbete.
+**Syfte:** Avbryt en hörbar replik från kartan och börja rättelsen direkt.
+Kontrollera rättelsens första ord och tidigare utfört arbete.
 
 **Användare:** Alex i den kontrollerade installationen.
 
@@ -448,7 +497,9 @@ TAL-06.
   },
   "reference": "Chromium och kontrollerade text-/mediesvar enligt angiven separat förberedelse; faktisk röst eller uppläsning bedöms separat.",
   "outcomes": [
-    "Nå avbrott utan öppen dialog och bevara redan utfört arbete."
+    "Kartläsningen syns under den talade instruktionen och ligger kvar efter avbrottet.",
+    "Rättelsens första ord finns i samtalstexten och Lo-förslaget finns kvar.",
+    "Försenat ljud före öppningen tystas och nästa svar hörs från början i det kontrollerade ljudförloppet."
   ]
 }
 ```
@@ -462,21 +513,28 @@ till TAL-17/23/24.
 
 **Steg:**
 
-1. Skriv Osänd rättelse utan att skicka. Låt Rätta Lo vänta enligt tidslinjen.
+1. Skriv Osänd rättelse utan att skicka. Låt Rätta Lo vänta efter
+   kartläsningen enligt tidslinjen. Läs **Läser kartan** under **Rätta Lo.**.
    Stäng textvyn och öppna Karta.
-2. Välj Avbryt i röstrutan. Låt det gamla För sent-förslaget släppas enligt
-   tidslinjen. Öppna textvyn och läs Avbrutet. Föreslagna ändringar ligger kvar
-   i utkastet.
-3. Slå av mikrofonen. Kräv kvarvarande Osänd rättelse. Välj Nytt samtal, läs en
-   osparad ändring och läs hela Lo Exempel-förslaget med Person och Påhittad
-   uppgift.
+2. Välj **Avbryt** i röstrutan medan repliken hörs. Låt den förberedda
+   rättelsen **Jag menar Lo Exempel.** börja vid trycket. Låt det gamla
+   För sent-förslaget och rättelsens svar komma enligt tidslinjen.
+3. Öppna textvyn. Läs **Läser kartan**, rättelsen från första ordet och beskedet
+   **Avbrutet. Föreslagna ändringar ligger kvar i utkastet.**
+   Kontrollera det gamla ljudet och nästa svars första ord enligt tidslinjen.
+4. Slå av mikrofonen. Kräv kvarvarande **Osänd rättelse**. Välj **Nytt samtal**
+   och läs en osparad ändring och hela Lo Exempel-förslaget med Person och
+   Påhittad uppgift.
 
 **Förväntat resultat:**
 
-- Avbrott stoppar det gamla uppdragets sena ändringar, utan att radera förslag.
-- Röst av, uppdragsavbrott och nytt samtal är separata handlingar.
-- Röstresurser avslutas vid avstängning; oskickad text behålls också efter
-  **Nytt samtal**.
+- Mikrofonen förblir på i samma röstanslutning. Samtalet innehåller hela
+  rättelsen och det sena förslaget ändrar inte utkastet.
+- Den avbrutna repliken tystnar. Gamla ljud som kommer medan uppspelningen
+  är tystad stoppas. Efter rättelsens första textfragment och minst 200 ms
+  tystnad kan nästa replik höras från första ordet. Även ett gammalt ord
+  som kommer först efter öppningen kan höras.
+- Nytt samtal behåller oskickad text och tidigare förslag.
 
 ### TAL-07: uppmätt ljudaktivitet skiljs från avstängd mikrofon och består
 
@@ -710,7 +768,7 @@ till TAL-17/23/24.
 
 **Förväntat resultat:**
 
-- Steg 2: röstrutan visar grå punkter och **Rösten startar**, utan stoppikon.
+- Steg 2: röstrutan visar grå punkter, **Rösten startar** och en ihålig ring.
   Knappen heter fortfarande **Prata med Skyttel**, är inte intryckt och
   beskrivs **Avbryt starten av rösten**.
 - Steg 3: den avbrutna röstrutan försvinner. Sen åtkomst startar inte ett
@@ -763,13 +821,13 @@ till TAL-17/23/24.
 
 **Steg:**
 
-1. Låt Rätta namnet till Lo Lind vänta enligt tidslinjen. Läs Skyttel arbetar
+1. Låt Rätta namnet till Lo Lind vänta enligt tidslinjen. Läs Arbetar
    och Avbryt.
 2. Slå av mikrofonen och fokusera Återställ vy. Uppdraget fortsätter;
    mikrofonknappen är fortfarande operabel.
-3. Låt det kontrollerade namnförslaget och svaret Namnet är ändrat i utkastet.
-   tillkomma medan inkommande aktivitet pågår. Läs Skyttel talar med mikrofonen
-   av.
+3. Starta inkommande ljud enligt tidslinjen. Läs **Skyttel talar** och
+   kontrollera att **Avbryt** är tillgänglig. Låt namnförslaget och svaret
+   Namnet är ändrat i utkastet. tillkomma medan ljudet pågår.
 4. Låt ljudaktiviteten upphöra, invänta några sekunder och låt ett nytt
    inkommande segment börja enligt tidslinjen. Skyttel talar ska återkomma utan
    mikrofonstart eller fel. Läs hela Lo Lind-förslaget med Person och Påhittad
@@ -777,10 +835,11 @@ till TAL-17/23/24.
 
 **Förväntat resultat:**
 
-- Steg 1: röstrutan visar **Skyttel arbetar** och stoppikonen **Avbryt**.
+- Steg 1: röstrutan visar **Arbetar** och stoppikonen **Avbryt**.
 - Steg 2: knappen är inte intryckt men går att välja. Mikrofonen är av.
-  Röstrutan visar fortfarande **Skyttel arbetar**.
-- Steg 3: utkastet visar **Lo Lind**. Röstrutan visar **Skyttel talar**.
+  Röstrutan visar fortfarande **Arbetar**.
+- I steg 3 visar röstrutan **Skyttel talar** och **Avbryt** medan arbetet
+  pågår med mikrofonen av. Utkastet visar sedan **Lo Lind**.
 - Steg 4: röstrutan
   försvinner när ljudet tystnar, och statusen för hjälpmedel innehåller
   **Mikrofonen är av**. Anslutningen och det avstängda mikrofonspåret finns
@@ -826,26 +885,25 @@ till TAL-17/23/24.
 
 1. Låt Rätta namnet vänta enligt tidslinjen. Fokusera Avbryt med Tab och tryck
    Enter.
-2. Röstrutan visar Lyssnar utan stoppknapp, och fokus går till Prata med
+2. Röstrutan visar Lyssnar med ringen, och fokus går till Prata med
    Skyttel. Släpp det sena För sent-förslaget enligt tidslinjen; det får inte
    ändra Lo.
-3. Låt inkommande aktivitet börja, välj Avbryt och låt det gamla ljudet försöka
-   återkomma efter en paus enligt tidslinjen. Mikrofonen ska förbli på och
-   Lyssnar visas.
-4. Låt ett nytt inkommande segment börja i den nya anslutningen. Läs Skyttel
-   talar och hela bevarade Lo Exempel-förslaget med Person och Påhittad uppgift.
+3. Välj Avbryt medan Skyttel talar. Prova de äldre orden och det sena ljudet
+   efter pausen enligt tidslinjen. Mikrofonen ska förbli på och Lyssnar visas.
+4. Öppna textvyn och läs rättelsen enligt tidslinjen. Låt nästa svar börja
+   i samma anslutning. Läs Skyttel talar och hela bevarade Lo Exempel-förslaget
+   med Person och Påhittad uppgift.
 
 **Förväntat resultat:**
 
-- Steg 2: röstrutan visar **Lyssnar** utan stoppikon. Fokus står på
+- Steg 2: röstrutan visar **Lyssnar** med ringen. Fokus står på
   **Prata med Skyttel**, som fortfarande är intryckt.
 - Steg 2: utkastet är oförändrat. Lo heter fortfarande Lo Exempel. Kommentarer
   och resursstopp granskas separat enligt tidslinjen.
 - Steg 3: det gamla ljudet tystnar direkt. Samtalets tidigare text finns kvar,
   röstrutan återgår till **Lyssnar**. Förslagen finns kvar.
-- Steg 4: det avbrutna ljudet kan inte återupptas efter en paus.
-  **Skyttel talar** visas för det nya svaret, som ger kontrollerad inkommande
-  ljudaktivitet.
+- Steg 4: den tidigare begäran och rättelsen finns i samtalstexten.
+  **Skyttel talar** visas när det nya svaret hörs.
 
 ### TAL-13: ett skrivet meddelande visar aldrig röstrutan och stänger av
 
@@ -891,20 +949,19 @@ till TAL-17/23/24.
 3. Skicka Beskriv det en gång till. Tryck Escape i meddelandefältet medan det
    väntar. Knappen blir operabel igen.
 4. Slå på mikrofonen, skicka Beskriv det nu. och välj Avbryt i röstrutan. Läs
-   Skyttel arbetar före avbrottet och Lyssnar efteråt.
+   Arbetar före avbrottet och Lyssnar efteråt.
 
 **Förväntat resultat:**
 
 - Steg 1: **Prata med Skyttel** är avstängd, och ingen röstruta visas.
 - Steg 2 och 3: knappen går att välja igen när Skyttel är klar eller uppdraget
   är avbrutet. Ingen röstruta visas, och ingen mikrofon används.
-- Steg 4: med mikrofonen på visar röstrutan **Skyttel arbetar** med stoppikonen.
+- Steg 4: med mikrofonen på visar röstrutan **Arbetar** med stoppikonen.
   Efter **Avbryt** visar den **Lyssnar**.
 
 ### TAL-14: röstrutans ordnade status och vågform
 
-**Syfte:** Se statusordens ordning, vågformens fyra former och de två fasta
-formerna vid minskad rörelse.
+**Syfte:** Skilja tal, arbete och vila åt i röstrutan med och utan rörelse.
 
 **Användare:** Alex i den kontrollerade installationen.
 
@@ -923,7 +980,9 @@ formerna vid minskad rörelse.
   },
   "reference": "Chromium och kontrollerade text-/mediesvar enligt angiven separat förberedelse; faktisk röst eller uppläsning bedöms separat.",
   "outcomes": [
-    "Se statusordens ordning, vågformens fyra former och de två fasta formerna vid minskad rörelse."
+    "Tal prioriteras vid samtidigt arbete. Avbryt kan användas under arbetet även när Du talar visas.",
+    "Arbetar visar en puls, med ett stilla streck vid minskad rörelse.",
+    "En ihålig ring visas på stoppikonens plats. Modell och resonemang och Nytt samtal har lika stora symboler som Avbryt."
   ]
 }
 ```
@@ -937,34 +996,32 @@ till TAL-17/23/24.
 
 **Steg:**
 
-1. Läs Lyssnar och sju punkter. Följ tidslinjens svaga/starka mikrofonaktivitet;
-   läs Du talar och staplarnas större utslag.
-2. Låt inkommande aktivitet börja medan mikrofonaktiviteten finns kvar. Skyttel
-   talar ska gå före Du talar.
+1. Läs **Lyssnar** och se sju punkter och ringen. Följ tidslinjens svaga
+   och starka mikrofonaktivitet. Läs **Du talar** och se staplarnas utslag.
+2. Låt Skyttel tala medan mikrofonaktiviteten finns kvar. Läs **Skyttel talar**.
 3. Låt Beskriv utkastet tillkomma och avsluta mikrofonaktiviteten så att
-   uppdraget börjar. Återuppta mikrofonaktiviteten medan svaret väntar och
-   läs Skyttel arbetar före båda andra statusarna. Avsluta aktiviteten igen
-   och låt Utkastet har ett förslag. tillkomma enligt tidslinjen; Skyttel
-   talar återkommer.
-4. Emulera minskad rörelse. Läs samma stilla staplar för inkommande och
-   återupptagen egen aktivitet. När båda avslutas återkommer sju stilla
-   punkter och Lyssnar.
+   uppdraget börjar. Läs **Skyttel talar** tills Skyttels ljud upphör och
+   läs sedan **Arbetar**. Återuppta och avsluta mikrofonaktiviteten medan
+   svaret väntar.
+4. Emulera minskad rörelse medan arbetet pågår. Låt sedan svaret komma och
+   återuppta egen aktivitet enligt tidslinjen. Avsluta båda ljudsignalerna.
 
 **Förväntat resultat:**
 
-- Steg 1: **Lyssnar** har sju punkter i accentfärg. **Du talar** har staplar i
-  accentfärg som är låga vid svagt ljud och höga vid starkt ljud.
-- Steg 2: **Skyttel talar** går före **Du talar**. Staplarna rör sig jämnt i
+- I steg 1 har **Lyssnar** sju punkter i accentfärg och en ihålig ring.
+  **Du talar** har låga staplar vid svagt ljud och höga staplar vid starkt ljud.
+- I steg 2 går **Skyttel talar** före **Du talar**. Staplarna rör sig jämnt i
   textfärg, och stoppikonen visas.
-- Steg 3: **Skyttel arbetar** går före båda, med stilla punkter. Efter svaret
-  visar den **Skyttel talar**.
-- Steg 4: vågformen rör sig inte. **Skyttel talar** och **Du talar** har samma
-  sju stilla staplar, som inte ändras med ljudnivån. **Lyssnar** har sju
-  punkter. Formerna byts utan övergång.
-- Röstrutan är en namngiven grupp. **Avbryt** går att trycka på. Den visar
-  vågform, ett statusord, eventuell kontextsymbol och stoppikon. Den blir
-  bredare med fler delar men behåller samma höjd. Text och stoppknapp förblir
-  läsbara och nåbara; exakta mått granskas separat enligt tidslinjen.
+- I steg 3 har **Arbetar** en puls från vänster till höger som sedan stannar
+  mitt bland punkterna. **Du talar** visas medan du talar och **Arbetar**
+  återkommer när du slutar. **Avbryt** finns under hela arbetet på ringens
+  plats. Reglagen för modellval, plustecknet och stoppikonen har jämförbar
+  storlek.
+- I steg 4 har **Arbetar** ett stilla streck bland punkterna. **Skyttel talar**
+  och **Du talar** har samma sju stilla staplar. När båda signalerna upphör
+  visas **Lyssnar** med sju punkter och ringen.
+- Text och stoppknapp går att läsa och nå. Exakta mått granskas separat
+  enligt tidslinjen.
 
 ### TAL-16: röstrutans namn läge och status för hjälpmedel
 
@@ -1206,12 +1263,12 @@ inte.
 | 1.3.1, 4.1.2 Namn, roll och värde | **Prata med Skyttel** är en växlingsknapp med samma namn i båda lägena. Röstrutan är gruppen **Röstruta**. Beskrivningen är **Avbryt starten av rösten** medan rösten startar. | Namn, roll, intryckt läge och beskrivning. | Hur skärmläsare säger läget. |
 | 1.4.1 Färg | Påslagen knapp har fylld bakgrund, inte bara en annan nyans, och intryckt läge för hjälpmedel. Röstrutan med **Lyssnar** visar också att mikrofonen är på. Vågformens färg följs av statusordet. | Intryckt läge, ändrad bakgrund och statusord i alla lägen. | Om fylld och ofylld knapp går att skilja åt utan färgseende. |
 | 1.4.3, 1.4.11 Kontrast | Rutan och knappen använder kartans färger i ljust och mörkt tema. De grå punkterna bär ingen egen information. | – | Kontrast för text, stoppikon och fokusram i båda teman. |
-| 1.4.4, 1.4.10 Förstoring och omflöde | Rutan har fast höjd och följer innehållets bredd, utan rullning i sidled. | Placering på 1280, 820 och 390 px utan rullning i sidled. | Verklig webbläsarzoom 200 och 400 procent. |
+| 1.4.4, 1.4.10 Förstoring och omflöde | Statusordet kan radbrytas när utrymmet är litet. Rutan följer innehållets bredd upp till fönstrets kanter. | Placering på 1280, 820 och 390 px utan rullning i sidled. | Verklig webbläsarzoom 200 och 400 procent. |
 | 2.1.1 Tangentbord | Knappen och stoppikonen nås med Tab. | Tangentordning och Enter på **Avbryt**. | Hjälpmedlens egna kommandon. |
-| 2.2.2 Paus, stopp, dölj | **Skyttel talar** rör sig medan Skyttel talar. **Avbryt** tystar Skyttel och stoppar rörelsen, och minskad rörelse ger fasta former. | Fasta former vid minskad rörelse. | Bedömning av rörelse som varar längre än fem sekunder. |
+| 2.2.2 Paus, stopp, dölj | Pulsen under **Arbetar** stannar efter två passager. **Skyttel talar** rör sig medan Skyttel talar. **Avbryt** tystar Skyttel och stoppar rörelsen, och minskad rörelse ger fasta former. | Puls under arbete och fasta former vid minskad rörelse. | Bedömning av talets rörelse som varar längre än fem sekunder. |
 | 2.3.3 Animering från interaktioner | Vid minskad rörelse rör sig inget, och formerna byts utan övergång. | Ingen animering och ingen övergång. | – |
 | 2.4.3, 2.4.7 Fokus | Ordningen är **Prata med Skyttel**, **Skriv till Skyttel**, **Avbryt**, sedan resten av verktygsraden. Försvinner **Avbryt** med fokus går fokus till **Prata med Skyttel**. | Tangentordning och fokus efter **Avbryt**. | Läsordning med VoiceOver när rutan står vid nederkanten. |
-| 2.5.8 Pekmål | Stoppikonen är 26 px och har en tryckyta på 44 px på mobil enhet. | Stoppikonens mått. | Träffsäkerhet på fysisk pekskärm. |
+| 2.5.8 Pekmål | Röstrutans ikoner har synliga knappar på 26 px och tryckytor på 44 px på mobil enhet. | Ikonernas mått och stoppknappens tryckyta. | Träffsäkerhet på fysisk pekskärm. |
 | 4.1.3 Statusmeddelanden | **Lyssnar**, **Skyttel arbetar** och **Mikrofonen är av** läses upp i tur, utan att flytta fokus och utan ljudsignaler. | Uppläsningarnas text, tur och att de inte upprepas. | Att varje uppläsning kommer en gång med riktig skärmläsare. |
 <!-- markdownlint-enable MD013 -->
 
@@ -1497,7 +1554,7 @@ Skyttel arbetar och före Avbryt. Utför inte den påslagna varianten först.
 
 ### TAL-20: röstrutans fria plats på dator
 
-**Syfte:** Behålla åtkomliga verktyg och kartåterkoppling medan röstrutan växer.
+**Syfte:** Behålla åtkomliga verktyg och kartåterkoppling när röstrutan visar arbete.
 
 **Användare:** Alex.
 
@@ -1518,7 +1575,7 @@ Skyttel arbetar och före Avbryt. Utför inte den påslagna varianten först.
   "reference": "Chromium 1280 × 800; kontrollerat lyssnande och väntande röstuppdrag.",
   "outcomes": [
     "Röstrutan, arbetsverktygen och kartåterkopplingen täcker inte varandra.",
-    "Längre statusord behåller en fri, synlig plats och åtkomlig stoppknapp."
+    "Arbetar och stoppknappen har en fri och synlig plats."
   ]
 }
 ```
@@ -1534,17 +1591,16 @@ Skyttel arbetar och före Avbryt. Utför inte den påslagna varianten först.
    Karta, öppna textvyn, visa utkastet, stäng textvyn och läs den fria platsen
    vid varje steg.
 3. Låt ett kontrollerat Beskriv utkastet-uppdrag vänta enligt tidslinje TAL-14.
-   Läs Skyttel arbetar och nå Avbryt utan att den bredare röstrutan täcker andra
-   kontroller.
+   Läs **Arbetar** och nå **Avbryt** utan att röstrutan täcker andra kontroller.
 
 **Förväntat resultat:**
 
 - Röstrutan, arbetsverktygen och kartåterkopplingen täcker inte varandra.
-- Längre statusord behåller en fri, synlig plats och åtkomlig stoppknapp.
+- Arbetar och stoppknappen har en fri och synlig plats.
 
 ### TAL-21: röstrutans fria plats på bred skärm
 
-**Syfte:** Behålla åtkomliga verktyg och kartåterkoppling medan röstrutan växer.
+**Syfte:** Behålla åtkomliga verktyg och kartåterkoppling när röstrutan visar arbete.
 
 **Användare:** Alex.
 
@@ -1565,7 +1621,7 @@ Skyttel arbetar och före Avbryt. Utför inte den påslagna varianten först.
   "reference": "Chromium 820 × 1180; kontrollerat lyssnande och väntande röstuppdrag.",
   "outcomes": [
     "Röstrutan, arbetsverktygen och kartåterkopplingen täcker inte varandra.",
-    "Längre statusord behåller en fri, synlig plats och åtkomlig stoppknapp."
+    "Arbetar och stoppknappen har en fri och synlig plats."
   ]
 }
 ```
@@ -1579,17 +1635,16 @@ Skyttel arbetar och före Avbryt. Utför inte den påslagna varianten först.
 2. Läs röstrutan, verktygsraden och kartåterkopplingen. Kontrollera att inget
    täcks och att sidan inte behöver rullas i sidled.
 3. Låt ett kontrollerat Beskriv utkastet-uppdrag vänta enligt tidslinje TAL-14.
-   Läs Skyttel arbetar och nå Avbryt utan att den bredare röstrutan täcker andra
-   kontroller.
+   Läs **Arbetar** och nå **Avbryt** utan att röstrutan täcker andra kontroller.
 
 **Förväntat resultat:**
 
 - Röstrutan, arbetsverktygen och kartåterkopplingen täcker inte varandra.
-- Längre statusord behåller en fri, synlig plats och åtkomlig stoppknapp.
+- Arbetar och stoppknappen har en fri och synlig plats.
 
 ### TAL-22: röstrutans fria plats på smal skärm
 
-**Syfte:** Behålla åtkomliga verktyg och kartåterkoppling medan röstrutan växer.
+**Syfte:** Behålla åtkomliga verktyg och kartåterkoppling när röstrutan visar arbete.
 
 **Användare:** Alex.
 
@@ -1610,7 +1665,7 @@ Skyttel arbetar och före Avbryt. Utför inte den påslagna varianten först.
   "reference": "Chromium 390 × 844; kontrollerat lyssnande och väntande röstuppdrag.",
   "outcomes": [
     "Röstrutan, arbetsverktygen och kartåterkopplingen täcker inte varandra.",
-    "Längre statusord behåller en fri, synlig plats och åtkomlig stoppknapp."
+    "Arbetar och stoppknappen har en fri och synlig plats."
   ]
 }
 ```
@@ -1624,13 +1679,12 @@ Skyttel arbetar och före Avbryt. Utför inte den påslagna varianten först.
 2. Läs röstrutan, verktygsraden och kartåterkopplingen. Kontrollera att inget
    täcks och att sidan inte behöver rullas i sidled.
 3. Låt ett kontrollerat Beskriv utkastet-uppdrag vänta enligt tidslinje TAL-14.
-   Läs Skyttel arbetar och nå Avbryt utan att den bredare röstrutan täcker andra
-   kontroller.
+   Läs **Arbetar** och nå **Avbryt** utan att röstrutan täcker andra kontroller.
 
 **Förväntat resultat:**
 
 - Röstrutan, arbetsverktygen och kartåterkopplingen täcker inte varandra.
-- Längre statusord behåller en fri, synlig plats och åtkomlig stoppknapp.
+- Arbetar och stoppknappen har en fri och synlig plats.
 
 ### TAL-23: verkligt svenskt tal genom familjeärendet
 

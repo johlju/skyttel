@@ -12,6 +12,7 @@ async function main() {
   const provider = costProvider(() => emit('held'));
   const app = await createInstallation(undefined, {
     modelFetch: provider.provider,
+    titleFetch: provider.provider,
     liveFetch: provider.live.provider,
     liveSideband: provider.live.attach,
     browserProviderScript: liveBrowserFixtureSource,

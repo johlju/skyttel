@@ -91,55 +91,32 @@ test('an accepted slow message preserves newer unsent text while its answer is a
 });
 
 test.each([false, true])(
-  'a new conversation retires a late message response (failure=%s) and keeps newly edited unsent text',
+  'a pending request blocks switching until its result is known (failure=%s)',
   async (failure) => {
     const held = deferred<Response>();
-    const reset = deferred<Response>();
     const posts: string[] = [];
     const { result } = await setup((url) => {
       posts.push(url);
-      if (url.endsWith('/messages')) return held.promise;
-      if (url.endsWith('/new')) return reset.promise;
-      return Response.json(initial);
+      return url.endsWith('/messages') ? held.promise : Response.json(initial);
     });
     act(() => result.current.setText('Gammalt uppdrag.'));
     let message!: Promise<void>;
     act(() => {
       message = result.current.send();
     });
-    let newConversation!: Promise<void>;
-    act(() => {
-      newConversation = result.current.newConversation();
-    });
     await act(async () => result.current.newConversation());
-    expect(posts.filter((url) => url.endsWith('/new'))).toHaveLength(1);
-    act(() => result.current.setText('Oskickat i det nya samtalet.'));
-    await act(async () => {
-      reset.resolve(
-        Response.json({
-          ...initial,
-          revision: 2,
-          contextRevision: 1,
-          reply: 'Nytt samtal. Utkastet ligger kvar.',
-          replyVoiced: false,
-        }),
-      );
-      await newConversation;
-    });
+    expect(result.current.switchBlocked).toBe(true);
+    expect(posts.filter((url) => url.endsWith('/messages'))).toHaveLength(1);
+    act(() => result.current.setText('Oskickat.'));
     await act(async () => {
       held.resolve(
         failure
-          ? Response.json({ error: 'old_error' }, { status: 503 })
-          : Response.json({ ...initial, revision: 1, modelReply: 'Gammalt privat svar.' }),
+          ? Response.json({ error: 'unavailable' }, { status: 503 })
+          : Response.json({ ...initial, revision: 1, modelReply: 'Klart.' }),
       );
       await message;
     });
-    expect(result.current.transcript.map((row) => row.text)).toEqual([
-      'Nytt samtal. Utkastet ligger kvar.',
-    ]);
-    expect(result.current.transcript[0]).toMatchObject({ voiced: false, voicePending: false });
-    expect(result.current.text).toBe('Oskickat i det nya samtalet.');
-    expect(result.current.unknown).toBe(false);
+    expect(result.current.text).toBe('Oskickat.');
     expect(result.current.pending).toBe(false);
   },
 );
@@ -255,14 +232,16 @@ test('a selection which finishes after an explicit reset cannot acknowledge an i
           selection: { kind: 'object', id: 'alex', revision: 1 },
         });
       if (url.endsWith('/selection')) acks.push(body);
-      if (url.endsWith('/new'))
-        return Response.json({ ...initial, revision: 2, contextRevision: 1 });
+      if (url.endsWith('/cancel')) return Response.json({ ...initial, revision: 2 });
+      if (body?.previousId) return Response.json({ ...initial, id: 'fresh' });
       return Response.json(initial);
     },
     { ...callbacks, onSelectItem: display },
   );
   act(() => result.current.setText('Visa Alex.'));
   await act(async () => result.current.send());
+  expect(result.current.switchBlocked).toBe(true);
+  await act(async () => result.current.cancel());
   await act(async () => result.current.newConversation());
   expect(signal?.aborted).toBe(true);
   await act(async () => selected.resolve(true));

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { conversationWidths } from '../shared/conversation-preferences.js';
+import { conversationPanelGap, conversationWidths } from '../shared/conversation-preferences.js';
 import { type DraftConflict, draftConflicts } from '../shared/draft-conflicts.js';
 import { hasEnded } from '../shared/lifecycle.js';
 import type {
@@ -297,7 +297,7 @@ export function HouseholdMap({
     ? viewport.width
     : viewport.mobile
       ? 400
-      : widths.textWidth + (draftViewOpen ? widths.draftWidth : 0);
+      : widths.textWidth + (draftViewOpen ? widths.draftWidth + conversationPanelGap : 0);
   const exclusiveViews = narrow || viewport.width - textViewWidth < 350;
   const textViewVisible =
     workspaceSurface !== 'reports' &&
@@ -346,7 +346,7 @@ export function HouseholdMap({
     }
     workTrigger.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    if (target === 'voice' && conversation.inputBlocked && (target === 'voice' || !ongoing)) {
+    if (target === 'voice' && conversation.inputBlocked) {
       conversation.showNotice?.();
       return;
     }
@@ -359,8 +359,8 @@ export function HouseholdMap({
       return;
     }
     if (target === 'voice' && conversation.session) {
-      // The microphone opens no panel. The voice box shows what it does.
-      conversation.voice.activate();
+      if (conversation.session.requiresActivation) conversation.begin('voice');
+      else conversation.voice.activate();
       return;
     }
     if (target === 'conversation') {
@@ -488,15 +488,9 @@ export function HouseholdMap({
         if (column && composer && header) {
           // The notice slot can push the composer down. Use the bounded
           // column height so expanding a report cannot grow its own limit.
-          const modelControl = column.querySelector('.text-view-model');
-          const modelHeight =
-            modelControl && getComputedStyle(modelControl).position !== 'absolute'
-              ? modelControl.getBoundingClientRect().height
-              : 0;
           const available =
             column.getBoundingClientRect().bottom -
             composer.getBoundingClientRect().height -
-            modelHeight -
             Math.max(column.getBoundingClientRect().top, header.getBoundingClientRect().bottom);
           card.style.setProperty('--notice-available-height', `${Math.max(46, available - 28)}px`);
         }
@@ -1158,10 +1152,10 @@ export function HouseholdMap({
   }
   // The household work owns the conversation. Views only choose where to
   // show its text, voice, notice and controls.
-  function showConversation() {
+  function showConversation(openingFocus: TextOpeningFocus = 'text') {
     if (workspaceSurface === 'reports') setWorkspaceSurface(reportReturnSurface.current);
     setRevealRequest(undefined);
-    setTextOpeningFocus('text');
+    setTextOpeningFocus(openingFocus);
     setTextViewOpen(true);
     setWorkspaceView('text');
     setTextFocusRequest((previous) => previous + 1);
@@ -1183,9 +1177,13 @@ export function HouseholdMap({
     conversation.session?.securityReference ??
     conversation.session?.completedReplies?.findLast((reply) => reply.securityReference)
       ?.securityReference;
-  const workFailure = !conversation.session?.paused ? conversation.session?.workFailure : undefined;
+  const workFailure =
+    conversation.session?.requiresActivation || !conversation.session?.paused
+      ? conversation.session?.workFailure
+      : undefined;
   const noticeState = useConversationNotice({
     workFailure,
+    voiceRefusal: conversation.voice.refusal,
     batchPending: conversation.session?.batchPending,
     contextSummaryFailure: conversation.session?.contextSummaryFailure,
     conditions: {
@@ -1257,13 +1255,15 @@ export function HouseholdMap({
           >
             Avstå från det oavslutade arbetet
           </button>
-          <button
-            type="button"
-            disabled={conversation.pending}
-            onClick={() => void conversation.cancel()}
-          >
-            Stoppa allt
-          </button>
+          {!conversation.session?.requiresActivation && (
+            <button
+              type="button"
+              disabled={conversation.pending}
+              onClick={() => void conversation.cancel()}
+            >
+              Stoppa allt
+            </button>
+          )}
         </>
       )}
     </ConversationNoticeCard>
@@ -1409,6 +1409,7 @@ export function HouseholdMap({
           <WorkspaceTools
             conversationUnavailable={Boolean(conversation.inputBlocked)}
             conversationOngoing={ongoing}
+            conversationPaused={conversation.session?.requiresActivation}
             voiceControl={
               conversation.session ||
               conversation.voice.microphone === 'on' ||

@@ -26,7 +26,14 @@ export type PendingPart = {
   operations: { name: string; arguments: Record<string, unknown> }[];
 };
 export type PendingPartReference = Pick<PendingPart, 'id' | 'revision'>;
-export type TextAssistantChange = { subject: string; action: string };
+export type TextAssistantChange = { subject: string; action: string; objectId?: string };
+export type ConversationWorkStep = {
+  id: string;
+  requestId: string;
+  kind: 'mcp' | 'tool';
+  text: string;
+  count: number;
+};
 export type TextAssistantResult = {
   kind: 'draft' | 'restored' | 'history' | 'failure';
   /** Server-produced text grounded in checked MCP results or recorded failures. */
@@ -62,8 +69,11 @@ export type ConversationReply = {
 export type RetainedConversation = {
   id: string;
   title: string;
+  createdAt?: number;
+  lastRequestAt?: number;
   expiresAt: number;
   paused: boolean;
+  busy?: boolean;
   modelChoice: ConversationModelChoice;
 };
 export interface TextAssistantView {
@@ -75,6 +85,9 @@ export interface TextAssistantView {
     message: string;
     retry?: string;
   };
+  requiresActivation?: boolean;
+  interruptedRequestId?: string;
+  interruptedSpeech?: string;
   /** Restored work never starts automatically. */
   paused?: boolean;
   expiresAt?: number;
@@ -82,6 +95,10 @@ export interface TextAssistantView {
     role: 'user' | 'assistant';
     text: string;
     partial?: boolean;
+    utteranceStart?: boolean;
+    requestId?: string;
+    /** Identifies the live speech fragment that began a delegated request. */
+    speechEventId?: string;
     /** Automatic failure shown in the notice; retained as model context only. */
     notice?: boolean;
   }[];
@@ -138,9 +155,10 @@ export interface TextAssistantView {
   /** A submitted draft batch has an outcome still awaiting status verification. */
   batchPending?: boolean;
   phase: 'ready' | 'working' | 'error' | 'recovery';
-  /** Current public executor stage and recent actual MCP steps in this task. */
+  /** Current public executor stage, followed by tool activity in this conversation. */
+  waitingForRetainedWork?: boolean;
   activity?: string;
-  activitySteps?: { id: string; text: string }[];
+  workSteps?: ConversationWorkStep[];
   review: TextAssistantReview;
   reply?: string;
   /** Provider conversation is never evidence of a saved or displayed result. */

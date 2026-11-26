@@ -165,7 +165,7 @@ test.each([
     expect(await read()).toEqual(before);
     const failedCalls = calls;
     expect(
-      (await post(`${endpoint}/model-choice`, { model: 'gpt-6.1-sol', effort: 'medium' })).status(),
+      (await post(`${endpoint}/model-choice`, { model: 'gpt-6.2-sol', effort: 'medium' })).status(),
     ).toBe(200);
     view = await (await browser.get(endpoint)).json();
     expect(view.queuedMessages).toBe(2);
@@ -191,7 +191,7 @@ test.each([
     );
     if (action === 'retry') expect(resumedInputs[0].messageId).toBe(requestId);
     expect(
-      resumed.every((body) => body.model === 'gpt-6.1-sol' && body.reasoning.effort === 'medium'),
+      resumed.every((body) => body.model === 'gpt-6.2-sol' && body.reasoning.effort === 'medium'),
     ).toBe(true);
     expect(view.workFailure).toBeUndefined();
     expect((await read()).draft).toMatchObject(
@@ -525,9 +525,11 @@ test.each(['retry', 'abandon'] as const)(
 );
 
 test.each([true, false])(
-  'a lost registered save response keeps only its unfinished explanation behind an explicit continuation action: explanation=%s',
+  'an unavailable save receipt lookup requires recovery before any unfinished explanation can resume: explanation=%s',
   async (explanation) => {
-    let dropped = false;
+    let operationIdWithDroppedReply: string | undefined;
+    let blockReceiptLookups = true;
+    const unavailableLookups = new Set<string>();
     const model = textModel(
       (body) => {
         if (model.requests.length > 1)
@@ -566,12 +568,20 @@ test.each([true, false])(
                 .json()
                 .catch(() => null)
             : null;
+        if (
+          blockReceiptLookups &&
+          rpc?.params?.name === 'read_save_operation' &&
+          operationIdWithDroppedReply
+        ) {
+          unavailableLookups.add(rpc.params.arguments.operationId);
+          throw new TypeError('Controlled save receipt lookup unavailable');
+        }
         const response = await dispatch(incoming);
-        if (rpc?.params?.name === 'save_draft' && !dropped) {
+        if (rpc?.params?.name === 'save_draft' && !operationIdWithDroppedReply) {
           const envelope = await response.clone().json();
           expect(envelope.result.isError).not.toBe(true);
-          dropped = true;
-          throw new Error('Controlled committed save response loss');
+          operationIdWithDroppedReply = rpc.params.arguments.operationId;
+          throw new TypeError('Controlled committed save response loss');
         }
         return response;
       },
@@ -609,20 +619,31 @@ test.each([true, false])(
     });
     await expect
       .poll(async () => {
-        view = await (await browser.get(endpoint)).json();
-        return [dropped, view.phase];
+        view = await (await browser.get(`${endpoint}/messages/${requestId}`)).json();
+        return view.taskStatus;
       })
-      .toEqual([true, 'recovery']);
+      .toBe('completed');
+    expect(view.phase).toBe('recovery');
+    expect(operationIdWithDroppedReply).toBeDefined();
+    expect(unavailableLookups).toEqual(new Set([operationIdWithDroppedReply]));
+    expect(view.receipt).toBeUndefined();
     expect(view.workFailure).toBeUndefined();
     expect(
       (await post(`${endpoint}/retry-work`, { revision: view.revision, requestId })).status(),
     ).toBe(409);
     expect(model.requests).toHaveLength(1);
     const operation = (await (await browser.get(`${map}/operations`)).json()).operations[0];
-    expect(operation.status).toBe('succeeded');
+    expect(operation).toMatchObject({
+      status: 'succeeded',
+      operationId: operationIdWithDroppedReply,
+    });
+    const { history } = await (await browser.get(`${map}/history`)).json();
+    expect(history).toEqual([operation.receipt]);
+    blockReceiptLookups = false;
     const check = await post(`${endpoint}/recover`, { operationIds: [operation.operationId] });
     expect(check.status(), await check.text()).toBe(200);
     view = await check.json();
+    expect(view.receipt).toEqual(operation.receipt);
     if (!explanation) {
       expect(view.workFailure).toBeUndefined();
       expect(view.phase).toBe('ready');
@@ -650,7 +671,7 @@ test.each([true, false])(
     expect(view.receipt).toBeUndefined();
     expect(model.requests).toHaveLength(2);
     expect((await (await browser.get(`${map}/operations`)).json()).operations).toHaveLength(1);
-    expect((await (await browser.get(`${map}/history`)).json()).history).toHaveLength(1);
+    expect((await (await browser.get(`${map}/history`)).json()).history).toEqual(history);
     expect(await (await browser.get(map)).json()).toMatchObject({
       objects: [{ id: 'lo', name: 'Lo' }],
       draft: { changes: [] },
@@ -1253,7 +1274,7 @@ test.each(['retry', 'abandon', 'stop'] as const)(
       });
     expect(workCalls).toBe(1);
     expect(
-      (await post(`${endpoint}/model-choice`, { model: 'gpt-6.1-sol', effort: 'medium' })).status(),
+      (await post(`${endpoint}/model-choice`, { model: 'gpt-6.2-sol', effort: 'medium' })).status(),
     ).toBe(200);
     await browser.get(endpoint);
     expect(workCalls).toBe(1);
@@ -1316,7 +1337,7 @@ test.each(['retry', 'abandon', 'stop'] as const)(
       .toEqual(['ready', 0]);
     expect(workCalls).toBe(action === 'retry' ? 3 : 2);
     expect(model.requests.map((body) => [body.model, body.reasoning.effort])).toEqual(
-      Array.from({ length: action === 'retry' ? 2 : 1 }, () => ['gpt-6.1-sol', 'medium']),
+      Array.from({ length: action === 'retry' ? 2 : 1 }, () => ['gpt-6.2-sol', 'medium']),
     );
     expect(
       view.conversation?.filter(

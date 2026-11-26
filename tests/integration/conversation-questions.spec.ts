@@ -17,7 +17,12 @@ import {
 import { readTableObject } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
-import { isVoiceAnswerRelease, liveProvider, voiceAnswerParts } from '../support/live-provider.js';
+import {
+  isVoiceAnswerRelease,
+  liveProvider,
+  speak,
+  voiceAnswerParts,
+} from '../support/live-provider.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 import {
   lastToolResult,
@@ -75,36 +80,19 @@ async function fixture(page: Page, model: ReturnType<typeof textModel>, unresolv
   await page.goto(app.origin);
   return { app, live, path, value, views, responses };
 }
-function speak(live: ReturnType<typeof liveProvider>, text: string) {
-  const id = [...live.channels.keys()].at(-1);
-  if (!id) throw new Error('Voice has not started');
-  live.emit(id, {
-    type: 'session.input_transcript.delta',
-    event_id: crypto.randomUUID(),
-    delta: text,
-    start_ms: 0,
-    end_ms: 100,
-  });
-  live.emit(id, {
-    type: 'session.delegation.created',
-    event_id: crypto.randomUUID(),
-    offset_ms: 100,
-    delegation: { id: crypto.randomUUID(), type: 'delegation', target: 'client' },
-  });
-}
 const commentary = (live: ReturnType<typeof liveProvider>) =>
   live.sent.filter(({ event }) => isVoiceAnswerRelease(event));
-async function output(page: Page, text: string) {
+async function output(page: Page, text: string, start = 200) {
   await page.evaluate(
-    (delta) =>
+    ({ delta, start }) =>
       window.skyttelVoiceFixture.emit({
         type: 'session.output_transcript.delta',
         event_id: crypto.randomUUID(),
         delta,
-        start_ms: 200,
-        end_ms: 300,
+        start_ms: start,
+        end_ms: start + 100,
       }),
-    text,
+    { delta: text, start },
   );
 }
 async function sound(page: Page, active: boolean) {
@@ -457,6 +445,7 @@ test('FRAGA-11: egenskapsfrågor och lika namn rättas med text i samma röstsam
     await send(page, 'Spara hela utkastet nu.');
     await expect(transcript).toContainText('Sparat.');
     await expect(await openConversationDraft(page)).toContainText('Utkastet är tomt.');
+    await page.getByRole('button', { name: 'Stäng textvyn' }).click();
     const saved = await readTableObject(page, 'Lo Exempel');
     for (const text of ['Tomt (Text)', 'Arbete', '0700123456', '0012'])
       await expect(saved).toContainText(text);
@@ -716,10 +705,9 @@ for (const mode of ['tal', 'text'] as const)
       await waitForResponse(live);
       await expect.poll(() => responses.at(-1)?.response?.questionPending).toBe(true);
       await expect.poll(() => views.at(-1)?.questionPending).toBe(true);
-      await sound(page, true);
-      await expect(voiceBox(page)).toContainText('Skyttel talar');
       await output(page, question);
-      await sound(page, false);
+      await page.evaluate(() => window.skyttelVoiceFixture.remoteTone(800, 0, 0.5));
+      await expect(voiceBox(page)).toContainText('Skyttel talar');
       await expect(voiceBox(page)).toHaveText('Väntar på ditt svar');
       await expect(voiceAnnouncement(page)).not.toContainText('Väntar på ditt svar');
       await expect(textView(page)).toHaveCount(0);
@@ -786,7 +774,7 @@ test('FRAGA-04: ett verifierat Sparat väntar på hela ordet och ljudet innan fy
       const observer = new MutationObserver(() => {
         const text = document.querySelector('[aria-label="Röstruta"]')?.textContent ?? '';
         const next =
-          ['Skyttel arbetar', 'Skyttel talar', 'Sparat', 'Rösten startar', 'Lyssnar'].find((word) =>
+          ['Arbetar', 'Skyttel talar', 'Sparat', 'Rösten startar', 'Lyssnar'].find((word) =>
             text.includes(word),
           ) ?? 'other';
         if (status !== next) {
@@ -872,7 +860,7 @@ test('FRAGA-04: ett verifierat Sparat väntar på hela ordet och ljudet innan fy
     await sound(page, false);
     await expect(voiceBox(page)).toHaveText('Lyssnar');
     // The final transcript arrives before its audio starts. No four-second timeout yet.
-    await output(page, 'at.');
+    await output(page, 'at.', 300);
     await expectVoiceStatusFor('Lyssnar', 4500);
     await sound(page, true);
     await expectVoiceStatusFor('Skyttel talar', 4500);

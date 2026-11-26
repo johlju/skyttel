@@ -71,6 +71,7 @@ test('an uncapped evaluation finishes speech beyond its reservation and runs the
     }),
   );
   const backend = textModel((request) => {
+    if (request.instructions.startsWith('SKYTTEL_TITLE')) return [modelMessage('Spara utkastet')];
     if (lastToolResult(request)) return [modelMessage('Sparat.')];
     const input = JSON.parse(
       String(request.input.findLast((item) => item.role === 'user')?.content),

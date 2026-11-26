@@ -34,7 +34,7 @@ export function draftUpdateDetails(before: TextAssistantReview, after: TextAssis
     const next = change.after;
     const name = next?.name ?? old?.name;
     if (!name) continue;
-    if (!old && next) say(name, 'lades till');
+    if (!old && next) changes.push({ subject: name, action: 'lades till', objectId: change.id });
     else if (old && !next) say(name, 'togs bort');
     if (!next) continue;
     if (old && old.name !== next.name) say(old.name, `bytte namn till ${next.name}`);

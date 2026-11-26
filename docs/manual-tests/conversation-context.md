@@ -204,7 +204,7 @@ och kastar utkastet”.
   "outcomes": [
     "Kommandona har samma verkan som **Nytt samtal** och den befintliga funktionen för att kasta hela utkastet. Bara ett uttryckligt **Kasta utkastet** tar bort de osparade förslagen.",
     "Tidigare samtalsord och pågående arbete följer inte med till det nya samtalet. Utkast, mikrofonläge och annan oskickad text bevaras vid nytt samtal utan kastkommando. Redan sparade uppgifter påverkas inte.",
-    "Logga ut avslutar samtalet. Samtalsord och ljud lagras inte. Faktiskt hört tal, mikrofon och skärmläsare återstår att prova manuellt enligt [förberedelsen i TAL-17](voice-assistant.md#tal-17-röstrutan-med-riktig-mikrofon-pekskärm-och-skärmläsare).",
+    "Utloggning pausar samtalet. Samtalstexten finns kvar tills samtalet raderas eller löper ut. Ljud lagras inte. Faktiskt hört tal, mikrofon och skärmläsare återstår att prova manuellt enligt [förberedelsen i TAL-17](voice-assistant.md#tal-17-röstrutan-med-riktig-mikrofon-pekskärm-och-skärmläsare).",
     "Ett skrivet nytt samtal med mikrofonen av ger enbart text. Ett talat nytt samtal får sitt röstbesked efter släpp eller avstängning, medan mikrofonen förblir av. Teknisk överlämning kontrolleras separat; faktiskt hört tal kräver den verkliga röstinstallationen."
   ],
   "evidence": [
@@ -282,8 +282,8 @@ efter känt utfall, avsluta med `quit` och starta nytt mellan fallen.
    samtalet eller kasta utkastet. Slå på mikrofonen och skriv **Oskickat** utan
    att skicka.
 2. Be operatören leverera det talade nytt-samtal-kommandot och invänta
-   bekräftelse. Kräv en tömd samtalstext med **Nytt samtal. 1 osparad ändring
-   ligger kvar i ditt utkast.**, kvarvarande Lo-förslag, mikrofon på och
+   den nya röstanslutningen. Kräv tom samtalstext, kvarvarande Lo-förslag,
+   mikrofon på och
    **Oskickat** kvar.
 3. Slå av mikrofonen och skicka **Nytt samtal** i textvyn. Kontrollera samma
    resultat med mikrofonen av. Ingen medgivanderuta visas. Kontrollera att inget
@@ -299,11 +299,12 @@ efter känt utfall, avsluta med `quit` och starta nytt mellan fallen.
    invänta bekräftelse. Kräv tomt utkast och **Utkastet är kastat.** Stäng av
    mikrofonen och skicka sedan **Kasta utkastet** i textvyn. Utkastet är
    fortsatt tomt.
-6. Skicka **Nytt samtal och kasta utkastet**. Kräv enbart **Nytt samtal.
-   Utkastet är tomt.** och mikrofonen fortsatt av.
+6. Skicka **Nytt samtal och kasta utkastet**. Kontrollera att bara det nya
+   kommandots arbetssteg och svaret **Nytt samtal. Utkastet är tomt.** visas
+   i samtalstexten. Mikrofonen är fortsatt av.
 7. Slå på mikrofonen. Be operatören leverera det kombinerade talade kommandot
-   och invänta bekräftelse. Kräv tomt utkast, nytt samtal och mikrofon fortsatt
-   på.
+   och invänta bekräftelse. Kontrollera samma samtalstext som i steg 6 och
+   att utkastet är tomt. Mikrofonen är fortsatt på.
 8. Skicka **Har vi börjat om?**. Släpp svaret och logga ut via **Din profil**,
    **Inloggningssätt**, **Logga ut**.
 
@@ -315,7 +316,8 @@ efter känt utfall, avsluta med `quit` och starta nytt mellan fallen.
 - Tidigare samtalsord och pågående arbete följer inte med till det nya
   samtalet. Utkast, mikrofonläge och annan oskickad text bevaras vid
   nytt samtal utan kastkommando. Redan sparade uppgifter påverkas inte.
-- Logga ut avslutar samtalet. Samtalsord och ljud lagras inte.
+- Utloggning pausar samtalet. Samtalstexten finns kvar tills samtalet raderas
+  eller löper ut. Ljud lagras inte.
   Faktiskt hört tal, mikrofon och skärmläsare återstår att prova manuellt
   enligt
   [förberedelsen i TAL-17](voice-assistant.md#tal-17-röstrutan-med-riktig-mikrofon-pekskärm-och-skärmläsare).
@@ -1299,7 +1301,7 @@ känt uppdrag. Detta bevisar inte verkliga modellers kontextgränser.
 4. Vänta tills Skyttel har talat färdigt innan röstanslutningen förnyas.
    Slå på mikrofonen, vänta på röstanslutningen och slå av mikrofonen.
 5. Öppna Modell och resonemang, öppna modellvalet via modellnamnet och
-   välj GPT-6.1 Sol. Vänta på ”Valet är sparat” och stäng dialogen med Escape.
+   välj GPT-6.2 Sol. Vänta på ”Valet är sparat” och stäng dialogen med Escape.
 6. Skriv ”Vad väntar exakt?”. Läs den återgivna begäran och samtalets
    ursprungliga begäran. Öppna utkastet och läs Lo Exempel.
 
@@ -1895,9 +1897,9 @@ frågan om du provar med syntetisk mikrofon. Faktiskt hört ljud ingår inte.
 1. Skriv ”Vad heter Lo Exempel i förslaget?”. Släpp det första svaret och
    läs ”Lo-förslaget heter Lo Exempel.”. Öppna förslaget och läs namn,
    Person och Beskrivning. Stäng läsningen.
-2. Öppna **Tabell → Redigera Lo Exempel**. Sätt **Namn** till ”Lo Manuell”
-   och välj **Lägg i utkastet och stäng**. Öppna textvyn och läs hela
-   Lo Manuell i utkastet. Stäng läsningen.
+2. Stäng textvyn och öppna **Tabell → Redigera Lo Exempel**. Sätt **Namn**
+   till ”Lo Manuell” och välj **Lägg i utkastet och stäng**. Öppna textvyn
+   och läs hela Lo Manuell i utkastet. Stäng läsningen.
 3. Slå på mikrofonen. Säg ”Vad heter Lo Manuell i förslaget nu?” och släpp
    det andra svaret. Läs ”Lo-förslaget heter Lo Manuell.” i samtalstexten.
    Kontrollera att den första frågan och det första svaret finns kvar.
@@ -2022,11 +2024,11 @@ teman och vid zoom.
 
 ## Bevarat samtal
 
-### KONTEXT-24: omladdning bevarar pausat samtal och avslut lämnar utkastet
+### KONTEXT-24: välj avbrutet arbete efter omladdning och börja ett nytt samtal
 
 **Syfte:** Återfå samtalets text, fråga och modellval efter omladdning,
-utloggning och omstart utan fortsatt arbete, och kunna ta bort samtalet
-utan att kasta utkastet.
+utloggning och omstart utan fortsatt arbete, och kunna fortsätta
+en avbruten begäran från dess rad.
 
 **Användare:** Alex.
 
@@ -2058,8 +2060,8 @@ och verifierar sjudygnsgränsen genom verklig omstart.
   },
   "reference": "Dator 1280 px, textläge och nödvändig webbläsarlagring. Riktig server med kontrollerad modell. HTTP-underlaget skiljer faktisk databasbeständighet från klientåterställning.",
   "outcomes": [
-    "Efter omladdning, utloggning och verklig serveromstart visas den exakta instruktionen, frågan och Sol/låg, med pausat arbete och en utgångstid.",
-    "Avslut raderar samtalstext och fråga även efter en ny omladdning, medan Lo-förslaget ligger kvar osparat. Tangentbordsfokus går till Nytt samtal."
+    "Efter omladdning, utloggning och verklig serveromstart är textvyn tom. Via Samtal visas samma instruktion, fråga och Sol/låg.",
+    "Fortsätt arbetet försöker igen från den avbrutna raden med oskickad text kvar. Nytt samtal ger tom text och bevarar Lo-förslaget."
   ],
   "evidence": [
     {
@@ -2118,38 +2120,33 @@ och verifierar sjudygnsgränsen genom verklig omstart.
 
 **Steg:**
 
-1. Öppna **Modell och resonemang** vid textfältet, välj **Låg**, öppna
-   modellnamnet och välj **GPT-6.1 Sol**. Stäng dialogen med Escape.
+1. Öppna **Modell och resonemang** bredvid **Nytt samtal**, välj **Låg**,
+   öppna modellnamnet och välj **GPT-6.2 Sol**. Stäng dialogen med Escape.
 2. Skriv **Byt cykelns namn till Blå, men ändra inte ägaren.** och välj
    **Skicka**. Släpp den kontrollerade frågan enligt förberedelsen.
    Läs **Vilken cykel?** i samtalstexten.
 3. Skicka **Beskriv garaget utan att ändra.** och lämna modellsvaret
    hållet i terminalen. Skicka sedan **Förklara vem som använder cykeln,
    men ändra eller spara ingenting.** medan arbetet pågår.
-4. Ladda om sidan och välj **Skriv till Skyttel**. Läs hela instruktionen
-   och frågan igen. Kontrollera **Samtalet är pausat**, **Löper ut** med
-   tidpunkt och modellvalet **GPT-6.1 Sol, Låg**. Det köade meddelandet
-   visas ordagrant i samma samtalstext. Ingen arbetsrad ska visas.
-5. Öppna **Din profil → Logga ut**. Logga in igen med **Fortsätt med
-   Google → Fortsätt till Google**. Öppna textvyn och läs samma instruktion,
-   fråga och pausbesked. Kör `restart` i förberedelseterminalen och invänta
-   `restarted`. Ladda om sidan och läs samma innehåll igen.
-6. Öppna **Visa utkastet → Visa förslaget: Lo Exempel**. Läs Person och
-   Lo Exempel utan beskrivning; stäng dialogen. Flytta tangentbordsfokus
-   till **Avsluta samtalet** och tryck Enter. Den tidigare instruktionen
-   och frågan ska försvinna. Fokus ska gå till **Nytt samtal**.
-7. Ladda om igen och öppna textvyn. Den tidigare samtalstexten ska saknas.
-   Läs Lo-förslaget på samma sätt igen; det ska vara kvar osparat.
+4. Ladda om och öppna textvyn. Den är tom. Välj **Samtal** och välj
+   cykelns begäran. Läs instruktionen, frågan, det köade meddelandet
+   och modellvalet **GPT-6.2 Sol, Låg**.
+5. Logga ut via **Din profil** och logga in med Google igen. Öppna
+   samtalet från listan. Kör `restart` i terminalen, invänta `restarted`
+   och upprepa omladdning och val. Kontrollera att modellens kö är tyst.
+6. Skriv en anteckning i meddelandefältet. Välj **Fortsätt arbetet** under
+   garageinstruktionen och godkänn vid behov. Svara på det nya
+   modelluppdraget i terminalen. Kontrollera en enda garageinstruktion,
+   den orörda anteckningen och det osparade Lo-förslaget.
+7. Välj **Nytt samtal** med tangentbordet. Läs den tomma samtalstexten.
+   Öppna **Samtal** och kontrollera att cykelns begäran går att välja igen.
 
 **Förväntat resultat:**
 
-- Samtalstext, fråga, köat meddelande och eget modellval består genom
-  omladdning,
-  utloggning och omstart.
-  Återkomsten visar pausat arbete och utgångstid, utan automatisk körning.
-- Uttryckligt avslut raderar samtalet. Omladdning återställer det inte.
-  Utkastet varken sparas eller kastas av avslutet. Tangentbordsfokus går
-  till **Nytt samtal** när den fokuserade avslutsknappen försvinner.
+- Varje besök börjar med tom text och avstängd mikrofon. Val av den gamla
+  raden visar tidigare samtalstext, modell och avbrutna begäran.
+- Återförsöket gäller den valda begäran. Det köade meddelandet väntar.
+  Nytt samtal behåller anteckningen, utkastet och det tidigare samtalet.
 
 ### KONTEXT-25: återuppta rätt samtal på samma och annan enhet
 
@@ -2194,11 +2191,11 @@ batchsvaret efter genomförandet och verifierar samma utfall efter omstart.
     "spec": "tests/integration/conversation-resume.spec.ts",
     "caseId": "KONTEXT-25"
   },
-  "reference": "Dator 1280 px i två separata Chromium-profiler, riktig server och SQLite, kontrollerad modell och Live med tyst media. Samma profil efter omladdning och en annan profil skyddar skilda vägar till samma bevarade samtal; den väntande textfrågan besvaras med röst.",
+  "reference": "Dator 1280 px i två separata Chromium-profiler, 760 px vid återval efter omladdning, riktig server och SQLite, kontrollerad modell och Live med tyst media. Samma profil efter omladdning och en annan profil skyddar skilda vägar till samma bevarade samtal; den väntande textfrågan besvaras med röst.",
   "outcomes": [
-    "Paus och utgångstid visas före uttrycklig återupptagning. Samma väntande textfråga kan besvaras med röst efter omladdning och på annan enhet.",
+    "Första begäran visas som utdrag tills titeln är klar. Samtalsinformation visar datum och kopierbara diagnostikuppgifter.",
     "Bevarade samtal kan väljas separat utan att deras text blandas. Äldre Sol/låg ändrar inte det senaste personliga valet Terra/medium för ett nytt samtal.",
-    "Efter öppning får Återuppta samtalet tangentbordsfokus. Enter återupptar samtalet."
+    "Tangentbordet öppnar information och väljer samtal. Fokus återgår till Samtal när listan stängs i kompakt läge. Den valda textfrågan kan besvaras med röst på den andra enheten."
   ],
   "evidence": [
     {
@@ -2214,8 +2211,8 @@ batchsvaret efter genomförandet och verifierar samma utfall efter omstart.
       "runner": "vitest",
       "suite": "server",
       "spec": "tests/unit/server/conversation-resume-http.test.ts",
-      "title": "only explicit approved resume renews the retained lifetime and enables the same conversation",
-      "purpose": "Endast uttrycklig återupptagning med aktuellt medgivande förnyar sju dygn; läsning gör det inte."
+      "title": "approved resume enables work without renewing the retained lifetime",
+      "purpose": "Livslängden räknas från senaste begäran även efter läsning och godkänd återupptagning."
     },
     {
       "kind": "technical",
@@ -2331,34 +2328,33 @@ batchsvaret efter genomförandet och verifierar samma utfall efter omstart.
 
 1. I första profilen: välj **Skriv till Skyttel → Nytt samtal** och
    godkänn aktuellt medgivande utan att spara det. Välj **Låg** i
-   resonemangsdialogen och **GPT-6.1 Sol** i modelldialogen. Skicka
+   resonemangsdialogen och **GPT-6.2 Sol** i modelldialogen. Skicka
    **Beskriv garaget utan att ändra något.**. Läs **Vilket garage?**.
-2. Ladda om och öppna textvyn. Läs **Samtalet är pausat** och **Löper ut**
-   med tidpunkt. Välj **Återuppta samtalet** och godkänn aktuellt medgivande
-   igen. Frågan ska vara kvar och meddelandefältet ska gå att använda.
-3. Logga in som Alex i den andra profilen och öppna samma hushåll.
+2. Öppna **Samtal**. Läs utdraget från begäran och släpp titeln enligt
+   förberedelsen. Öppna **Samtalsinformation** med Enter. Läs titeln,
+   skapandetiden, senaste begäran och **Löper ut**. Kopiera samtals-ID och
+   LangSmith-filter till en tom lokal anteckning. Samma ID ska finnas i båda.
+   Tryck Escape och kontrollera att informationsknappen åter får fokus.
+3. Ändra det första fönstrets bredd till 760 px och ladda om. Öppna den
+   tomma textvyn och välj **Samtal**. Kontrollera att **Text** visas när
+   listan är öppen. Välj garagets samtal med Enter. Listan stängs,
+   **Text** försvinner och **Samtal** får fokus. Läs **Vilket garage?**
+   en gång. Mikrofonen ska vara av.
+4. Logga in som Alex på den andra enheten och öppna samma hushåll.
    Starta ett nytt textsamtal. Välj **Medium** och **GPT-6.1 Terra**.
-   Skicka **Beskriv cykeln utan att ändra något.**. Läs
-   **Det andra samtalet gäller cykeln.**.
-4. Välj **Bevarade samtal** och läs utgångstiderna. Välj
-   **Öppna Beskriv garaget utan att ändra något.**. Läs **Vilket garage?**
-   och **GPT-6.1 Sol, Låg**. Cykelsamtalets svar ska inte ingå här.
-5. Kontrollera synligt fokus på **Återuppta samtalet**. Tryck Enter, slå
-   på **Prata med Skyttel** och säg **Det västra garaget.** enligt den
-   kontrollerade förberedelsen. Läs **Garaget heter Västra.**.
-6. Välj **Bevarade samtal → Öppna Beskriv cykeln utan att ändra något.**.
-   Läs cykelsamtalets svar utan garagets nya svar. Välj **Nytt samtal**.
-   Modellvalet ska vara **GPT-6.1 Terra, Medium**.
-   Mikrofonen ska vara av efter bytet till det andra samtalet.
+   Skicka **Beskriv cykeln utan att ändra något.** och läs cykelsvaret.
+5. Skriv en anteckning utan att skicka den. Välj garaget med Enter.
+   Kontrollera frågan, **GPT-6.2 Sol, Låg** och anteckningen. Slå på
+   mikrofonen och säg **Det västra garaget.** enligt förberedelsen.
+   Läs **Garaget heter Västra.**.
+6. Välj cykelsamtalet. Mikrofonen stängs av och cykelsamtalets svar
+   visas. Välj **Nytt samtal** och läs **GPT-6.1 Terra, Medium**.
 
 **Förväntat resultat:**
 
-- Öppning visar det valda samtalet pausat före fortsatt arbete. Läsning
-  ensam startar inget nytt modellarbete och förlänger inte livslängden.
-  Uttrycklig återupptagning förnyar de sju dygnen.
-- Samma väntande fråga och dess svar hör till samma samtal. Text från
-  det andra samtalet blandas inte in, och ett äldre samtals val ändrar
-  inte nästa nya samtals personliga modellval.
-  En redan visad fråga visas inte en gång till av återupptagningen.
-- Kontrollerna går att nå med tangentbord och öppning lämnar fokus på
-  den meningsfulla nästa handlingen, **Återuppta samtalet**.
+- Listan visar varje samtals första begäran eller färdiga titel och markerar
+  det valda samtalet. Endast nya begäranden ändrar ordning och utgångstid.
+- Information och samtalsval kan nås med tangentbord. Användarnas lokala
+  val, mikrofonläge och oskickade text består på respektive enhet.
+- Det äldre samtalet har kvar sin fråga och sitt modellval. Det nya
+  använder det senaste personliga modellvalet.

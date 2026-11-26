@@ -1,6 +1,7 @@
+export const solModelId = 'gpt-6.2-sol';
 export const conversationModels = [
   { id: 'gpt-6.1-terra', name: 'GPT-6.1 Terra' },
-  { id: 'gpt-6.1-sol', name: 'GPT-6.1 Sol' },
+  { id: solModelId, name: 'GPT-6.2 Sol' },
 ] as const;
 export const reasoningEfforts = ['low', 'medium', 'high'] as const;
 export const reasoningLabels = { low: 'Låg', medium: 'Medium', high: 'Hög' } as const;

@@ -419,21 +419,26 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   Ett kort statusbesked per svar bevarar fokus.
   Långa svar rullas med tangentbord i den utfällda svarsrutan.
   Saknad leveranskanal lämnar texten oskickad och hindrar röststart
-  tills användaren uttryckligen försöker igen.
+  tills användaren uttryckligen försöker igen. Om kanalen bryts före
+  mottagning ligger den oskickade texten kvar även när ett nytt talat
+  uppdrag får svar i samma samtal.
   Förlust före första uppgiftsnotisen ger tydligt leveransfel; lagrat
   utkast finns kvar efter utgång och ny inloggning utan återspelning.
   Verkligt ljud och skärmläsare bedöms separat.
 - [Skyttels röst](voice-assistant.md): svenska röstuppdrag,
   start efter medgivande, mikrofonen på och av med **Prata med Skyttel**,
-  röstrutans statusord, vågform, stoppikon, plats och uppläsning,
+  röstrutans statusord, staplar vid tal, puls under arbete, stoppikon,
+  ring i vila, plats och uppläsning,
   ljudaktivitet, fördröjda svar med mikrofonen av och fokus efter avbrott
-  även i Inställningar samt avbrutet ljud som förblir stoppat över pauser,
+  även i Inställningar. TAL-06 provar en omedelbar rättelse, gamla ljud
+  på båda sidor om pausen och nästa repliks första ord. Övriga fall provar
   avbrott i långa samtal med bevarad kontext och mikrofonval,
   faktisk markering, exakt sparåterhämtning och tydlig skillnad mellan
-  samtalstext och verifierade resultat, löpande dialog och
-  raden Skyttel arbetar. TAL-03 skyddar läsbar beskrivning i korta
-  uppgiftsfönster även efter hela svaret som text och läser sparutfallet i
-  det pausade samtalet efter omstart före ett uttryckligt nytt samtal. Kontrollerat
+  samtalstext och verifierade resultat. TAL-05 följer hela talade repliker
+  i det pågående samtalet och efter omstart. TAL-03 skyddar läsbar beskrivning
+  i korta uppgiftsfönster även efter hela svaret som text och läser sparutfallet
+  i det pausade samtalet efter omstart. Ett tappat webbläsarsvar följs upp från
+  samtalsnotisen med det sparade objektet synligt utan omladdning. Kontrollerat
   familjeunderlag och verkligt tal redovisas separat. TAL-18/19 skiljer mikrofonlägena;
   TAL-20–22 skiljer placeringarna och TAL-17/23–26 kräver verkliga
   mikrofon-, ljud-, system- eller skärmläsarobservationer. TAL-24 behåller
@@ -443,8 +448,9 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
 - [Utkastet i samtalet](conversation-draft.md): tabellen och dess symboler,
   personligt val mellan hushåll och enheter, första förslaget, tomt utkast,
   sparåterkoppling och kvittots plats i Rapporter → Ändringshistorik.
-  SAMTALSUTKAST-01 läser fältvärden före/efter och bevarad sparad historik
-  med [exakt läsförberedelse](conversation-review-preparation.md).
+  SAMTALSUTKAST-01 provar öppning från ändringstexten, läser fältvärden
+  före och efter samt kontrollerar sparad historik med
+  [exakt läsförberedelse](conversation-review-preparation.md).
   SAMTALSUTKAST-04 är pensionerat till TEXT-04 utan återanvänt ID;
   smal dator och bred emulerad pekare har varsin motsvarighet.
 
@@ -455,20 +461,25 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   spärrad ljuduppspelning och mikrofonens läge vid nytt samtal.
 
 - [Textvyn](text-view.md): **Skriv till Skyttel** öppnar och stänger
-  textvyn utan att samtalet avslutas, samtalstexten visar vem som skriver
-  och raden Skyttel arbetar sist med en roterande ring som följer valet
-  för minskad rörelse. Aktuellt arbetssteg och utfällbara MCP-steg visar
-  vad som händer. **Nytt samtal** behåller utkast, mikrofon
-  och oskickad text även vid dubbelklick under fördröjd omstart, och textvyn
-  går att använda på pekskärm och smal skärm. Textknappens överlagrade
+  textvyn utan att samtalet avslutas. Textvyn ligger ovanpå kartan med
+  stilla bakgrund och kartan panorerar vid behov för att visa markeringen.
+  Samtalstexten visar vem som skriver och raden Skyttel arbetar sist med en
+  roterande ring som följer valet för minskad rörelse. Verktygsstegen
+  visas i samtalstexten och räknas när samma anrop upprepas i följd.
+  **Modell och resonemang** ligger bredvid **Nytt samtal**, som behåller
+  utkast, mikrofon och oskickad text även vid dubbelklick under fördröjd
+  omstart. Textvyn går att använda på pekskärm och smal skärm.
+  Samtalslistan visar titel,
+  datum och radåtgärder. Ett samtal kan tas bort med bekräftelse när
+  Skyttel varken arbetar eller talar i det. Textknappens överlagrade
   markeringar visar skrivet arbete, olästa svar och väntande frågor med
   en enda artig uppläsning, fasta mått och minskad rörelse. Kommentarspaket
   och faktiskt hört tal provas separat. Mobilfallen har separata ID för
   varje kvarvarande emulerad konfiguration, fast sidofält på bred pekare,
-  kompakt rad vid kort synlig höjd, paus och utgångstid vid återkomst,
+  kompakt rad vid kort synlig höjd, samtalsval efter omladdning,
   nåbart avslut med fokusåtergång, bibehållet fokus, 190 px synlig höjd med
   rösten på, fria kartkontroller och långa rullbara notiser. Datorfallen
-  provar oberoende breddhandtag
+  provar breddhandtagen på de tre panelernas vänsterkanter
   med mus och piltangenter, personliga bredder mellan hushåll och enheter,
   visningsbegränsning utan ändrat sparat val samt återställning även utan
   tillgängligt samtal. Mobil enhet och smal skärm behåller sina bredder.
@@ -489,8 +500,14 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   KÖ-09 köar kastande vid nytt samtal och provar stopp under väntan.
 - [Röst och text i samma samtal](conversation-voice-text.md): skrivna svar
   med röst när mikrofonen är på, text när den är av, ordnad överlämning av
-  långa svar, kvarvarande samtalstext och artig uppläsning bara av nya
-  textlevererade Skyttel-rader. Obekräftad text ger inget sparkvitto.
+  långa svar med väntan på föregående uppläsning, kvarvarande samtalstext
+  och artig uppläsning bara av nya
+  textlevererade Skyttel-rader. Följ Alex blå cykel och dess väntande frågor
+  genom lägesbyte och ljudavbrott. Granska cykeln, avbryt en sparbegäran
+  och följ ett nytt bekräftat sparande till kartan och ändringshistoriken.
+  Läs sparkvittots tidpunkt, vem som sparade och uppgifterna om cykeln.
+  RÖSTTEXT-07 provar att nästa svar hörs från början efter Avbryt och en
+  skriven rättelse.
 - [Samtalets kontext](conversation-context.md): samma samtal
   genom utkast, sparande, avbrott, fel, mikrofon av och på samt byte mellan
   röst och text. Äldre sparbesked ger inget nytt sparande. Skrivna och
@@ -498,11 +515,11 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   Kontextmätaren följer serverns procenttal, röstrutan visar procent från
   85 och ger en enda artig uppläsning, även på smal pekskärm. Nytt samtal
   återställer mätaren och gamla mätningar ignoreras.
-  Omladdning återställer bevarad text och modellval med arbetet pausat;
-  utgångstid visas och uttryckligt avslut lämnar utkastet kvar.
+  Efter omladdning väljer användaren tidigare samtal i listan. En avbruten
+  begäran kan fortsättas från sin rad. Utkastet består vid samtalsbyte.
   Egna talade repliker förnyar tiden från mottagandet; senare modellarbete
   och kontroller flyttar inte gränsen.
-  KONTEXT-25 hittar och återupptar ett valt samtal på samma och annan
+  KONTEXT-25 läser samtalsinformation och väljer tidigare samtal på samma och annan
   enhet utan att blanda separata samtal eller skriva över personligt modellval.
   Full kontext sammanfattas automatiskt med kvarvarande samtalstext,
   aktuellt utkast, mikrofonläge och tidigare inspelat tal. Misslyckad
@@ -537,6 +554,9 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   skild från resultat samt synliga samband, typer och före-/eftervärden
   i hela ändringslistan och begärda samtalsdetaljer från utkast och kvitto.
   TEXT-07 är pensionerat till SAMTALSUTKAST-01 utan återanvänt ID.
+  [TEXT-20](text-assistant.md#text-20-följdfrågan-identifierar-cykeln-i-utkastet)
+  kontrollerar att en följdfråga ger det nya objektets namn och id medan
+  förslaget ligger kvar osparat.
   TEXT-04 återfinner den verkliga sparidentifieraren efter genomfört
   sparande med tappat svar och omstart. Varje TEXT-08-storlek har eget ID.
   TEXT-16 återfinner osparade ändringar efter tappat verktygssvar och

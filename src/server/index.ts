@@ -45,8 +45,10 @@ async function main() {
       });
       setTimeout(() => process.exit(1), 10_000).unref();
     };
-    process.once('SIGTERM', shutdown);
-    process.once('SIGINT', shutdown);
+    // Keep the application signal handlers registered throughout shutdown.
+    // The Agents SDK checks for another handler before exiting the process.
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
   } catch (error) {
     database.close();
     throw error;

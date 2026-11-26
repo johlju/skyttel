@@ -192,7 +192,7 @@ test('KONTEXT-19: exakt väntande uppdrag följer med efter sammanfattning och n
           }),
         ];
       if (message === 'Vad väntar exakt?') {
-        expect(request.model).toBe('gpt-6.1-sol');
+        expect(request.model).toBe('gpt-6.2-sol');
         const input = current(request) as ReturnType<typeof current> & {
           unfinishedRequests: { text: string }[];
         };
@@ -262,7 +262,7 @@ test('KONTEXT-19: exakt väntande uppdrag följer med efter sammanfattning och n
       .getByRole('dialog')
       .getByRole('button', { name: 'GPT-6.1 Terra', exact: true })
       .click();
-    await page.getByRole('dialog').getByRole('radio', { name: 'GPT-6.1 Sol', exact: true }).click();
+    await page.getByRole('dialog').getByRole('radio', { name: 'GPT-6.2 Sol', exact: true }).click();
     await expect(page.getByRole('dialog').getByRole('status')).toContainText('Valet är sparat');
     await page.keyboard.press('Escape');
     await send(page, 'Vad väntar exakt?');
@@ -680,11 +680,10 @@ test('KONTEXT-11: sammanfattning väntar på talat sparande och dess hörda kvit
     );
     await expect(meter(page)).toHaveAttribute('value', '89');
     expect(live.requests).toHaveLength(1);
-    await page.evaluate(() => window.skyttelVoiceFixture.setSound('remote', true));
+    await page.evaluate(() => window.skyttelVoiceFixture.remoteTone(800, 0, 0.5));
     await expect(page.getByRole('group', { name: 'Röstruta', exact: true })).toContainText(
       'Skyttel talar',
     );
-    await page.evaluate(() => window.skyttelVoiceFixture.setSound('remote', false));
     await expect(log(page).getByRole('listitem').filter({ hasText: summaryLine })).toHaveCount(1);
     await expect.poll(() => live.requests.length).toBe(2);
     expect((await read()).draft.changes).toEqual([]);

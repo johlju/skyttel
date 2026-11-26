@@ -223,24 +223,42 @@ test('summary failure during provider startup retains input OFF and closes it wh
   expect(media.microphone.stopped).toBe(true);
 });
 
-test('a summary handoff waits for the current necessary question audio to drain before replacing its peer', async () => {
+test.each([
+  {
+    name: 'a verbatim necessary question',
+    expected: 'Vilken cykel menar du?',
+    spoken: 'Vilken cykel menar du?',
+    questionPending: true,
+  },
+  {
+    name: 'a paraphrased ordinary reply',
+    expected: 'Den blå cykeln står i garaget intill den gamla kajaken.',
+    spoken: 'Den blå cykeln finns i garaget, bredvid den gamla kajaken.',
+    questionPending: false,
+  },
+])('summary waits for $name to drain', async ({ expected, spoken, questionPending }) => {
   const { media, server, summary, calls } = await setup();
-  const question = 'Vilken cykel menar du?';
   server.assistant = {
     ...initial,
     revision: 1,
-    taskId: 'question',
-    questionPending: true,
+    taskId: 'task',
+    questionPending,
     contextSummaryState: 'needed',
   };
-  server.response = { id: 'spoken-question', revision: 1, text: question, questionPending: true };
+  server.response = {
+    id: 'reply',
+    revision: 1,
+    text: expected,
+    questionPending,
+    conversationalText: questionPending ? undefined : expected,
+  };
   await tick(500);
   media.signals.set(media.peers[0].remote, 40);
   await tick(100);
   await act(async () =>
     media.peers[0].channel.emit({
       type: 'session.output_transcript.delta',
-      delta: question,
+      delta: spoken,
       start_ms: 0,
       end_ms: 100,
     }),

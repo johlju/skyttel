@@ -75,7 +75,7 @@ avbryter bara i textvyn”.
     "Skicka behåller sitt namn. Endast första modelluppdraget har börjat i steg 1. Arbetsraden visar **Skyttel arbetar… Tryck på Escape för att avbryta.**. Svaren visas i samma ordning.",
     "Escape gör inget utan arbete eller med fokus utanför textvyn. Med fokus i textvyn avbryts aktuellt arbete och hela kön.",
     "**Avbrutet. Föreslagna ändringar ligger kvar i utkastet.** står ovanför fältet även när textvyn öppnas igen, men visas inte utanför textvyn. Texten och Lo-förslaget ligger kvar. Sena svar visas inte.",
-    "Nästa uppdrag tar bort avbrottstexten. Nytt samtal tömmer också kön; de borttagna uppdragen börjar aldrig. Det nya uppdraget kan besvaras."
+    "Nästa uppdrag tar bort avbrottstexten. Nytt samtal blir tillgängligt efter avbrottet. De borttagna uppdragen börjar aldrig. Det nya uppdraget kan besvaras."
   ],
   "evidence": [
     {
@@ -158,7 +158,8 @@ giltig autentisering medan inloggningen fortfarande gäller.
    **Skriv till Skyttel** utan att aktivera knappen och tryck Escape.
 4. Skriv **Text som inte skickas** i fältet och tryck Escape där.
    Släpp det gamla svaret med **För sent.**. Stäng och öppna textvyn.
-5. Skicka **Ny uppgift.** och **Bort med kön.**. Välj **Nytt samtal**.
+5. Skicka **Ny uppgift.** och **Bort med kön.**. Kontrollera att **Nytt samtal**
+   är spärrat. Tryck Escape i fältet och välj sedan **Nytt samtal**.
    Släpp det gamla svaret. Skicka **Efter nytt samtal.** och släpp dess
    svar med **Efter nytt.**.
 
@@ -172,8 +173,9 @@ giltig autentisering medan inloggningen fortfarande gäller.
 - **Avbrutet. Föreslagna ändringar ligger kvar i utkastet.** står
   ovanför fältet även när textvyn öppnas igen, men visas inte utanför
   textvyn. Texten och Lo-förslaget ligger kvar. Sena svar visas inte.
-- Nästa uppdrag tar bort avbrottstexten. Nytt samtal tömmer också kön;
-  de borttagna uppdragen börjar aldrig. Det nya uppdraget kan besvaras.
+- Nästa uppdrag tar bort avbrottstexten. Efter avbrottet går det att välja
+  **Nytt samtal**. De borttagna uppdragen börjar aldrig. Det nya uppdraget
+  kan besvaras.
 
 ### KÖ-02: smal dator visar stopp, behåller oskickad text och tillåter Escape
 
@@ -212,7 +214,8 @@ Escape”.
 1. Välj **Prata med Skyttel**. Skicka **Ett uppdrag åt gången.**.
    Skriv **Oskickad text** och tryck Retur medan svaret hålls.
 2. Läs röstrutan och arbetsraden. Aktivera textvyns stoppikon med
-   tangentbord eller pekare. Släpp det gamla svaret.
+   tangentbord eller pekare. Läs förslaget i **Utkast**. Släpp det gamla
+   svaret och välj **Text** för att kontrollera samtalet.
 3. Skicka **Avbryt med tangentbord.** och tryck Escape i fältet medan
    det nya svaret hålls. Släpp svaret.
 4. Starta den kontrollerade utgångssignalen enligt förberedelsen när
@@ -716,7 +719,7 @@ KÖ-09. Leverantören är kontrollerad; server och SQLite är riktiga.
 6. Läs väntestatusen i andra profilen. Släpp första profilens ändringsbatch
    enligt förberedelsen, med namnet Lo Lind och bevarad Beskrivning.
 7. Läs **Lo Exempel bytte namn till Lo Lind.** i första profilen och därefter
-   **Nytt samtal. Utkastet är tomt.** i andra.
+   arbetsstegen och **Nytt samtal. Utkastet är tomt.** i andra.
 
 **Förväntat resultat:**
 

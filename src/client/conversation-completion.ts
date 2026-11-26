@@ -87,7 +87,16 @@ export function conversationCompletion(hydrated?: TextAssistantView) {
     ];
     const answers = finished.flatMap((reply) => {
       if (!reply.questionPending || !reply.questions?.length) return [];
-      const answer = reply.questions
+      // New questions are presented together below. A follow-up can also
+      // quote an earlier, still-pending question as part of its own answer.
+      const questionsToRemoveFromAnswer = reply.questions.filter(
+        (question) =>
+          reply.newQuestions === undefined ||
+          reply.newQuestions.includes(question) ||
+          questions.includes(question) ||
+          !view.questions?.includes(question),
+      );
+      const answer = questionsToRemoveFromAnswer
         .reduce((text, question) => text.replaceAll(question, ''), reply.text)
         .trim();
       return answer && answer !== reply.result?.message ? [answer] : [];

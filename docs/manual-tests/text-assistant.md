@@ -37,12 +37,14 @@ formuläret; befintliga förslag i utkastet påverkas inte.
    [separat förberedelse](text-conversation-preparation.md#familjerättelsen).
    TEXT-15 och TEXT-17 använder röstinstallationen enligt sin separata
    förberedelse.
+   TEXT-20 har egen förberedelse med tom karta och tomt utkast.
    Övriga fall använder den
    [kontrollerade startguiden](#controlled-text-fixture).
    Den senare håller varje modellsvar tills du släpper det i terminalen.
    Den provar inte en verklig modells svenska språkförståelse.
-2. För övriga fall: skapa hushållet Textprov. Skapa objektet **Lo Exempel** av typen
-   **Person**, med beskrivningen **Påhittad uppgift**, genom formuläret.
+2. För fallen med Lo Exempel, skapa hushållet Textprov. Skapa objektet
+   **Lo Exempel** av typen **Person** med beskrivningen **Påhittad uppgift**
+   genom formuläret.
    Välj **Lägg i utkastet och stäng** och lämna förslaget osparat.
 3. När fallet inte anger en egen samtalsstart: välj **Skriv till Skyttel →
    Nytt samtal** och **Godkänn och starta**. Övriga fall anger starten i
@@ -53,6 +55,74 @@ formuläret; befintliga förslag i utkastet påverkas inte.
    stäng provfönstret enligt startguidens städningssteg.
 
 ## Samtal och samlat sparande
+
+### TEXT-20: följdfrågan identifierar cykeln i utkastet
+
+**Syfte:** Kontrollera att Skyttel kan identifiera objektet från det senaste
+uppdraget och lämnar förslaget i utkastet när användaren ställer en följdfråga.
+
+**Användare:** Alex i ett nytt provhushåll med tom karta och tomt utkast.
+
+**Förberedelse:** Använd ett nytt hushåll för varje körning. För prov med
+verklig modell krävs godkända modellkostnader.
+
+**Automatiskt motsvarande test:**
+[text-assistant.spec.ts](../../tests/integration/text-assistant.spec.ts),
+TEXT-20. Testet använder en kontrollerad modell och hushållets databas.
+
+**Ytterligare underlag:**
+[text-assistant.test.ts](../../tests/unit/server/text-assistant.test.ts)
+jämför id:t i följdsvaret med cykelns id i utkastet och kontrollerar att
+utkastets innehåll och version samt den sparade kartan är oförändrade.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/text-assistant.spec.ts",
+    "caseId": "TEXT-20"
+  },
+  "reference": "Textvy på dator med tom karta och tomt utkast, GPT-6.1 Terra och hög resonemangsnivå.",
+  "outcomes": [
+    "Ett enda förslag visar Blå cykeln med objekttypen Fordon.",
+    "Följdsvaret visar Blå cykeln och ett id. Samma förslag finns kvar i utkastet och ändringshistoriken är tom."
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/text-assistant.test.ts",
+      "title": "a follow-up identifies the blue bike from the checked change and leaves the draft intact",
+      "purpose": "Verifierar att följdsvaret anger samma objekt-id och att utkastets innehåll och version samt den sparade kartan är oförändrade."
+    }
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Starta ett nytt samtal via **Skriv till Skyttel**. Kontrollera att
+   modellvalet är **GPT-6.1 Terra** med resonemangsnivån **Hög**.
+2. Skicka ”Lägg till ett objekt av typen Fordon med namnet Blå cykeln i
+   mitt utkast. Lämna det i utkastet.” Invänta svaret och välj **Visa
+   utkastet**. Kontrollera förslagets namn och typ.
+3. Skicka ”Vad ändrade du precis? Ange objektets namn och id.” i samma
+   samtal. Läs följdsvaret. Välj **Visa utkastet** om utkastet är stängt och
+   kontrollera förslaget igen.
+4. Öppna **Rapporter** och läs **Ändringshistorik**.
+
+**Förväntat resultat:**
+
+- Utkastet visar ett enda tillägg, **Blå cykeln** av typen **Fordon**.
+- Följdsvaret anger **Blå cykeln** och ett id. Utkastet visar fortfarande
+  ett enda förslag med samma namn och typ.
+- Ändringshistoriken visar **Inga genomförda sparanden.**
 
 ### TEXT-18: återförsök och avstående fortsätter bara återstående arbete
 
@@ -187,7 +257,7 @@ TEXT-18.
    släpper nu felet. Läs att modellen är tillfälligt otillgänglig, att
    återstående arbete och kö väntar och att utkastet finns kvar. Öppna
    utkastet och läs Lo Lind med oförändrad beskrivning.
-3. Öppna **Modell och resonemang**, välj **GPT-6.1 Sol** och **Medium**,
+3. Öppna **Modell och resonemang**, välj **GPT-6.2 Sol** och **Medium**,
    och stäng dialogerna. Läs det nya valet. Inget arbete startar av valet.
 4. Nå **Försök igen** med tangentbord och aktivera knappen. Operatören
    lämnar först samma Lo-förslag tillsammans med Mira och släpper sedan
@@ -789,7 +859,7 @@ TEXT-15.
     "runner": "vitest",
     "suite": "server",
     "spec": "tests/unit/server/conversation-whole-draft-save.test.ts",
-    "title": "an old whole-draft approval cannot save newer proposals and a rejected attempt needs fresh authority",
+    "title": "an old whole-draft approval with a save tool cannot save newer proposals and a rejected attempt needs fresh authority",
     "purpose": "Ändrar utkastet medan den oberoende kontrollen hålls och verifierar beständig avvisning, återhämtning och krav på ny uttrycklig sparbegäran."
   }, {
     "kind": "technical",

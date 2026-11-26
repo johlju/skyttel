@@ -101,7 +101,7 @@ test.each(['throwing', 'rejecting', 'mutating'])(
     expect(costs.status()).toBe(200);
     expect(await costs.json()).toMatchObject({
       recordingUnavailable: false,
-      terra: { attempts: 3, usage: { input: { known: 360 }, output: { known: 90 } } },
+      terra: { attempts: 4, usage: { input: { known: 368 }, output: { known: 92 } } },
     });
   },
 );
@@ -409,7 +409,11 @@ test.each(['canceled', 'incomplete'] as const)(
         paused: true,
         error: 'assistant_task_expired',
       });
-      expect(retained.conversation).toContainEqual({ role: 'user', text: 'Läs bara Lina.' });
+      expect(retained.conversation).toContainEqual({
+        role: 'user',
+        text: 'Läs bara Lina.',
+        requestId: 'read-lina',
+      });
       expect(retained.expiresAt).toBeGreaterThan(clock);
     }
   },

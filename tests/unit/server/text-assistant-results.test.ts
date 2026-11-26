@@ -130,7 +130,7 @@ test.each([
       ],
     };
     expect(draftUpdateDetails(before, after)).toEqual([
-      { subject: 'Exempel', action: 'lades till' },
+      { subject: 'Exempel', action: 'lades till', objectId: 'new' },
       {
         subject: 'Exempel',
         action: `${verb[0].toLocaleLowerCase('sv')}${verb.slice(1)} Motpart`,

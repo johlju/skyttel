@@ -127,6 +127,7 @@ export const liveBrowserFixtureSource = `
       this.dispatchEvent(new Event('connectionstatechange'));
     }
     started() {
+      this.startedAt ??= performance.now();
       this.channel.emit({
         type: 'session.started', event_id: crypto.randomUUID(),
         session: { id: 'synthetic-live', model: 'gpt-live-1', status: 'active' }
@@ -174,13 +175,27 @@ export const liveBrowserFixtureSource = `
       return stream;
     }
   });
+  // Observe the final nodes connected to the device output. This records the
+  // same rendered PCM that Web Audio supplies to the browser's audio device.
+  const speakerNodes = new Set();
+  const incomingNodes = new Set();
+  const connectNode = AudioNode.prototype.connect;
+  AudioNode.prototype.connect = function (target, ...ports) {
+    const result = connectNode.call(this, target, ...ports);
+    if (target === this.context.destination) speakerNodes.add(this);
+    if (this instanceof MediaStreamAudioSourceNode &&
+        this.mediaStream.getAudioTracks().some(track => remoteTracks.includes(track))) incomingNodes.add(this);
+    return result;
+  };
+  const nativePlay = HTMLMediaElement.prototype.play;
+  const nativePause = HTMLMediaElement.prototype.pause;
   HTMLMediaElement.prototype.play = function () {
     audioElements.add(this);
     if (playback === 'blocked') return Promise.reject(new DOMException('Synthetic autoplay block', 'NotAllowedError'));
     if (playback === 'error') return Promise.reject(new DOMException('Synthetic output failure', 'NotSupportedError'));
     return Promise.resolve();
   };
-  HTMLMediaElement.prototype.pause = function () { audioElements.delete(this); };
+  HTMLMediaElement.prototype.pause = function () { audioElements.delete(this); nativePause.call(this); };
   const latest = () => peers.at(-1);
   window.skyttelVoiceFixture = {
     emit: (event) => latest()?.channel.emit(event),
@@ -210,6 +225,79 @@ export const liveBrowserFixtureSource = `
       }
       signal.analyser.getFloatTimeDomainData(microphoneWave);
       return Math.max(...microphoneWave.map(Math.abs));
+    },
+    // Count complete cycles in both signals so a clipped onset is visible.
+    sessionMs: () => Math.ceil(performance.now() - latest().startedAt),
+    // Arm the tones on the actual button, so capture begins in the same click
+    // as interruption even when the UI or the control request is delayed.
+    armCorrection: (button) => {
+      const fixture = window.skyttelVoiceFixture;
+      return new Promise(resolve => button.addEventListener('click', () => {
+        const start = fixture.sessionMs();
+        const sentFrom = sentAudio.length;
+        fixture.setMicrophoneTone(600);
+        setTimeout(() => fixture.setSound('microphone', false), 160);
+        fixture.remoteTone(640, 0, 0.12);
+        fixture.remoteTone(800, 0.22, 0.18);
+        fixture.remoteTone(1000, 0.601, 0.15);
+        const timer = setInterval(() => {
+          if (!sentAudio.slice(sentFrom).some(sample => Math.abs(sample.frequency - 600) < 40)) return;
+          clearInterval(timer);
+          clearTimeout(deadline);
+          const event = { type: 'session.input_transcript.delta', event_id: crypto.randomUUID(),
+            delta: 'Jag menar Lo Exempel.', start_ms: start, end_ms: start + 160 };
+          fixture.emit(event);
+          resolve(event);
+        }, 10);
+        const deadline = setTimeout(() => { clearInterval(timer); resolve(null); }, 1500);
+      }, { once: true }));
+    },
+    observeSpeaker: async () => {
+      const element = [...audioElements].find(element => element.srcObject);
+      await nativePlay.call(element);
+      if (!element.muted || speakerNodes.size !== 1) throw new Error('Expected one device output and a muted receiver');
+      const [played] = speakerNodes;
+      const context = played.context;
+      const raw = [...incomingNodes].find(node => node.context === context);
+      if (!raw) throw new Error('Missing receiver audio in the output context');
+      // Compare both branches in the same render quantum. A second media
+      // stream or audio context would introduce independent jitter/resampling.
+      const merger = context.createChannelMerger(2);
+      raw.connect(merger, 0, 0);
+      played.connect(merger, 0, 1);
+      const recorder = context.createScriptProcessor(4096, 2, 1);
+      merger.connect(recorder).connect(context.destination);
+      const counts = [{}, {}];
+      const lastCrossing = [-Infinity, -Infinity];
+      const lastSample = [0, 0];
+      const previousMarker = [0, 0];
+      let frames = 0;
+      recorder.onaudioprocess = ({ inputBuffer }) => {
+        for (let ch = 0; ch < 2; ch++) {
+          const samples = inputBuffer.getChannelData(ch);
+          for (let i = 0; i < samples.length; i++) {
+            if (samples[i] > 0.01 && lastSample[ch] <= 0.01) {
+              const hz = context.sampleRate / (frames + i - lastCrossing[ch]);
+              const marker = [440, 640, 800, 1000, 1200, 1600].find(word => Math.abs(hz - word) < word * 0.05);
+              // A discontinuity between words can make one half-wave look like
+              // another frequency. Require consecutive cycles of the same tone.
+              if (marker && marker === previousMarker[ch]) counts[ch][marker] = (counts[ch][marker] || 0) + 1;
+              previousMarker[ch] = marker;
+              lastCrossing[ch] = frames + i;
+            }
+            lastSample[ch] = samples[i];
+          }
+        }
+        frames += inputBuffer.length;
+      };
+      return () => ({ incoming: { ...counts[0] }, speaker: { ...counts[1] } });
+    },
+    remoteTone: (frequency, start, duration) => {
+      const { context, gain, oscillator } = signals.get(remoteTracks);
+      const at = context.currentTime + start;
+      oscillator.frequency.setValueAtTime(frequency, at);
+      gain.gain.setValueAtTime(0.2, at);
+      gain.gain.setValueAtTime(0, at + duration);
     },
     setMicrophoneTone: (frequency) => {
       const signal = signals.get(microphoneTracks);
@@ -283,6 +371,21 @@ declare global {
       sentAudio(): { peak: number; frequency: number; at: number }[];
       captureChanges(): { enabled: boolean; at: number }[];
       microphoneLevel(): number;
+      sessionMs(): number;
+      armCorrection(button: Element): Promise<{
+        type: string;
+        event_id: string;
+        delta: string;
+        start_ms: number;
+        end_ms: number;
+      } | null>;
+      observeSpeaker(): Promise<
+        () => {
+          incoming: Record<number, number>;
+          speaker: Record<number, number>;
+        }
+      >;
+      remoteTone(frequency: number, start: number, duration: number): void;
       setMicrophoneTone(frequency: number): void;
       useControlledRemoteSamples(): void;
       /** The level is the sound's strength, from 0 to 1. A quiet voice when it is left out. */

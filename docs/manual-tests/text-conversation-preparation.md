@@ -778,14 +778,16 @@ TEXTVY-02: håll första svaret för den synliga arbetsraden; släpp
 och släpp `reply REQUEST Kim betalar musiken.` när användaren har läst
 arbetssteget. Efter nästa användarmeddelande, vänta på det tredje hållna
 svaret och släpp `reply REQUEST Klart.`.
-TEXTVY-03: håll originalet tills **Nytt samtal**, släpp därefter gammalt
+TEXTVY-03: håll originalet tills användaren avbryter med Escape och väljer
+**Nytt samtal**. Släpp därefter gammalt
 Lo-värde med namnet **För sent** genom `propose_object` med ursprungliga
 versioner. Nästa nya uppdrag får `reply REQUEST Lo Exempel.`. Separat
 tekniskt underlag är `pending`, `sessions` och
 `window.skyttelVoiceFixture.stats()` före/efter nystart: en mikrofonbegäran,
-ett öppet peer, samma levande spår, senare avstängt. Kontrollera `/new`
-i Network under fördröjt dubbelklick. Återställ normal nätprofil direkt
-efter det enda svaret. Detta säger ingenting om faktiskt hört tal.
+ett öppet peer, samma levande spår, senare avstängt. Kontrollera att ett enda
+POST-anrop till `/text-assistant` syns under fördröjt dubbelklick. Återställ
+normal nätprofil direkt efter det enda svaret. Detta säger ingenting om
+faktiskt hört tal.
 
 TEXTVY-04: släpp `reply REQUEST Ett provsvar.`. TEXTMOBIL-01–02 och
 deras separata storleksfall får `reply REQUEST Ett synligt provsvar.`.

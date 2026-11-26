@@ -6,9 +6,8 @@ quality result. No paid execution is authorized by this document.
 
 ## Source verification: 2026-11-11
 
-The official model pages confirm Responses tool calling and high effort for
-[Terra](https://developers.openai.com/api/docs/models/gpt-6.1-terra)
-and [Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
+The [campaign profiles](optimization-campaign-profiles.json) cite the official
+Terra and Sol model pages used to verify Responses tool calling and high effort.
 Both specify 1,050,000 context tokens, 922,000 maximum input tokens and
 128,000 maximum output tokens. Keep the full backend and summary output
 allowance. The judge has a separately declared 4,096-token output limit.

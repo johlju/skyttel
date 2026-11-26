@@ -78,7 +78,8 @@ An attempt belongs to the UTC month in which it starts, including a voice
 session that ends in the following month. Repeated updates replace the
 same attempt's measurements; a new provider attempt is counted separately.
 
-The included price assumptions dated 2026-10-12 are:
+The Sol rates use Standard pricing, checked on 2026-11-25 against
+[OpenAI's GPT-6.2 Sol model page](https://developers.openai.com/api/docs/models/gpt-6.2-sol).
 
 | Model or category | USD assumption |
 | :-- | :-- |
@@ -88,7 +89,7 @@ The included price assumptions dated 2026-10-12 are:
 | Sol cache write | 2.50 per million tokens |
 | Sol output, including reasoning | 10.00 per million tokens |
 
-For a `gpt-6.1-sol` request with more than 272,000 input tokens, the
+For a `gpt-6.2-sol` request with more than 272,000 input tokens, the
 corresponding prices are USD 4.00, 0.20, 5.00 and 15.00 for the whole
 request. Cache reads and writes replace the ordinary input price for those
 tokens. Reasoning tokens are part of output and are not charged a second

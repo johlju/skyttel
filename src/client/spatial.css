@@ -64,7 +64,7 @@
   position: absolute;
   z-index: 2;
   bottom: max(0.25rem, env(safe-area-inset-bottom));
-  left: 50%;
+  left: calc((100% - var(--map-text-inset, 0px)) / 2);
   transform: translateX(-50%);
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
@@ -682,7 +682,7 @@
 }
 .spatial-axis.top-right {
   top: 0.5rem;
-  right: 0.5rem;
+  right: calc(0.5rem + var(--map-text-inset, 0px));
 }
 .spatial-axis.bottom-left {
   bottom: 0.5rem;
@@ -690,7 +690,7 @@
 }
 .spatial-axis.bottom-right {
   bottom: 0.5rem;
-  right: 0.5rem;
+  right: calc(0.5rem + var(--map-text-inset, 0px));
 }
 .personal-tools fieldset {
   margin: 0.5rem 0;

@@ -29,6 +29,7 @@ async function main() {
   const conversationWorkMode = process.env.SKYTTEL_CONVERSATION_WORK_MODE ?? 'sequential';
   if (conversationWorkMode !== 'sequential' && conversationWorkMode !== 'overlap')
     throw new Error('Use sequential or overlap for SKYTTEL_CONVERSATION_WORK_MODE.');
+  let holdTitle = false;
   let holdScope = false;
   let holdCheck = false;
   let scopeMode: 'read' | 'work' | undefined;
@@ -45,6 +46,8 @@ async function main() {
     | undefined;
   let voiceFailureStatus: 401 | 503 | undefined;
   function describe(id: string, item: Pending) {
+    if (item.request.instructions.startsWith('SKYTTEL_TITLE'))
+      return { id, kind: 'title', input: item.request.input };
     const user = item.request.input.findLast((part) => part.role === 'user');
     const current = user && typeof user.content === 'string' ? JSON.parse(user.content) : {};
     return {
@@ -100,6 +103,7 @@ async function main() {
   });
   const app = await createInstallation(undefined, {
     conversationWorkMode,
+    titleFetch: textModel((request) => (holdTitle ? holdRequest(request) : [])).provider,
     modelFetch: async (input, init) => {
       let response: Response;
       try {
@@ -186,6 +190,7 @@ async function main() {
               'seed-family',
               'identity alex|robin',
               'sessions',
+              'user-at MILLISECONDS TEXT',
               'voice-failure startup|administration|off',
               'user TEXT',
               'assistant TEXT',
@@ -205,6 +210,7 @@ async function main() {
               'hold-save on|off',
               'hold-check on|off',
               'hold-scope on|off',
+              'hold-title on|off',
               'scope-read | scope-work',
               'response-required on|off',
               'release-save',
@@ -217,6 +223,12 @@ async function main() {
               'quit',
             ],
           });
+          continue;
+        }
+        if (command === 'hold-title') {
+          if (id !== 'on' && id !== 'off') throw new Error('Use hold-title on or off.');
+          holdTitle = id === 'on';
+          emit('title-hold', { active: holdTitle });
           continue;
         }
         if (command === 'hold-scope') {
@@ -312,15 +324,23 @@ async function main() {
           emit('restarted', { origin: app.origin });
           continue;
         }
-        if (command === 'user' || command === 'assistant') {
-          const delta = line.slice(command.length).trim();
+        if (command === 'user' || command === 'assistant' || command === 'user-at') {
+          // Match a timed browser microphone fixture on the provider session timeline.
+          let delta = line.slice(command.length).trim();
+          let start = offset;
+          if (command === 'user-at') {
+            start = Number(id);
+            if (!id || !Number.isSafeInteger(start) || start < 0)
+              throw new Error('Supply a session offset in milliseconds.');
+            delta = delta.slice(id.length).trim();
+          }
           if (!delta) throw new Error('Supply a synthetic transcript fragment.');
-          voiceEvent(`session.${command === 'user' ? 'input' : 'output'}_transcript.delta`, {
+          voiceEvent(`session.${command === 'assistant' ? 'output' : 'input'}_transcript.delta`, {
             delta,
-            start_ms: offset,
-            end_ms: offset + 100,
+            start_ms: start,
+            end_ms: start + 100,
           });
-          offset += 100;
+          offset = start + 100;
         } else if (command === 'delegate') {
           voiceEvent('session.delegation.created', {
             offset_ms: offset,

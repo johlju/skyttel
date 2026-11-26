@@ -1,6 +1,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { useConversation } from '../../../src/client/use-conversation.js';
+import { conversationConsentTextVersion } from '../../../src/shared/conversation-consent.js';
 import type { SaveOperation, SaveReceipt } from '../../../src/shared/map.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 
@@ -311,4 +312,33 @@ test('a check which finishes after leaving the household cannot insert old priva
     ),
   );
   expect(changed).not.toHaveBeenCalled();
+});
+
+test('New conversation stays blocked until the registered save settles', async () => {
+  vi.useFakeTimers();
+  const opens = vi.fn();
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    if (url.endsWith('/conversation-consent'))
+      return Response.json({ saved: { textVersion: conversationConsentTextVersion } });
+    if (url.endsWith('/map/operations')) return Response.json({ operations: [original] });
+    if (url.endsWith('/recover'))
+      return Response.json({
+        id: 'resolved',
+        reply: 'Sparat.',
+        receipt,
+        operations: [{ ...original, status: 'succeeded', receipt }],
+      });
+    if (url === path && init?.method !== 'POST') return Response.json({ available: true });
+    if (url === path) opens();
+    return Response.json(initial);
+  });
+  const { result } = renderHook(() => useConversation(options));
+  await tick(0);
+  expect(result.current.saveChecking).toBe(true);
+  await act(async () => result.current.newConversation());
+  expect(opens).not.toHaveBeenCalled();
+  await tick(500);
+  expect(result.current.saveChecking).toBe(false);
+  await act(async () => result.current.newConversation());
+  expect(opens).toHaveBeenCalledOnce();
 });

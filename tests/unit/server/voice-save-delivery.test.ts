@@ -197,11 +197,107 @@ test.each(['receipt', 'answer', 'stopped'])(
         questionPending: false,
         receiptOperationId: 'verified-operation',
       });
-      expect(update).not.toHaveBeenCalled();
     } else {
       expect(send).not.toHaveBeenCalled();
       expect(response).not.toHaveBeenCalled();
     }
+    if (variant !== 'stopped') expect(update).toHaveBeenCalledExactlyOnceWith(view, false);
     expect(work.readyForSummary()).toBe(variant === 'stopped');
   },
 );
+
+test('a late verified receipt is spoken without replacing the newer response', {
+  tags: ['technical'],
+}, async () => {
+  vi.useFakeTimers();
+  const initial: TextAssistantView = {
+    id: 'overlapping-voice',
+    revision: 0,
+    phase: 'ready',
+    operations: [],
+    review: {
+      version: 1,
+      contentVersion: 1,
+      changes: [],
+      readyToSave: true,
+      conflicts: [],
+      unresolvedIdentities: [],
+      pendingOperations: [],
+    },
+  };
+  let finishSave: (view: TextAssistantView) => void = () => {};
+  const save = new Promise<TextAssistantView>((resolve) => {
+    finishSave = resolve;
+  });
+  const latest: TextAssistantView = {
+    ...initial,
+    revision: 2,
+    taskStatus: 'completed',
+    modelReply: 'Ett senare svar.',
+  };
+  const request = vi.fn(async (action?: string, body?: unknown) => {
+    if (action !== 'messages') return initial;
+    return (body as { text: string }).text === 'Spara utkastet.' ? save : latest;
+  });
+  const channel = Object.assign(new EventEmitter(), { send: vi.fn() });
+  const response = vi.fn();
+  const update = vi.fn();
+  const work = voiceWork({
+    channel: channel as unknown as LiveSideband,
+    initial,
+    request,
+    response,
+    update,
+    failed: vi.fn(),
+    interrupt: vi.fn(),
+  });
+  const speak = (id: string, text: string, start: number) => {
+    channel.emit('session.input_transcript.delta', {
+      event_id: id,
+      delta: text,
+      start_ms: start,
+      end_ms: start + 100,
+    });
+    channel.emit('session.delegation.created', {
+      offset_ms: start + 100,
+      delegation: { id, target: 'client' },
+    });
+  };
+
+  speak('save', 'Spara utkastet.', 0);
+  await vi.advanceTimersByTimeAsync(2100);
+  speak('read', 'Vad ändrades?', 3000);
+  await vi.advanceTimersByTimeAsync(2100);
+  for (const [event] of [...channel.send.mock.calls])
+    if (event.type === 'session.thinking.append')
+      channel.emit('session.thinking.appended', { client_event_id: event.event_id });
+  expect(response).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({
+      revision: 2,
+      text: expect.stringContaining('Ett senare svar.'),
+    }),
+  );
+  finishSave({
+    ...initial,
+    revision: 1,
+    taskStatus: 'completed',
+    receipt: {
+      operationId: 'previous-save',
+      householdId: 'home',
+      userId: 'alex',
+      draftVersion: 2,
+      contentVersion: 1,
+      savedAt: '2026-10-11T10:00:00Z',
+      changes: [],
+    },
+  });
+  await vi.advanceTimersByTimeAsync(50);
+  expect(channel.send).toHaveBeenCalledWith({
+    type: 'session.commentary.append',
+    delegation_id: 'save',
+    content: 'Sparat.',
+  });
+  expect(response).toHaveBeenCalledTimes(1);
+  expect(update).toHaveBeenCalledExactlyOnceWith(latest, false);
+  work.retire();
+});
