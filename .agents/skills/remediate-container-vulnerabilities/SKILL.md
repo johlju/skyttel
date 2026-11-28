@@ -34,7 +34,8 @@ other ticket publication, branch publication, and PRs to a separate workflow.
    configuration to locate its evidence and determine which findings block it.
 2. Reconcile any checklist from the caller with the gate's review markers
    and complete scanner reports. Account for every High or Critical finding,
-   including nonblocking, supplemental, excepted, and no-fix findings. Group
+   including those that do not block promotion, supplemental or excepted
+   findings, and findings with no published fix. Group
    confirmed matches by exact image, affected package copy, and advisory.
    Merge scanner entries only when the package copy matches and advisory IDs
    match or their aliases are verified.
@@ -43,8 +44,11 @@ other ticket publication, branch publication, and PRs to a separate workflow.
    solution still applies. Recheck applicable exceptions for new fix evidence.
    Report active exceptions that are still needed and any that qualify for
    cleanup or require a new decision.
-4. For every case, report the affected copy, advisory, scanners, gate
-   disposition, and first applicable action in **Remediate in order**. Cite
+4. For every case, give the affected copy and advisory, then state together
+   which scanners still report it, whether it blocks promotion and why, the
+   tracking ticket state or that no ticket was created, and the next check.
+   Use open and closed for tickets. Use reported or absent for scanner findings.
+   Give the first applicable action in **Remediate in order**. Cite
    supporting evidence and state what remains uncertain. If no action is ready,
    give a concrete next check and say what evidence it would establish. Give
    the [scan summary](#scan-summary) and any closure candidates separately.
@@ -89,11 +93,22 @@ each path with verified remediation or evidence of why it cannot solve the
 case before trying the next path. When authoritative evidence shows the exact
 installed component is unaffected or already mitigated, recommend an
 evidence-backed override directly. Cite the evidence for that copy and state
-any residual uncertainty. Apply this rule to supplemental findings too.
+any residual uncertainty. Complete the release check in step 1 before
+presenting that recommendation. Apply this rule to supplemental findings too.
 
-1. **Install a fix.** Verify a compatible fixed package or base from an
-   authoritative source. Use RPM-aware comparisons for RPMs. Inspect both the
-   selected base and any build-time package update steps for inherited packages.
+1. **Install a fix.** Before presenting the remediation decision, identify the
+   supported upstream release lane or lanes the deployment can use. Check
+   available releases in those lanes. Use published SBOMs, package metadata,
+   or inspection of the released artifacts to verify the dependency versions
+   they actually ship. Compare them with authoritative fix or backport
+   evidence. Record the supported lane, releases checked, packaged versions,
+   and deployment assumptions that affect which fixes can be used or whether
+   an override is appropriate. Recommend a compatible fixed release when one
+   is available. If a fixed release cannot be deployed, state the constraint.
+   If missing evidence could change the decision, mark it pending and give
+   the next check.
+   Use RPM-aware comparisons for RPMs. Inspect the selected base and any
+   build-time package update steps for inherited packages.
    For a base change, pass the maintenance unit and candidate to
    `$update-container-image`. When called by the updater for a scanned finding,
    return the remediation and evidence to that update for verification.
@@ -130,9 +145,11 @@ ticket. Show the advisory and verified aliases, component and installed
 version, exact image scope, evidence, rationale, residual risk, owner, review
 date, expiry, and removal condition. Wait for approval of that exact decision.
 Then invoke `$manage-container-vulnerability-exceptions` with the approval and
-matching scan evidence. Return the ticket URL, override verification result,
-and overall gate decision. If the user declines, report the remaining exposure
-and next check.
+matching scan evidence. When multiple overrides are approved for the same
+image, use the final evaluation of the full approved set for the handoff.
+Return each linked ticket URL and state, its override match, the overall gate
+decision, and the evidence link. If the user declines, report the remaining
+exposure and next check.
 
 ## Verify and record
 

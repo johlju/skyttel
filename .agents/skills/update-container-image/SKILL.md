@@ -73,7 +73,9 @@ Resolve [the canonical gate](#canonical-gate) before making changes. Follow
    as pending. Rebuild and verify changes the user selects. Repeat the
    open-ticket review if the selected base digest changes.
 5. Include the assessment in the final report for the exact candidate or
-   commit. Give final counts by severity for each configured scanner. For
+   commit. For each assessed case, carry forward the scanner disposition,
+   effect on promotion, tracking ticket state, and next check together.
+   Give final counts by severity for each configured scanner. For
    completed scans, show Critical and High counts even when zero and include
    every other severity present. Report zero total findings only when all configured
    scans completed and found nothing. Mark missing or failed scans as

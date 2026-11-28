@@ -36,7 +36,8 @@ workaround and close the ticket. Say if this case needs no further action.>
 ## Evidence
 
 - **Affected images:** <Image names, digests, and source commit>
-- **Scan evidence:** <CI job, scan date, database status, and report locations>
+- **Scan evidence:** <Retained scan evidence link, scan date, database status,
+  and policy decision identifier>
 - **Fix criteria:** <Vendor references and exact versions or evidence that
   confirm the fix>
 
@@ -55,5 +56,6 @@ subheading names so existing links still work.
 For an approved override, include the advisory and approved scope in the
 ticket identity. Record the rationale, residual risk, owner, review date,
 expiry, and removal condition. State whether the evaluator matched the
-override and whether other findings still block the gate. Keep the ticket
-open with a concrete next check when verification is incomplete.
+override and whether other findings still block the gate. Use the final gate
+decision and retained scan evidence for every override ticket for that image.
+Keep the ticket open with a concrete next check when verification is incomplete.
