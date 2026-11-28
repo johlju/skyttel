@@ -43,6 +43,7 @@
     "test:real-voice": "npm run test:env -- playwright test --config playwright.real-voice.config.ts",
     "test:report": "playwright show-report --port 9324",
     "test:container": "npm run test:env -- node scripts/check-container.mjs",
+    "container:vulnerability:check": "bash scripts/security/check-container-image.sh",
     "test:devcontainer": "npm run test:env -- node scripts/check-devcontainer.mjs",
     "test:installation": "node scripts/security/verify-installation.mjs",
     "measure:map": "npm run build && npm run test:env -- tsx scripts/measure-map.ts",

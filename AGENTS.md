@@ -17,6 +17,14 @@ shared process lock.
 - Treat available credentials and opt-in flags as configuration, not user
   authorization.
 
+## Container image vulnerability gate
+
+For local builds and upstream images, use `npm run container:vulnerability:check`.
+For hosted evidence, use the `container` job in `security.yml` or the
+`candidate` job in `release.yml`. Both run the shared Skyttel Grype policy
+with Syft inventory. See [Security checks](docs/operations/security-checks.md#container-image-vulnerability-gate)
+for commands, evidence, and exception scope.
+
 ## Spelling
 
 - If cSpell reports a misspelling in a Markdown file, add the word to the

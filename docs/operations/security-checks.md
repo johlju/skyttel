@@ -59,6 +59,47 @@ The workflows do not carry repository-administration credentials. Enable
 private vulnerability reporting in repository settings as well; sensitive
 reports belong in the private channel linked in [SECURITY.md](../../SECURITY.md).
 
+## Container image vulnerability gate
+
+Run the local gate from the checkout root. On Linux AMD64, install the same
+checksum-verified Syft and Grype versions used by the deployed-image monitor.
+The local gate also needs Docker, Node, npm, and `jq`. Upstream scans use
+Docker Buildx to verify the platform manifest.
+
+```sh
+scratch=$(mktemp -d)
+bash scripts/security/install-image-scanners.sh "$scratch/tools"
+PATH="$scratch/tools:$PATH" npm run container:vulnerability:check -- \
+  --local "${built_image:?Set built_image}" "$scratch/local-evidence"
+```
+
+For an upstream image, resolve the Linux AMD64 platform manifest digest from
+the registry before scanning. Use a fresh evidence directory for each check.
+
+```sh
+PATH="$scratch/tools:$PATH" npm run container:vulnerability:check -- \
+  --upstream "${upstream_image:?Set upstream_image}" "$scratch/upstream-evidence"
+```
+
+The local check uses the exported Docker image identified by configuration
+hash and applies `.github/security-exceptions.json`. The upstream check
+verifies the requested registry manifest and applies the same severity policy
+with an empty exception set. It does not inherit exceptions for Skyttel builds.
+Keep the complete `grype.json`, `sbom.spdx.json`, `image-id.txt`,
+`image-reference.txt`, `policy.log`, and any upstream `manifest.json` outside
+Git. Grype includes database status in its report. Scanner or identity
+failures can leave partial evidence.
+
+For PR evidence, use the `container-security-results` artifact from the
+`container` job in [Security checks](../../.github/workflows/security.yml).
+Match the workflow run to the exact source under review. For release evidence,
+use `release-candidate` or the attempt-specific
+`release-candidate-diagnostics-*` artifact from the `candidate` job in
+[Container release](../../.github/workflows/release.yml). Match its recorded
+manifest digest to the independently verified release identity. For deployed
+images, the monitor applies the same policy to the current and last known-good
+deployment. Its status artifact contains sanitized findings.
+
 ## Temporary container exceptions
 
 Remediate first. `.github/security-exceptions.json` starts empty. An exception

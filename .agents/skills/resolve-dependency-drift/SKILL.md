@@ -1,59 +1,65 @@
 ---
 name: resolve-dependency-drift
-description: Resolve a detector-created dependency drift issue for the npm toolchain, a coordinated release toolchain, or a container image, including every synchronized repository surface and required compatibility work. Use when an `automation:dependency-drift` issue provides a maintenance unit with current and available state.
+description: Resolve a Dependabot proposal or reported drift for a toolchain or container image.
 disable-model-invocation: true
 ---
 
 # Resolve Dependency Drift
 
+Recommend changes for assessments. Apply requested changes locally and report
+completed and pending checks. Leave branch publication, PRs, and ticket
+updates to a separate user-directed workflow.
+
 ## Workflow
 
-1. Read the issue's maintenance unit, current state, available state, and
-   completion checklist.
-2. Create one isolated directory with
+1. Read the Dependabot PR or drift report for the affected dependency,
+   current and proposed versions, and required checks. Find its consumers
+   and read the [Skyttel update policy](../../../docs/operations/security-checks.md#versions-and-updates).
+   Use `.github/dependabot.yml` to identify monitored ecosystems and paths.
+2. For containers, hand the dependency, evidence, and proposed candidate
+   to `$update-container-image`. That skill owns candidate selection, review
+   of remediation issues, pin changes, and verification. Continue at
+   **Confirm resolution** after it returns. For toolchains, continue below.
+
+## Update a toolchain
+
+1. Create one isolated directory with
    `mktemp -d /tmp/resolve-dependency-drift.XXXXXX`.
-3. Start a background agent with `$research`.
+2. Start a background agent with `$research`.
    - For npm, research compatibility, lifecycle-script policy, install paths,
      and verification using primary npm and Node sources.
-   - For a container image, research vendor releases, compatibility,
-     immutable identity, synchronized surfaces, and verification using primary
-     registry and vendor sources.
-   - For a release toolchain such as Lychee, research the supported release,
+   - For a standalone tool or Action, research the supported release,
      action compatibility, release assets, published digests, and every
      synchronized installer and CI surface using primary project sources.
    - Override `$research` output handling for this invocation: write its single
      Markdown result inside the exact temporary directory, never in the
      repository.
-4. Continue repository discovery while research runs. Read and apply the
+3. Continue repository discovery while research runs. Read and apply the
    temporary findings before choosing the target or editing.
-5. Apply the policy for the issue's maintenance unit:
-   - **npm toolchain:** Treat root `package.json` as canonical. Adopt one exact
-     reviewed npm version across every dynamically discovered install path.
+4. Apply the policy for the issue's maintenance unit:
+   - **npm toolchain:** Set the exact reviewed npm version in the root
+     `package.json` `packageManager` field. Synchronize its install paths.
      Preserve pinned script approvals, explicit denials, fail-closed lifecycle
      policy, and LTS Node compatibility.
-   - **Container image:** Resolve the requested upstream tag, multi-platform
-     index when published, and Linux AMD64 platform manifest. For
-     `devcontainer-base`, record the index digest as `manifestDigest` and the
-     AMD64 image config digest as `imageId`. For other image lanes, preserve
-     their existing identity policy. Update every dynamically discovered
-     synchronized surface without changing release-lane policy.
-   - **Lychee toolchain:** Update both installer version constants, the CI
-     `lycheeVersion`, and both AMD64 and ARM64 asset checksums together. Keep
-     the action compatible and pinned to a full commit SHA with its release-tag
-     comment, and preserve relational alignment coverage.
-6. Update focused tests, generated locks or configuration, the maintenance
-   coverage invariant, and affected operator, developer, or CI documentation.
-7. Run dynamically relevant verification:
-   - For npm, include clean installs, pending script approval checks, nested
-     packages, `npm run check`, and `npm audit`.
-   - For a container image, include image, release, smoke, workflow, and
-     repository checks.
-   - For Lychee, include the dependency-drift, dependency-maintenance, workflow
-     security, Markdown link, and repository checks relevant to the change.
-8. Confirm a detector scan reports no remaining drift for the maintenance
-   unit.
-9. Remove only the exact temporary directory created in step 2 after applying
-   its findings.
+   - **Standalone tool or Action:** Synchronize installer and CI versions, supported
+     architecture checksums, and action pins. Preserve compatibility, immutable
+     identities, and alignment coverage.
+5. Update affected focused tests, generated locks or configuration, and
+   operator, developer, or CI documentation.
+6. Run the repository's relevant verification:
+   - For npm, include clean installs, pending script approval checks,
+     `npm audit`, and `npm run check`. Use `npm run test:container` when the
+     production build's npm changes.
+   - For a standalone tool or Action, verify alignment and run the affected
+     installer and CI checks.
+7. Remove only the temporary directory created for this run after applying its
+   findings.
+
+## Confirm resolution
+
+Compare every owned reference with the reviewed upstream version or digest.
+For a Dependabot proposal, check its published findings and checks for the
+exact PR head. Report checks still pending and any remaining drift.
 
 ## Guardrails
 
@@ -63,23 +69,5 @@ disable-model-invocation: true
   release.
 - Never use floating versions for project-bound npm dependencies or the
   canonical npm toolchain.
-- Preserve ADR 0045 rolling channels such as `@github/copilot@latest` for
-  standalone development tools when their distribution integrity is verified
-  or ADR 0045 records an explicit exception. Do not replace those channels with
-  routine version pins.
-- Keep externally sourced service and base images on their lane's explicit
-  identity policy. UBI permits `latest` only with its selected SHA-256 digest;
-  other lanes require a non-`latest` tag. Repository-local build outputs do
-  not require an explicit Compose `image` or canonical image lock.
-- Preserve each image lane's identity policy. Production and release
-  references keep their required immutable identities. ADR 0045 development
-  references backed by canonical image locks stay explicit, non-`latest`,
-  tag-only references; do not append digests to those runtime references.
-- For an ADR 0045 development image update, record the required manifest digest
-  and image ID in the canonical image lock and update every synchronized
-  development tag reference from that lock. Keep the devcontainer base lock's
-  `manifestDigest` bound to the multi-platform index, not one platform
-  manifest.
-- Never approve all lifecycle scripts or update an image lock tag without its
-  required immutable identities.
-- Do not leave research artifacts in the repository.
+- Preserve existing version and integrity policies for standalone tools.
+- Keep explicit lifecycle-script approvals limited to reviewed dependencies.

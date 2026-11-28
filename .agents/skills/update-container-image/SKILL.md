@@ -1,111 +1,104 @@
 ---
 name: update-container-image
-description: Update pinned vendor container image locks and all repository references for a specified container image. Use when Codex is asked to bump, refresh, switch, or verify an upstream container image such as nginx, SQL Server, Keycloak, or another image recorded in `containers/*/image.lock.json`, including integration tests, release-smoke fixtures, prodlike examples, deployment docs, and vendor-image-update pipeline configuration.
+description: >-
+  Update or verify a pinned upstream container image. Use for a requested
+  image refresh, a container drift handoff, or verification after a package
+  remediation. Synchronize pins and consumers, check open workarounds, and
+  verify the rebuilt images.
 ---
 
 # Update Container Image
 
-Update one requested container image end to end: resolve the upstream tag and
-immutable identities, switch every repo-owned usage for that container, and
-verify the release/smoke/test surfaces that consume it.
+Accept an image name or maintenance unit, an optional target tag or digest,
+and any ticket or CI evidence supplied by the caller. Use **Verify affected
+images** alone when the caller already applied the change.
 
-## Workflow
+Resolve [the canonical gate](#canonical-gate) before making changes. Follow
+[the local handoff](#local-handoff) for the requested scope.
 
-1. Identify the requested image and old state.
-   - Read `.github/workflows/dependency-drift.mjs`.
-   - Match by `IMAGE_CONFIGS` key, `image`, or `lockPath`.
-   - Read the matching `containers/<image>/image.lock.json`.
-   - If the image is not in `IMAGE_CONFIGS`, search for a matching
-     `containers/*/image.lock.json` and all direct refs before editing.
+## Select and update
 
-2. Resolve the target tag.
-   - If the user supplied a tag, verify that exact upstream tag exists.
-   - If the user asked for latest/newer/current, query the upstream registry or
-     official source before choosing. Do not rely on memory.
-   - Prefer immutable, version-specific tags for release locks. Avoid moving
-     tags such as `stable-alpine`, `latest`, or `2025-latest` unless the repo's
-     existing product lane explicitly uses that moving tag.
-   - Preserve the lane policy from `IMAGE_CONFIGS.parseTag`,
-     `laneFromVersion`, and `versionSortValue`.
+1. Find the repository's authoritative image reference, such as an image
+   lock, maintenance registry, Dockerfile, or deployment configuration. Find
+   its owner, release lane, supported platforms, and consumers. Ask if the
+   repository evidence does not establish which reference to update.
+   For Skyttel's production Node base, synchronize both `FROM` references
+   and follow the [Node alignment rules](../../../docs/operations/security-checks.md#versions-and-updates).
+   For development images, inspect `.devcontainer/Dockerfile` and both
+   devcontainer profiles.
+2. Resolve the exact vendor candidate and verify it is available on the
+   supported lane. Preserve the repository's tag, index digest, platform
+   manifest digest, and config digest policy. When the caller supplies a
+   digest, verify and use that identity. A rebuild of an old pin keeps the
+   old base.
+3. Ask `$remediate-container-vulnerabilities` to recheck matching open
+   remediation tickets for the maintenance unit and exact unmodified
+   candidate. Use the repository's ticket conventions. Reuse reviews for the
+   same digest and case. Keep workarounds with incomplete evidence and report
+   which tickets could not be assessed.
+4. Update the authoritative reference and synchronize all owned consumers
+   before final verification. Update the image lock if the repository uses
+   one. Otherwise update the configuration that selects the image. Preserve
+   each consumer's reference format and package policy.
+   Report obsolete workarounds and exceptions as cleanup candidates with the
+   tickets the image change could close. Apply only remediation or cleanup the
+   user selected. Hand selected exception edits to
+   `$manage-container-vulnerability-exceptions`.
+5. Search for remaining old references. Account for each active match and
+   update maintenance coverage when the repository requires it.
 
-3. Resolve immutable image identity for `linux/amd64`.
-   - Record both the platform manifest digest and the image config digest.
-   - For manifest lists, select platform `{ os: "linux", architecture:
-     "amd64" }`, then fetch that platform manifest.
-   - Update `tag`, `manifestDigest`, and `imageId` together in
-     `containers/<image>/image.lock.json`.
-   - Use `.github/workflows/dependency-drift.mjs` as the source of truth
-     for registry host, repository, accepted media types, and digest
-     normalization.
+## Verify affected images
 
-4. Update companion files and usage surfaces.
-   - Check `IMAGE_CONFIGS[image].companionFiles`; keep it complete when adding
-     or discovering hardcoded refs.
-   - Any time this task changes a file because it contains a hardcoded image
-     reference, release example, devcontainer/devfile example, or active
-     deployment/doc workflow reference, update
-     `.github/workflows/dependency-drift.mjs` in the same change so
-     `IMAGE_CONFIGS[image].companionFiles` or the replacement logic covers
-     that file for future automated updates.
-   - Known companion files:
-     - `nginx`: `containers/production/env/release.env.template`
-     - `sqlserver`: `docker-compose.sqlserver.yml`,
-       `.devcontainer/docker-compose.yml`,
-       `.devcontainer/elevated/docker-compose.yml`
-     - `keycloak`: `docker-compose.idp.yml`,
-       `.devcontainer/docker-compose.yml`,
-       `.devcontainer/elevated/docker-compose.yml`,
-       `devfile.example.yaml`,
-       `containers/production/env/release.env.template`,
-       `docs/development/auth-developer-workflow.md`,
-       `docs/development/openshift-devspaces.md`
-   - Search broadly for the old tag, moving tags, image name, env var, and
-     lock name:
+1. Read the current authoritative reference back and confirm it selects the
+   intended candidate. Rebuild every affected consumer from that selection,
+   including helpers and release-only consumers. Use the repository's
+   supported build, smoke, integration, and release workflows. Bypass cached
+   package steps when verifying a package change or workaround removal.
+2. Verify the selected base and final image identities, complete SBOMs,
+   affected package versions or absence, and supported runtime behavior.
+   Run the [canonical gate](#canonical-gate) against the exact selected image
+   or its rebuilt consumers. Use any pre-update scan as assessment evidence.
+   Use `--upstream` with the Linux AMD64 platform digest or `--local` with a
+   rebuilt Docker image. For the release OCI archive, use the release
+   candidate workflow and verify its recorded manifest digest. Retain the
+   complete evidence outside Git and run the affected repository checks,
+   including `npm run test:container` or `npm run test:devcontainer`.
+3. For High or Critical findings from any configured scanner, hand the grouped
+   findings, policy decision, and exact build evidence
+   to `$remediate-container-vulnerabilities`. If that skill called this
+   verification for the same finding, return the result to its current attempt.
+   Report recommendations before changing remediation. Rebuild and verify the
+   changes the user selects. If remediation selects a different base
+   digest, repeat the open-ticket review for it.
+   Diagnose infrastructure and other non-package failures through the owning
+   workflow.
+4. Report what the evidence verifies for the exact candidate or commit. Give
+   final counts by severity for each configured scanner. For completed scans,
+   show Critical and High counts even when zero and include every other
+   severity present. Report zero total findings only when all configured
+   scans completed and found nothing. Mark missing or failed scans as
+   incomplete. Give the gate decision separately, link the evidence, and list
+   pending PR or release checks, including release-only consumers that PR CI
+   omits.
 
-```bash
-rg --hidden -n "OLD_TAG|NEW_TAG|docker.io/library/nginx|NGINX_IMAGE_REF|stable-alpine" \
-  --glob '!node_modules/**' --glob '!.git/**' --glob '!.next/**' \
-  --glob '!coverage/**' --glob '!test-results/**' .
-```
+## Canonical gate
 
-5. Update tests and fixtures that model the changed image.
-   - Common release/container fixture files:
-     - `scripts/__tests__/container-stack-lock.test.mjs`
-     - `scripts/__tests__/container-compose.test.mjs`
-     - `scripts/__tests__/container-oci-archives.test.mjs`
-     - `scripts/__tests__/production-image-helper.test.mjs`
-     - `scripts/__tests__/container-release.test.mjs`
-     - `scripts/__tests__/container-stack.test.mjs`
-   - Keep fixture tags version-specific when the real lock is
-     version-specific.
-   - Add an assertion when a shipped template should contain the new direct
-     public example, as with `NGINX_IMAGE_REF`.
+Use the gate provided by the caller or declared in the repository's agent
+instructions. It should identify the command or workflow and its evidence.
+If none is provided, find the likely gate in the repository, show the user
+the proposed gate, and wait for confirmation before using it.
 
-6. Update docs only when they contain active examples or workflow behavior.
-   - Update deploy, upgrade, release, prodlike, and smoke docs that hardcode
-     the old tag or describe companion-file behavior.
-   - Leave warning prose about avoiding moving tags intact unless it has become
-     misleading.
-   - If an IDE/open-tab path does not exist in the checkout, search for the
-     checked-in successor before assuming it needs an edit.
+## Local handoff
 
-7. Verify.
-   - Run targeted tests for changed scripts when useful.
-   - Run `node --check .github/workflows/dependency-drift.mjs` when the
-     updater changed.
-   - Run `npm run check` before final response unless the user asked for a
-     narrower pass or the change is documentation-only.
-   - Re-run the broad `rg` search and explain any remaining old/moving tag
-     hits as intentional warnings or unrelated refs.
+For an assessment, recommend the change. For an implementation request, make
+the change locally and run available local checks. Use existing CI and ticket
+evidence read-only. Leave branch publication, PR creation or edits, and ticket
+mutations to a separate user-directed workflow.
 
-## Safety Rules
-
-- Do not run `.github/workflows/dependency-drift.mjs` locally unless the
-  user explicitly wants the workflow branch/PR behavior and the GitHub env is
-  configured. It switches branches, commits, pushes, and opens PRs.
-- Do not update only the tag in an image lock. Digest and image ID must move
-  with it.
-- Do not leave the release/prodlike example behind when a direct public image
-  ref is shown for operators.
-- Do not update user-facing deployment docs from memory. Derive actual runtime
-  refs from `container-stack.lock.json` and `release.env.template`.
+Return the proposed or applied change, completed checks, and checks still
+needed. Recommend a PR when there is a change to publish. Recommend closure on
+merge using the repository's convention once the unmodified candidate fixes or
+omits the affected copy, the change removes the obsolete remediation, and the
+exact PR commit passes checks for every affected image and advisory. List
+pending closure candidates and the evidence they still need. Keep tickets
+open when the change retains a workaround or covers only part of the case.
