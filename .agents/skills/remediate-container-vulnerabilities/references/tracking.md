@@ -1,12 +1,15 @@
 # Package remediation tracking
 
 Use one human-managed ticket per remediated package, including its images and
-advisories. Draft an update or a new ticket only after applying remediation.
+advisories. Draft an update or a new ticket after the package change. For a
+scoped override, create or reuse one ticket per advisory and approved scope
+after the user approves both actions. Reuse it on retries and record pending
+or failed verification there.
 Use the template's required tracking label and repository conventions. Track
 every vulnerability-driven change to the selected base's packages, including
 build-time package updates, source patches, and removals.
-Track approved exceptions on the same package ticket. A pin update to a fixed
-upstream image without a local workaround belongs to image maintenance.
+Link a related package ticket when one exists. A pin update to a fixed upstream
+image without a local workaround belongs to image maintenance.
 
 ## Find prior remediation
 

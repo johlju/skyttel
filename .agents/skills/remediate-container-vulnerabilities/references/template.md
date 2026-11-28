@@ -51,3 +51,9 @@ workaround and close the ticket. Say if this case needs no further action.>
 When migrating an older ticket, keep its supporting details under
 `### Original technical record` after **Remediation and cleanup**. Preserve
 subheading names so existing links still work.
+
+For an approved override, include the advisory and approved scope in the
+ticket identity. Record the rationale, residual risk, owner, review date,
+expiry, and removal condition. State whether the evaluator matched the
+override and whether other findings still block the gate. Keep the ticket
+open with a concrete next check when verification is incomplete.

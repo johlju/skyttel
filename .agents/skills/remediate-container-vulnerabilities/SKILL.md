@@ -12,8 +12,8 @@ argument-hint: "[CI job URL | remediation ticket number or URL]"
 Accept scan results or a PR or release job, a labeled remediation ticket by
 number or URL, or the candidate and maintenance unit from an image update.
 Recommend changes for assessments and apply selected remediation locally.
-Leave branch publication, PRs, and ticket updates to a separate user-directed
-workflow.
+Publish a tracking ticket only as part of an approved scoped override. Leave
+other ticket publication, branch publication, and PRs to a separate workflow.
 
 ## Choose the review
 
@@ -44,13 +44,15 @@ workflow.
    Report active exceptions that are still needed and any that qualify for
    cleanup or require a new decision.
 4. For every case, report the affected copy, advisory, scanners, gate
-   disposition, and recommended fix. If the evidence does not support a fix,
+   disposition, and first applicable action in **Remediate in order**. Cite
+   supporting evidence and state what remains uncertain. If no action is ready,
    give a concrete next check and say what evidence it would establish. Give
    the [scan summary](#scan-summary) and any closure candidates separately.
    Finish when every checklist entry maps to a reported case. Mark unavailable
    evidence or outstanding assessment as pending.
-5. Ask which remediation or exception changes to apply unless the user already
-   selected them. After applying selected changes locally,
+5. Ask which remediation changes to apply unless the user already selected
+   them. For a scoped override, use the approval and ticket flow below. After
+   applying a package or image change locally,
    use the [ticket template](references/template.md) to draft a labeled
    tracking ticket. For an existing ticket, draft the update and include the
    required label if missing.
@@ -84,7 +86,10 @@ A scan of an adapted image can miss a package its workaround already removes.
 
 Use this order to recommend a fix. When applying selected remediation, finish
 each path with verified remediation or evidence of why it cannot solve the
-case before trying the next path.
+case before trying the next path. When authoritative evidence shows the exact
+installed component is unaffected or already mitigated, recommend an
+evidence-backed override directly. Cite the evidence for that copy and state
+any residual uncertainty. Apply this rule to supplemental findings too.
 
 1. **Install a fix.** Verify a compatible fixed package or base from an
    authoritative source. Use RPM-aware comparisons for RPMs. Inspect both the
@@ -111,22 +116,31 @@ case before trying the next path.
    finish. Preserve accurate package inventory, trust material, licenses, and
    required runtime behavior. Record collateral tools removed and how their
    build-time or diagnostic purpose is served. Verify the final workloads.
-4. **Ask about an exception.** If the finding blocks promotion, report why
-   all three paths failed, residual exposure, and concrete next checks.
-   Ask the user whether to add an exception, presenting its exact scope,
-   accountable owner, rationale, and proposed case-specific review and expiry
-   dates. Wait for the answer before changing the exception file. If approved,
-   call the Skill tool with "manage-container-vulnerability-exceptions".
-   The user decides the dates from the case; this workflow sets no fixed
-   review or expiry interval. For findings outside the blocking policy or
-   where the user declines, report the remaining exposure and next checks.
+4. **Override this advisory.** When the earlier paths cannot fix an affected
+   component, propose an exact override for accepted risk and explain why the
+   prior actions are unavailable. Use this action for supplemental findings
+   when the evaluator supports their scope. If it does not, report the missing
+   support and a concrete next check. Preserve complete scan evidence and
+   identify the override separately in the policy decision.
+
+## Approve an override
+
+Ask once to apply the specific override and create or reuse its tracking
+ticket. Show the advisory and verified aliases, component and installed
+version, exact image scope, evidence, rationale, residual risk, owner, review
+date, expiry, and removal condition. Wait for approval of that exact decision.
+Then invoke `$manage-container-vulnerability-exceptions` with the approval and
+matching scan evidence. Return the ticket URL, override verification result,
+and overall gate decision. If the user declines, report the remaining exposure
+and next check.
 
 ## Verify and record
 
-- Rebuild all affected images from the selected base. Verify image identities,
-  package inventory, and supported workloads. Run the declared gate against
-  the exact rebuilt images and assess all remaining or new High and Critical
-  findings. Retain the evidence. For source patches, also test the affected
+- After a package or image change, rebuild all affected images from the
+  selected base. Verify image identities, package inventory, and supported
+  workloads. Run the declared gate against the exact rebuilt images and
+  assess all remaining or new High and Critical findings. Retain the evidence.
+  For source patches, also test the affected
   behavior. For removal, check native linkage and workloads after the complete
   package removal.
 - Assess operator guidance and update affected build and runtime guidance
