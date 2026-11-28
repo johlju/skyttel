@@ -16,9 +16,11 @@ updates to a separate user-directed workflow.
    and completion checklist. Find the unit in the repository's dependency
    maintenance configuration and read its update guidance.
 2. For containers, hand the maintenance unit, issue, and detector candidate
-   to `$update-container-image`. That skill owns candidate selection, review
-   of remediation issues, pin changes, and verification. Continue at
-   **Confirm resolution** after it returns. For toolchains, continue below.
+   to `$update-container-image`. Require its verification handoff to include
+   the gate decision and a recommendation or concrete next check for every
+   distinct High or Critical finding across scanners. Report any unfinished
+   assessment as pending. Continue at **Confirm resolution** after it
+   returns. For toolchains, continue below.
 
 ## Update a toolchain
 
@@ -57,8 +59,10 @@ updates to a separate user-directed workflow.
 
 Run the detector's read-only check and confirm the unit reports no remaining
 drift. Use the repository's documented entry point or exported lookup functions
-when the detector CLI also writes issues. Report missing verification and keep
-detector reconciliation separate from remediation issue closure.
+when the detector CLI also writes issues. For a container, report the detector
+result alongside the gate decision, completed recommendations, and any
+pending verification. Keep detector reconciliation separate from remediation
+ticket closure.
 
 ## Guardrails
 

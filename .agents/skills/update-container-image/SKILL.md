@@ -57,23 +57,30 @@ Resolve [the canonical gate](#canonical-gate) before making changes. Follow
    Use the registry reference for an upstream image and the build artifact
    for an image built locally. Retain the complete evidence. Run repository
    checks through the documented commands. Keep scan artifacts outside Git.
-3. For High or Critical findings from any configured scanner, hand the grouped
-   findings, policy decision, and exact build evidence
-   to `$remediate-container-vulnerabilities`. If that skill called this
-   verification for the same finding, return the result to its current attempt.
-   Report recommendations before changing remediation. Rebuild and verify the
-   changes the user selects. If remediation selects a different base
-   digest, repeat the open-ticket review for it.
-   Diagnose infrastructure and other non-package failures through the owning
-   workflow.
-4. Report what the evidence verifies for the exact candidate or commit. Give
-   final counts by severity for each configured scanner. For completed scans,
-   show Critical and High counts even when zero and include every other
-   severity present. Report zero total findings only when all configured
+3. Build the post-scan review checklist from every entry the gate marks for
+   remediation review. If the gate has no markers, use every High or Critical
+   finding from the complete scanner reports. Review the checklist whether the
+   gate passed or blocked the candidate. For a nonempty checklist, pass the
+   exact image identity, checklist, grouped findings, gate decision, and
+   evidence to `$remediate-container-vulnerabilities`. If it requested verification,
+   return the full checklist and evidence to it for assessment, including any
+   new findings.
+4. Complete image verification only when the assessment accounts for every
+   checklist entry with a recommendation or concrete next check. Check
+   coverage by exact image, affected package copy, and advisory. Merge only
+   verified aliases across scanners. A pre-update ticket review does not
+   complete this assessment. If evidence or assessment is missing, report it
+   as pending. Rebuild and verify changes the user selects. Repeat the
+   open-ticket review if the selected base digest changes.
+5. Include the assessment in the final report for the exact candidate or
+   commit. Give final counts by severity for each configured scanner. For
+   completed scans, show Critical and High counts even when zero and include
+   every other severity present. Report zero total findings only when all configured
    scans completed and found nothing. Mark missing or failed scans as
-   incomplete. Give the gate decision separately, link the evidence, and list
-   pending PR or release checks, including release-only consumers that PR CI
-   omits.
+   incomplete. Diagnose infrastructure and other non-package failures through
+   the owning workflow. Give the gate decision separately, link the evidence,
+   and list pending PR or release checks, including release-only consumers that
+   PR CI omits.
 
 ## Canonical gate
 
