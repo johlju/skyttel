@@ -15,12 +15,12 @@ request excerpt. Each new conversation can issue one additional model call
 for its title. Use the conversation ID from the information dialog to
 filter text and voice traces for the same conversation.
 
-### Restore archives that include the Milky Way background
+### Restore archives that include a panorama background
 
-Use a destination that supports the Milky Way background when you restore a
-household archive that contains this preference. An older release can reject
-the full archive even when it uses the same archive format version.
-The same condition applies to archives with the Milky Way 2 background.
+If a household archive contains a preference for Skärgårdsmorgon, Milky Way,
+or Milky Way 2, restore it on a release that supports the saved background.
+An older release can reject the entire archive even if it supports the same
+archive format version.
 
 ### Prepare production before publishing a stable release
 

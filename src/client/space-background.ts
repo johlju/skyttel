@@ -23,6 +23,20 @@ import type { BackgroundProjection } from './background-projection.js';
 import { cosmicSky } from './cosmic-sky.js';
 import { darkOceanBackground } from './dark-ocean-background.js';
 import { lightOceanBackground } from './light-ocean-background.js';
+import { initialCameraAzimuth } from './spatial-navigation.js';
+
+type BackgroundChoice = ViewSettings['lightBackground'] | ViewSettings['darkBackground'];
+const panoramaUrls: Partial<Record<BackgroundChoice, string>> = {
+  'archipelago-morning': new URL('./assets/archipelago-morning.webp', import.meta.url).href,
+  'milky-way': new URL('./assets/milky-way.webp', import.meta.url).href,
+  'milky-way-2': new URL('./assets/milky-way-2.webp', import.meta.url).href,
+};
+const galacticRotation = new Matrix3()
+  .setFromMatrix4(new Matrix4().makeRotationFromEuler(new Euler(-0.16, 0.45, 0.8)))
+  .invert();
+const archipelagoRotation = new Matrix3().setFromMatrix4(
+  new Matrix4().makeRotationY(-initialCameraAzimuth),
+);
 
 /** Decorative graphics only. Extend theme choices here; camera navigation and
  * personal object placement remain owned by spatialScene. No animation loop. */
@@ -212,34 +226,41 @@ export function spaceBackground(pixelRatio: number, redraw: () => void) {
       rotation: material.uniforms.rotation,
       tangent: material.uniforms.tangent,
       aspect: material.uniforms.aspect,
+      offset: material.uniforms.offset,
       panorama: { value: null as Texture | null },
-      galacticRotation: {
-        value: new Matrix3()
-          .setFromMatrix4(new Matrix4().makeRotationFromEuler(new Euler(-0.16, 0.45, 0.8)))
-          .invert(),
-      },
+      panoramaRotation: { value: galacticRotation },
+      overWater: { value: false },
     },
     vertexShader: material.vertexShader,
     fragmentShader: `
       #include <common>
       varying vec2 screen;
-      uniform mat3 rotation, galacticRotation;
+      uniform mat3 rotation, panoramaRotation;
+      uniform vec3 offset;
+      uniform bool overWater;
       uniform float tangent, aspect;
       uniform sampler2D panorama;
       void main() {
-        // Each pixel looks in one direction from inside the celestial sphere.
-        // The fixed galactic frame places its equator along the Milky Way band.
         vec3 ray = vec3(screen.x * aspect * tangent, screen.y * tangent, -1.0);
-        vec3 d = normalize(galacticRotation * rotation * ray);
+        vec3 d = normalize(rotation * ray);
+        if (overWater) {
+          // Reproject the water plane one unit below the original observer.
+          // Its parallax fades to zero at the horizon. Sky directions stay fixed.
+          d = normalize(d + offset * max(-d.y, 0.0) / (1.0 + offset.y));
+        }
+        d = panoramaRotation * d;
         vec2 uv = vec2(atan(d.x, -d.z) / (2.0 * PI), asin(clamp(d.y, -1.0, 1.0)) / PI) + 0.5;
         // Select detail from angular size, which stays finite at the poles
         // and longitude seam where texture-coordinate derivatives diverge.
         float footprint = max(length(dFdx(d)), length(dFdy(d)));
         float lod = max(0.0, log2(footprint * float(textureSize(panorama, 0).y) / PI));
-        vec3 sky = textureLod(panorama, uv, lod).rgb;
-        // Keep the contrast in the dust lanes while softening the brightest stars.
-        float luminance = dot(sky, vec3(0.2126, 0.7152, 0.0722));
-        gl_FragColor = vec4(sky * 0.78 / (1.0 + luminance * 0.65), 1.0);
+        vec3 colour = textureLod(panorama, uv, lod).rgb;
+        if (!overWater) {
+          // Keep the contrast in the dust lanes while softening the brightest stars.
+          float luminance = dot(colour, vec3(0.2126, 0.7152, 0.0722));
+          colour *= 0.78 / (1.0 + luminance * 0.65);
+        }
+        gl_FragColor = vec4(colour, 1.0);
         #include <colorspace_fragment>
       }
     `,
@@ -251,9 +272,9 @@ export function spaceBackground(pixelRatio: number, redraw: () => void) {
   const ocean = lightOceanBackground();
   const deepOcean = darkOceanBackground();
   group.add(mesh, cosmic.group, ocean.mesh, deepOcean.mesh);
-  const panoramas: Partial<Record<'milky-way' | 'milky-way-2', Texture>> = {};
+  const panoramas: Partial<Record<BackgroundChoice, Texture>> = {};
   const loadedPanoramas = new Set<Texture>();
-  let selectedPanorama: 'milky-way' | 'milky-way-2' | undefined;
+  let selectedPanorama: BackgroundChoice | undefined;
   let disposed = false;
 
   return {
@@ -266,22 +287,19 @@ export function spaceBackground(pixelRatio: number, redraw: () => void) {
       const universe = theme === 'dark' && value.darkBackground === 'universe';
       deepOcean.mesh.visible = theme === 'dark' && value.darkBackground === 'ocean';
       mesh.visible = !ocean.mesh.visible && !deepOcean.mesh.visible && !universe;
-      selectedPanorama =
-        group.visible &&
-        theme === 'dark' &&
-        (value.darkBackground === 'milky-way' || value.darkBackground === 'milky-way-2')
-          ? value.darkBackground
-          : undefined;
+      const choice = theme === 'light' ? value.lightBackground : value.darkBackground;
+      const url = group.visible ? panoramaUrls[choice] : undefined;
+      selectedPanorama = url ? choice : undefined;
+      const overWater = choice === 'archipelago-morning';
+      panoramaMaterial.uniforms.overWater.value = overWater;
+      panoramaMaterial.uniforms.panoramaRotation.value = overWater
+        ? archipelagoRotation
+        : galacticRotation;
       const selectedTexture = selectedPanorama ? panoramas[selectedPanorama] : undefined;
       panoramaMaterial.uniforms.panorama.value =
         selectedTexture && loadedPanoramas.has(selectedTexture) ? selectedTexture : null;
       mesh.material = panoramaMaterial.uniforms.panorama.value ? panoramaMaterial : material;
-      if (selectedPanorama && !selectedTexture) {
-        const choice = selectedPanorama;
-        const url =
-          choice === 'milky-way'
-            ? new URL('./assets/milky-way.webp', import.meta.url).href
-            : new URL('./assets/milky-way-2.webp', import.meta.url).href;
+      if (url && !selectedTexture) {
         panoramas[choice] = new TextureLoader().load(
           url,
           (texture) => {

@@ -1,0 +1,205 @@
+Skärgårdsmorgon
+
+Bildkälla
+Landskapet, vattnets höjdkarta och färgbilden till vågorna är skapade med
+OpenAI ImageGen. Vattnets speglingar beräknas från landskapet och vågornas
+lutning.
+
+Bildprompt
+Skapa ett fotorealistiskt sfäriskt panorama av en klar morgon i svensk
+ytterskärgård, för bakgrunden i en ljus karta. Kameran är fast, knappt en
+meter över Östersjöns vattenyta. Leverera en enda kantlös equirektangulär
+2:1-textur i liggande format för insidan av en sfär, 360° runt betraktaren och
+180° från zenit till nadir. En rak vågrät havshorisont ligger exakt halvvägs
+upp i bilden. Övre halvan är ljus morgonhimmel, undre halvan är vatten.
+
+Mitt på bilden, rakt fram, syns öppet hav och en helt fri horisont. Ett kvarts
+varv åt höger, vid 75 procent av bildens bredd, ligger EN låg, slät rosagrå
+granithäll nära vattnet, med varm morgonsol längs bergssidan och sval skugga
+nere vid vattenlinjen. Ett halvt varv bakom kameran, precis där bildens
+sidokanter möts, går ett smalt farbart sund mellan TVÅ olika tallklädda öar.
+Lämna en öppning av vatten med avlägsen horisont i själva skarven. Strax
+innanför bildens högra kant reser sig den ena ön med en brant rundad strand
+och täta, höga tallar. Strax innanför vänsterkanten ligger den andra, en lång
+flack udde med enstaka krokiga vindpinade tallar. Deras mörkgröna kronor
+speglas brutet i vattnet nära respektive strand. Vid 25 procent av bildens
+bredd syns lugn öppnare fjärd där den låga udden klingar av. Låt mitten förbli
+helt öppen.
+
+Rakt upp övergår morgonhimlen i klar ljusblå zenit. Rakt ner löper ett fåtal
+låga vågor över nästan blankt, blågrått vatten. Visa vattenytan i alla
+nedåtriktningar med trovärdig polprojektion. Låt samma varma låga morgonljus
+från höger stryka över häll, talltoppar och vatten, med dämpat vattenblänk och
+teckning i skuggorna. Landskapet ska vara tydligt även i ett litet utsnitt men
+lugnt bakom kartans symboler. Låt havslinje, himmelsfärg och vågmönster löpa
+på samma höjd och med samma ljus genom båda sidokanterna när de fogas samman.
+Naturlig svensk naturfotografi, diskreta färgskiftningar i vattnet, ingen
+spegelsymmetri. Visa bara miljön, utan båtar, människor, bebyggelse, text,
+ramar eller kartgrafik.
+
+Bildredigering efter ett halvt varvs vridning
+Redigera det bifogade fotorealistiska skärgårdspanoramat. Panoramat visas här
+vridet ett halvt varv för att kunna laga mittpartiet. Öppna ett smalt sund
+precis mitt i bilden där två landmassor och deras speglingar nu möts i en hård
+lodrät skarv. Låt båda öarna sluta naturligt på var sin sida om en cirka 5 %
+bildbred öppning, med utsikt långt in mellan dem över vatten till avlägsen
+horisont. Den vänstra ön vid sundet är brantare med en tät klunga höga tallar;
+den högra är en lång låg granitudde med glesa vindpinade tallar. De ska vara
+två tydligt åtskilda, asymmetriska silhuetter från samma svenska skärgård, med
+var sin spegling. Laga hela skarven från himlen genom sundet och speglingarna
+till vattenkrusningarna under kameran så vyn är en sammanhängande naturbild.
+
+Behåll det bifogade bildutsnittet exakt, den flata solbelysta granithällen vid
+en fjärdedel av bredden, den raka horisonten halvvägs upp, den svagt varma
+morgonbelysningen och befintligt öppet hav vid BÅDA ytterkanterna. Håll
+ytterkanterna matchande från topp till botten. Equirektangulär 2:1-textur,
+360° × 180°, klar ljusblå himmel ovanför vattenytan, mjuka krusningar rakt
+under kameran. Inga förgrundsföremål, byggnader, båtar eller bokstäver.
+
+Detaljpass för de fyra överlappande vyerna vid horisonten
+
+Varje bildprompt består av den gemensamma inledningen, texten för den aktuella
+riktningen och den gemensamma avslutningen.
+
+Gemensam inledning
+Använd bilden som en registreringsmall för ett utsnitt av ett större
+360°-panorama. Återge utsnittet som ett NYTT knivskarpt, naturtroget
+högupplöst fotografi från svensk ytterskärgård en stilla klar morgon, med
+verkliga skärgårdsmaterial i optisk skärpa. Mallen innehåller oskarpa,
+uttänjda pixlar. Återskapa naturens små strukturer och normala proportioner
+med fin fotografisk detalj. Behåll exakt samma bredd och höjd, vattenlinjens
+läge, himlens färg, ljusriktning och strändernas placering i bild. Horisonten
+måste ligga horisontellt på 37 procent av bildhöjden. Samma kamera strax
+ovanför vattnet, samma bildvinkel och oförändrat utsnitt utan inzoomning.
+
+Öppet hav
+Utsikten rakt ut över öppet hav har en rak, fri horisont genom hela mitten och
+långt åt båda sidor. Behåll bara yttersta spetsen av den mycket låga stranden
+längst ut i de två kanterna såsom mallen visar. Återge havet som riktigt
+östersjövatten med flera skalor av små, skarpa morgonkrusningar och diskreta
+mjuka reflexer. Vågkammarna blir allt finare mot horisonten. Himlen är milt
+blå med tunna bleka molnstråk och ett varmt aprikosfärgat ljus nära
+horisonten. Inga nya öar, träd, båtar eller andra motiv framåt.
+
+Granithällen
+Den låga, breda rosagrå granithällen i mitten är huvudmotivet. Återskapa dess
+bergytor i hög fotografisk detalj, tydliga glacialt rundade ryggar och
+klyftor, tunna ljusa mineralstråk, små fläckar av lav, varm strykbelysning
+över stenens korn och en våt mörk kant vid vattnet. En svagt högre rygg mitt
+på hällen får fram materialet. Längst till höger kommer den tätare tallön in
+från kanten med läsbara grenar och individuella stammar. Till vänster öppet
+hav. Återge träden med naturliga, upprätta proportioner och klar detalj i
+stället för utsmetade former.
+
+Sundet
+Motivet är sundet i mitten mellan två distinkta svenska tallöar. Vattengapet
+mitt i bilden är exakt lika brett som i mallen. Vänstra strandens täta skog
+har upprätta rödbruna stammar, oregelbundna luftiga kronor, små barrklädda
+grenar som skiljer sig mot himlen och skuggade mellanrum. På högra strandens
+lägre häll står ett fåtal krokiga tallar. Ge dem naturliga, individuella
+kronor. Skapa realistiska brottytor, tunna kvartsgångar, kornig
+mineralstruktur, gles grå skorplav och en smal fuktig rand på graniten vid
+båda stränderna. Bevara klippornas silhuetter, med taktil skärpa även i
+skuggorna. Både de närmaste och de bortre träden och bergytorna är i fokus.
+
+Udden
+Den låga långsträckta granitudden går från vänstra kanten och smalnar av åt
+höger mot öppet hav. Återställ tallarnas korrekta naturliga proportioner, med
+några få upprätta vindpinade tallar, rödbruna barkklädda stammar, knotiga
+grenar och små skarpa barrtofsar. Tallarnas höjd avtar med den bortre udden.
+Bevara ungefärliga platser och storlek men trädens kronor ska vara trovärdiga,
+INTE utsträckta platta streck. Bevara den långsträckta strandens tunna
+silhuett. Visa små skåror, rundade rosagrå klippytor och mörka våta springor
+längs bergstranden och en naturligt bruten spegling.
+
+Gemensam avslutning
+Rita fina krusningar och strandens brutna speglingar i blågrått kallt vatten,
+lågt morgonljus från sidan. Övre och nedre bildkant samt de yttersta kanterna
+ska ansluta till det befintliga panoramat. Leverera bara ett rent
+landskapsfoto i liggande 2:1, högsta tillgängliga upplösning. Fri miljö utan
+text eller byggnader.
+
+Tallarna på den låga ön, två utsnitt i kartkamerans perspektiv
+
+Gemensam inledning
+Redigera referensbilden som ett skarpt svenskt naturfotografi. Den är ett
+raktecknande kamerautsnitt ur ett större panorama. Bevara bildvinkel, utsnitt i
+liggande 2:1, havshorisonten genom bildens mitt, hällarnas konturer och lägen,
+himmelsfärg och morgonljus. Kameran står strax över vattnet. Låt land och
+vatten passa ihop med samma vy utanför utsnittet.
+
+Vid sundet
+Ersätt tallarna på den låga ön med tre naturligt proportionerade
+skärgårdstallar (Pinus sylvestris). De två stammarna nära sundet till vänster
+och det ensamma trädet längre till höger har kvar sina rotfästen på samma
+plats. I referensen är särskilt det högra trädet kraftigt ihoptryckt på höjden.
+Gör om det helt. Det ska resa sig ur hällen på en hög, lätt krokig rödbrun
+stam, med luft under de lägsta gröna grenarna och en oregelbunden, smal
+tredimensionell krona. Hela trädet ska vara ungefär dubbelt så högt som kronans
+bredd. Ge träden olika höjd och grenverk. Visa bark, tunna grenar, små
+barrtofsar och brutna speglingar i vattnet. Sundet till vänster ska vara öppet.
+Bevara den solvarma rosagrå granitens struktur och de skuggade sprickorna.
+Ingen ny skog, inga båtar, skyltar eller människor.
+
+Längre ut på udden
+Återge de glesa tallarna som riktiga svenska skärgårdstallar. De två träden mot
+vänster står kvar med lite himmel mellan kronorna, och det mindre trädet längre
+bort till höger står kvar på sin häll. Resliga smala rödbruna stammar, lite
+krokiga av vinden, bär oregelbundna tredimensionella kronor med fritt utrymme
+under grenarna. Träden är tydligt högre än sina kronor är breda. Höjd och
+grenverk varierar med avståndet. Låt de tunna grenarna, barrtofsarna, granitens
+sprickor och de brutna speglingarna synas i skarpt lågt morgonljus. Behåll den
+tunna låga udden genom hela bilden. Inga andra motiv.
+
+Vågornas höjd
+Den första referensen visar vågorna intill hällen. Den andra visar öppet hav
+från samma panorama, omprojicerat till en vy uppifrån.
+
+Skapa en kvadratisk gråskalig HÖJDKARTA för det lugna havet vid svensk
+ytterskärgård. Det är en ortografisk vy rakt ovanifrån av cirka åtta meter
+vatten i varje riktning. Bild 1 visar önskad typ av låga, mjukt välvda
+vindvågor. Bild 2 visar fotograferade vågor i samma sjö. Använd dem bara för
+vågornas form. Kamerabelysning, himmelsreflexer och färger ska inte finnas i
+höjdkartan. En enda bris blåser vertikalt genom hela kartan. Vågornas krön går
+i stort sett från vänster till höger. De är cirka en halv till en meter från
+varandra, med olika avstånd. Fånga ett enda ögonblick med ojämna, svagt böjda
+och ställvis avbrutna kammar som växer och klingar ut efter ett par meter. Den
+mesta vattenytan mellan dem är bred, jämn och svagt böljande. Några diskreta
+små vindvågor har samma huvudriktning. Ange enbart höjd per pixel, där
+neutralt mellangrått är medelhöjden, något ljusare grått är de låga krönen och
+något mörkare grått är dalarna. Alla vågor är mjukt rundade och ganska flacka.
+Jämnt statistiskt mönster och identisk skala i alla fyra hörn. Vattenfältet
+fortsätter genom kanterna. Hela bilden fylls av höjddata. Utan lampa,
+kastskuggor, blänk, svarta konturlinjer, skum, bubblor, ringar, horisont,
+mark, skala, siffror eller text.
+
+Vattnets färg och ljus
+Den första referensen är höjdkartan. Den andra är färgstudien av lugnt vatten
+rakt uppifrån.
+
+Gör ett fotorealistiskt lodfoto av blågrå Östersjö utifrån bild 1. Bild 1 är
+vattenytans höjdkarta och är den exakta geometrimallen. De ljusa vågkammarna
+och de mörkare dalarna ska ligga på precis samma platser, i samma skala och
+med samma svaga böjar genom hela den kvadratiska bilden. Bild 2 visar den
+önskade fotografiska färgen, det mjuka, låga morgonljuset och de återhållna
+reflexerna. Kameran ser vinkelrätt ner på en enda sammanhängande vattenyta.
+Visa låga långsträckta vindvågor från vänster till höger, glest isär, med lätt
+oregelbundna sidor. Färga de skyddade lugna mellanrummen i djup, lätt
+genomlyst blågrå färg med mycket fin naturtrogen detalj. Bara på den smala
+belysta flanken av några kammar får ett svagt, mjukt brutet pärlgrått eller
+blekt varmt skimmer synas. Efterlikna en riktig svensk naturfotografs stilla
+havsyta. Håll hela motivet i samma skala utan perspektivflykt och utan
+horisont. Vatten ända ut till kanterna. Undvik skum, bubblor, cirklar, vita
+band, skarpa svarta konturer och botten. Återge befintlig vattengeometri och
+ändra bara dess material och ljus.
+
+Inpassning i panoramat
+De två vyerna av udden projiceras tillbaka till sina ursprungliga riktningar.
+Himlens blå ton övergår i en jämn färg kring zenit.
+
+Höjd och färg läses på samma plats på ett horisontellt vattenplan. Vågorna har
+en gemensam vindriktning, omkring 25 grader åt höger från startvyn mot öppet
+hav. Några mindre vågor avviker svagt från brisen. Vågornas lutning avgör var
+morgonhimlen och stränderna speglas. Rakt nedanför kameran syns låga, mjukt
+belysta vågkammar med blankt vatten emellan. Vid strandlinjen och längst ut
+vid horisonten bevaras detaljerna från landskapsbilden.
