@@ -20,12 +20,10 @@ workflow.
 1. Use the canonical gate provided by the caller or declared in repository
    instructions. If neither identifies it, find the likely gate and wait for
    user confirmation before using it. Bind evidence to the exact source commit,
-   image digest, complete report, SBOM, and scanner database. For a PR,
-   confirm the job scanned the current proposed merge or head and refresh
-   evidence for a superseded revision. Use the
-   [Skyttel gate](../../../docs/operations/security-checks.md#container-image-vulnerability-gate)
-   to locate evidence. The Grype policy blocks High and Critical findings
-   even when a fix is unavailable.
+   image digest, complete report, SBOM, and scanner database. For a PR, compare
+   the failing commit with its current head and obtain current evidence when
+   they differ. Use the repository's vulnerability-gate workflow and policy
+   configuration to locate its evidence and determine which findings block it.
 2. Read the unfiltered results for the [scan summary](#scan-summary). Select
    only High or Critical findings for remediation review, including findings
    without a reported fix and excepted findings. Handle confirmed matches as
@@ -101,12 +99,13 @@ it cannot solve the case. Continue to the next path only on the latter result.
    build-time or diagnostic purpose is served. Verify the final workloads.
 4. **Ask about an exception.** If the finding blocks promotion, report why
    all three paths failed, residual exposure, and concrete next checks.
-   Ask the user whether to add an exception. Present its exact scope,
-   owner, reviewer, rationale, and proposed review plan and expiry within the
-   Skyttel policy's 30-day limit. If approved, invoke
-   `$manage-container-vulnerability-exceptions`. For findings outside the
-   blocking policy or where the user declines, report the remaining exposure
-   and next checks.
+   Ask the user whether to add an exception, presenting its exact scope,
+   accountable owner, rationale, and proposed case-specific review and expiry
+   dates. Wait for the answer before changing the exception file. If approved,
+   call the Skill tool with "manage-container-vulnerability-exceptions".
+   The user decides the dates from the case; this workflow sets no fixed
+   review or expiry interval. For findings outside the blocking policy or
+   where the user declines, report the remaining exposure and next checks.
 
 ## Verify and record
 

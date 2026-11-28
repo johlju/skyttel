@@ -22,10 +22,6 @@ Resolve [the canonical gate](#canonical-gate) before making changes. Follow
    lock, maintenance registry, Dockerfile, or deployment configuration. Find
    its owner, release lane, supported platforms, and consumers. Ask if the
    repository evidence does not establish which reference to update.
-   For Skyttel's production Node base, synchronize both `FROM` references
-   and follow the [Node alignment rules](../../../docs/operations/security-checks.md#versions-and-updates).
-   For development images, inspect `.devcontainer/Dockerfile` and both
-   devcontainer profiles.
 2. Resolve the exact vendor candidate and verify it is available on the
    supported lane. Preserve the repository's tag, index digest, platform
    manifest digest, and config digest policy. When the caller supplies a
@@ -58,11 +54,9 @@ Resolve [the canonical gate](#canonical-gate) before making changes. Follow
    affected package versions or absence, and supported runtime behavior.
    Run the [canonical gate](#canonical-gate) against the exact selected image
    or its rebuilt consumers. Use any pre-update scan as assessment evidence.
-   Use `--upstream` with the Linux AMD64 platform digest or `--local` with a
-   rebuilt Docker image. For the release OCI archive, use the release
-   candidate workflow and verify its recorded manifest digest. Retain the
-   complete evidence outside Git and run the affected repository checks,
-   including `npm run test:container` or `npm run test:devcontainer`.
+   Use the registry reference for an upstream image and the build artifact
+   for an image built locally. Retain the complete evidence. Run repository
+   checks through the documented commands. Keep scan artifacts outside Git.
 3. For High or Critical findings from any configured scanner, hand the grouped
    findings, policy decision, and exact build evidence
    to `$remediate-container-vulnerabilities`. If that skill called this
